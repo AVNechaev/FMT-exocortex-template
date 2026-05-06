@@ -85,6 +85,31 @@
 - Собери все РП со статусом pending/in-progress
 - Выяви расхождения с HUB-планом
 
+#### 5.5. Active-WP heartbeat sweep (EXTENSION POINT)
+
+> Цель: не потерять активные РП, у которых есть git-активность, но которые не попали в carry-over / WORKPLAN явно (паттерн «writer-sampling drift», feedback_alerter_writer_sampling_drift.md).
+
+```bash
+bash .claude/scripts/load-extensions.sh session-prep sweep
+```
+
+- Exit 0 → прочитать каждый файл из вывода (alphabetic), выполнить инструкции
+- Exit 1 → шаг пропускается (нет sweep-расширения)
+
+**Если sweep выполнен:** добавить секцию «Кандидаты на добавление» в черновик WeekPlan перед шагом 7.
+Формат секции:
+
+```markdown
+## Активные РП — кандидаты на добавление в план (sweep)
+
+> Найдены через heartbeat-sweep (git-активность ≥7д, status: active/in_progress в inbox).
+> Не все попали в WORKPLAN.md или carry-over явно. Проверь на сессии.
+
+| РП | Последний коммит |
+|----|-----------------|
+| WP-NNN Название | commit hash / описание |
+```
+
 #### 6. Проверить нерегулярные блоки (Session Agenda)
 
 - Прочитай `{{GOVERNANCE_REPO}}/docs/Session Agenda.md`
