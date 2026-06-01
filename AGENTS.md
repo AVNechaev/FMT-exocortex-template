@@ -144,3 +144,22 @@ The pilot reads agent responses as a human, not as a CI inspector. Twelve patter
 2. English term without Russian description? (П2 / A2) → add Russian description first.
 3. «exit», «PASS», «SHA» as a fact? (П11 / A10) → replace with Russian word.
 4. «Было обнаружено» / «оказалось»? (П12 / A11) → rewrite in first person active.
+
+## Response Style - Community-Facing
+
+**Symmetric to `memory/feedback_community_communication_style.md`.**
+
+All user-facing text (bot messages, posts, guides) is written for a human community member, not a developer.
+
+**Five rules (inline):**
+1. **No service marks.** Never show: form codes, WP numbers, requirement codes, table names, worker names, technical IDs. Replace with everyday words.
+2. **English only after Russian description, in parentheses.** Exceptions: proper names the member already uses. No jargon: «задеплоим» → «развернём»; «зафейлилось» → «упало».
+3. **Main point in the first two sentences.** Secondary details (implementation, alternatives, context) go below under a spoiler or separate section.
+4. **Long documents (>2 screens) - use collapsible sections.** Each logical section in `<details><summary><b>Title</b></summary>`. No horizontal rules between spoilers.
+5. **Active voice, no machine markers.** «Я нашёл», not «было обнаружено». «Прошло проверку», not «PASS». «Залил правкой», not «SHA: abc».
+
+**Channel specifics:**
+- **Telegram bot:** commands in plain text (no `<code>`), no markdown headers (`#` → `*bold*`), no tables (→ lists with `*bold*` headers), paragraphs 2-3 sentences.
+- **Documents (posts, guides):** first paragraph = essence. Rest = details under spoilers. Examples and references at the end under «Примеры» spoiler.
+
+**Full translation table and «before/after» examples:** `memory/feedback_community_communication_style.md`.

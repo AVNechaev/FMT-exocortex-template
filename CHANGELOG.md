@@ -5,6 +5,19 @@ All notable changes to FMT-exocortex-template will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versioning: [Semantic Versioning](https://semver.org/).
 
+## [0.35.3] — 2026-06-01
+
+### Added
+
+- `memory/feedback_community_communication_style.md` — стиль общения агентов с участниками сообщества (community-facing). 5 правил inline + полный набор в externalized memory: таблица переводов терминов (deploy → развернуть, disambiguation marker → маркер различения и др.), особенности каналов (Telegram бот vs документы), примеры «было/стало». Компактный формат: главное наверху, детали в спойлерах.
+- `AGENTS.md` — новая секция **Response Style — Community-Facing** (симметрично пилот-режиму).
+- `CLAUDE.md §S-38 «Стиль общения с участниками сообщества»` — inline-правила для Claude-агента, ссылка на полный набор в memory.
+
+### Notes
+
+- Архитектура доставки — та же, что и для пилот-режима (WP-388 Ф7): компактный inline (≤15 строк) + externalized memory с деталями. Экономия токенов: пилот-режим и community-режим не смешиваются, каждый агент загружает только нужную аудиторию.
+- Источник — актуализация WP-388 «Стиль общения агентов IWE» (1 июня 2026).
+
 ## [0.35.2] — 2026-06-01
 
 ### Fixed (hotfix по verify-агенту 0.35.1)

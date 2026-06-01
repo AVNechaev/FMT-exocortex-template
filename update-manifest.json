@@ -1,5 +1,5 @@
 {
-  "version": "0.35.2",
+  "version": "0.35.3",
   "description": "Манифест платформенных файлов FMT-exocortex-template. Используется update.sh для доставки обновлений.",
   "files": [
     {
@@ -352,6 +352,9 @@
     },
     {
       "path": "memory/feedback_response_clarity_for_pilot.md"
+    },
+    {
+      "path": "memory/feedback_community_communication_style.md"
     },
     {
       "path": "memory/fpf-reference.md"
