@@ -66,6 +66,17 @@ if echo "$FIRST_LINES" | grep -qiE '(^(Reading|Checking|Looking|Searching|Let me
     echo "$TIMESTAMP | R1 | process-journal | $(echo "$FIRST_LINES" | grep -iE '(Reading|Checking|Let me|Сейчас|Читаю|Проверяю)' | head -1 | cut -c1-100)" >> "$LOG_FILE"
 fi
 
+# --- R5-emdash: длинное тире вне конструкции «— это» ---
+# Допустимо только «X — это Y». Любое другое «—» = нарушение (правило #5 базы стиля).
+if printf '%s' "$RESPONSE" | grep -q '—'; then
+    if printf '%s' "$RESPONSE" | perl -CSD -Mutf8 -ne 'exit(/—(?!\s*это)/ ? 1 : 0)' 2>/dev/null; then
+        : # все тире — в конструкции «— это», нарушений нет
+    else
+        VIOLATIONS="${VIOLATIONS}R5:em-dash "
+        echo "$TIMESTAMP | R5 | em-dash-outside-eto | $(printf '%s' "$RESPONSE" | grep '—' | head -1 | cut -c1-100)" >> "$LOG_FILE"
+    fi
+fi
+
 # Если есть нарушения — вывести nudge (не блокировать)
 if [ -n "$VIOLATIONS" ]; then
     echo "⚠️ Стиль: нарушения [${VIOLATIONS}] — подробности в ~/.claude/logs/style-violations.log"
