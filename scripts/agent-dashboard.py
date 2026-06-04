@@ -2,14 +2,15 @@
 """
 Agent Dashboard — статус всех агентов IWE через Aisystant MCP.
 
-Источник данных: `agent_status_list` MCP-инструмент (платформенный реестр РП-395).
+Источник данных: `agent_status_list` MCP-инструмент (WP-398, API v2.0).
 Аутентификация: OAuth-токен из ~/.hermes/mcp-tokens/aisystant.json или AISYSTANT_MCP_TOKEN.
 Никаких хардкод-credentials — работает для любого пользователя IWE-шаблона.
 
 Использование:
-  agent-dashboard.py              # показать дашборд
-  agent-dashboard.py --json       # сырой JSON (для скриптов)
-  agent-dashboard.py --help       # справка
+  agent-dashboard.py                        # личный дашборд
+  agent-dashboard.py --repo org/repo-name  # командный дашборд по репо
+  agent-dashboard.py --json                # сырой JSON (для скриптов)
+  agent-dashboard.py --help                # справка
 
 Требования:
   - Python 3.9+
@@ -26,7 +27,7 @@ import urllib.request
 import urllib.error
 import ssl
 from datetime import datetime, timezone
-from typing import Optional, List, Dict
+from typing import Dict, List, Optional, Tuple
 
 # ── Константы ──────────────────────────────────────────────────────
 
@@ -222,34 +223,51 @@ def call_mcp(method: str, params: dict, token: str) -> dict:
         return json.loads(resp.read())
 
 
-def get_agents(token: str, _retry: bool = False) -> list[dict]:
-    """Получить список агентов через agent_status_list."""
+def call_mcp_tool(token: str, tool_name: str, arguments: dict, _retry: bool = False) -> dict:
+    """Вызвать MCP-инструмент и вернуть распарсенный JSON-ответ."""
     try:
-        result = call_mcp(
-            "tools/call",
-            {"name": "agent_status_list", "arguments": {}},
-            token
-        )
-        # MCP-ответ: result.content[0].text = JSON-строка
+        result = call_mcp("tools/call", {"name": tool_name, "arguments": arguments}, token)
         content = result.get("result", {}).get("content", [])
         if not content:
-            die("MCP `agent_status_list`: пустой ответ (нет content)")
+            die(f"MCP `{tool_name}`: пустой ответ (нет content)")
         text = content[0].get("text", "{}")
-        data = json.loads(text)
-        return data.get("agents", [])
+        return json.loads(text)
     except urllib.error.HTTPError as e:
         if e.code == 401 and not _retry:
-            # Токен протух — пробуем обновить и повторить (максимум 1 раз)
             new_token = refresh_token()
             if new_token:
-                return get_agents(new_token, _retry=True)
+                return call_mcp_tool(new_token, tool_name, arguments, _retry=True)
             die("Токен истёк, обновить не удалось. Перезапусти `hermes setup`.")
         die(f"MCP-сервер вернул HTTP {e.code}: {e.reason}")
     except urllib.error.URLError as e:
         die(f"MCP-сервер недоступен: {e.reason}")
     except json.JSONDecodeError:
         die("MCP-сервер вернул некорректный JSON.")
-    return []
+    return {}
+
+
+def get_dashboard_data(token: str, repo: Optional[str] = None) -> dict:
+    """Получить v2-ответ agent_status_list. Возвращает весь объект {version, mode, agents}."""
+    args_payload: Dict[str, str] = {}
+    if repo:
+        args_payload["repo"] = repo
+    return call_mcp_tool(token, "agent_status_list", args_payload)
+
+
+# ── Нормализация путей и конфликты ─────────────────────────────────
+
+IWE_ROOT = os.path.normpath(os.path.expanduser(os.environ.get("IWE_DIR", "~/IWE")))
+
+
+def normalize_file_path(p: str) -> str:
+    """Нормализуй путь к relative от IWE_ROOT с POSIX-разделителями."""
+    p = os.path.normpath(os.path.expanduser(p))
+    try:
+        rel = os.path.relpath(p, IWE_ROOT)
+        return rel.replace(os.sep, "/")
+    except ValueError:
+        # Разные диски (Windows) или путь вне IWE_ROOT → вернуть нормализованный путь
+        return p.replace(os.sep, "/")
 
 
 # ── Отображение ────────────────────────────────────────────────────
@@ -260,93 +278,146 @@ def die(msg: str, code: int = 1):
     sys.exit(code)
 
 
-def render_dashboard(agents: list[dict]):
-    """Показать дашборд агентов в терминале."""
+def find_conflicts(agents: List[dict]) -> List[Tuple[str, List[dict]]]:
+    """Найти файлы, которые одновременно держат 2+ активных сессии (нормализованный путь)."""
+    file_sessions: Dict[str, List[dict]] = {}
+    for group in agents:
+        pilot = group.get("pilot_name") or group.get("pilot") or ""
+        for sess in group.get("sessions", []):
+            if sess.get("status") in ("working", "peer-session"):
+                for f in sess.get("files") or []:
+                    norm = normalize_file_path(f)
+                    if norm not in file_sessions:
+                        file_sessions[norm] = []
+                    file_sessions[norm].append({
+                        "agent": group.get("agent", "?"),
+                        "session_id": sess.get("session_id", "?"),
+                        "pilot": pilot,
+                    })
+    return [(f, ss) for f, ss in file_sessions.items() if len(ss) > 1]
+
+
+def _render_session_line(sess: dict, indent: str = "      ", show_stale_2h: bool = True) -> None:
+    """Вывести одну строку сессии."""
+    sid = sess.get("session_id", "?")
+    status = sess.get("status", "idle")
+    task: str = sess.get("task") or ""
+    files = sess.get("files") or []
+    updated = sess.get("updated_at", "")
+
+    icon = STATUS_ICONS.get(status, "❓")
+    status_ru = STATUS_NAMES.get(status, status)
+
+    mins_ago_val = 0
+    try:
+        dt = datetime.fromisoformat(updated.replace("Z", "+00:00"))
+        mins_ago_val = int((datetime.now(timezone.utc) - dt).total_seconds() / 60)
+    except Exception:
+        pass
+
+    stale_15 = mins_ago_val > 15 and status != "idle"
+    stale_2h = mins_ago_val > 120 and status != "idle"
+
+    if stale_2h and show_stale_2h:
+        stale_label = c(f" [вероятно зависла: {ago(updated)}]", COLOR_RED)
+    elif stale_15:
+        stale_label = c(f" [устарел: {ago(updated)}]", COLOR_YELLOW)
+    else:
+        stale_label = ""
+
+    task_short = (task[:60] + "…") if len(task) > 60 else task
+    sid_short = sid[:20] if len(sid) > 20 else sid
+
+    print(f"{indent}{icon} {c(sid_short, COLOR_DIM)}  {c(task_short, COLOR_BOLD)}{stale_label}")
+
+    if files:
+        files_str = ", ".join(normalize_file_path(f) for f in files[:3])
+        if len(files) > 3:
+            files_str += f" +{len(files)-3}"
+        print(f"{indent}   {c(f'📄 {files_str}', COLOR_DIM)}")
+
+
+def render_dashboard(agents: List[dict], repo: Optional[str] = None) -> None:
+    """Показать дашборд агентов v2 (личный или командный)."""
     if not agents:
         print(c("Нет данных об агентах. Возможно, ни один агент ещё не отчитывался.", COLOR_DIM))
         return
 
-    # Заголовок
     now = datetime.now().strftime("%H:%M")
     print()
-    print(c("═══ Агенты IWE ", COLOR_BOLD) + c(f"[{now}]", COLOR_DIM))
+    if repo:
+        print(c("═══ Команда ", COLOR_BOLD) + c(f"{repo} [{now}]", COLOR_DIM))
+    else:
+        print(c("═══ Агенты IWE ", COLOR_BOLD) + c(f"[{now}]", COLOR_DIM))
     print()
 
-    for a in agents:
-        name = a.get("agent", "?")
-        status = a.get("status", "idle")
-        task: str = a.get("task") or ""
-        files = a.get("files") or []
-        updated = a.get("updated_at", "")
-        stale = is_stale(updated)
+    for group in agents:
+        name = group.get("agent", "?")
+        pilot_name = group.get("pilot_name") or group.get("pilot") or ""
+        sessions = group.get("sessions") or []
+        summary = group.get("summary") or {}
+        working = summary.get("working", 0)
+        total = summary.get("total", 0)
 
-        icon = STATUS_ICONS.get(status, "❓")
-        status_ru = STATUS_NAMES.get(status, status)
+        # Заголовок группы
+        pilot_str = f"  / {c(pilot_name, COLOR_CYAN)}" if pilot_name else ""
+        summary_str = c(f"— {working} работает, {total - working} свободно ({total} сессий)", COLOR_DIM)
+        print(f"  {c(name, COLOR_BOLD, COLOR_CYAN)}{pilot_str}  {summary_str}")
 
-        # Цвет статуса: рабочий зелёный, заблокирован красный, stale жёлтый
-        if stale and status != "idle":
-            status_color = COLOR_YELLOW
-            staleness = f" [{c('устарел', COLOR_YELLOW)}: {ago(updated)}]"
-        elif status == "blocked":
-            status_color = COLOR_RED
-            staleness = ""
-        elif status in ("working", "peer-session"):
-            status_color = COLOR_GREEN
-            staleness = ""
-        else:
-            status_color = COLOR_DIM
-            staleness = ""
-
-        # Строка агента
-        agent_line = f"  {icon}  {c(name, COLOR_BOLD, COLOR_CYAN)}"
-        status_line = f" — {c(status_ru, status_color)}{staleness}"
-        print(agent_line + status_line)
-
-        # Задача
-        if task:
-            print(f"      {c(task, COLOR_DIM)}")
-
-        # Файлы
-        if files:
-            files_str = ", ".join(files[:3])
-            if len(files) > 3:
-                files_str += f" +{len(files)-3}"
-            print(f"      {c(f'📄 {files_str}', COLOR_DIM)}")
-
-        # Время
-        if updated:
-            print(f"      {c(f'{ts_iso(updated)}  ({ago(updated)})', COLOR_DIM)}")
+        for sess in sessions:
+            _render_session_line(sess)
 
         print()
 
-    # Легенда
+    # Блок конфликтов (только в командном режиме или если есть)
+    conflicts = find_conflicts(agents)
+    if conflicts:
+        print(c("─" * 50, COLOR_DIM))
+        print(c("  ⚠️  Конфликты файлов:", COLOR_YELLOW + COLOR_BOLD))
+        for fpath, owners in conflicts:
+            owners_str = ", ".join(
+                f"{o['agent']}/{o['pilot']}" if o['pilot'] else o['agent']
+                for o in owners
+            )
+            print(f"     {c(fpath, COLOR_BOLD)}  ←  {owners_str}")
+        print()
+
     print(c("─" * 50, COLOR_DIM))
     print(c("  💤 свободен   🔧 работает   🤝 peer-сессия   🚫 заблокирован", COLOR_DIM))
-    print(c(f"  Статусы старше 15 мин. — жёлтая пометка «устарел»", COLOR_DIM))
+    print(c("  Жёлтый [устарел] >15 мин.   Красный [вероятно зависла] >2ч", COLOR_DIM))
     print()
 
 
-def render_json(agents: list[dict]):
+def render_json(data: dict) -> None:
     """Вывести сырой JSON."""
-    print(json.dumps({"agents": agents}, indent=2, ensure_ascii=False))
+    print(json.dumps(data, indent=2, ensure_ascii=False))
 
 
 # ── main ────────────────────────────────────────────────────────────
 
-def main():
+def main() -> None:
     if "--help" in sys.argv or "-h" in sys.argv:
         print(__doc__)
         sys.exit(0)
 
     json_mode = "--json" in sys.argv
 
+    repo: Optional[str] = None
+    if "--repo" in sys.argv:
+        idx = sys.argv.index("--repo")
+        if idx + 1 < len(sys.argv):
+            repo = sys.argv[idx + 1]
+        else:
+            die("--repo требует аргумент: --repo org/repo-name")
+
     token = get_token()
-    agents = get_agents(token)
+    data = get_dashboard_data(token, repo=repo)
+    agents = data.get("agents", [])
 
     if json_mode:
-        render_json(agents)
+        render_json(data)
     else:
-        render_dashboard(agents)
+        render_dashboard(agents, repo=repo)
 
 
 if __name__ == "__main__":

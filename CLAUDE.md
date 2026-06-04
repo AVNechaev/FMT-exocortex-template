@@ -180,6 +180,8 @@ If you discover a discrepancy (file doesn't match plan, stale content, inconsist
 
 **Primary (обязательно):** в начале задачи вызвать MCP-инструмент `agent_status_update(agent=<твой-id>, status=working, task=<кратко>, files=[...])`; по завершении — `status=idle`. `agent` = `claude-code` | `kimi` | `hermes`. Статусы: `idle|working|peer-session|blocked`. Инструмент в Aisystant MCP; не виден в каталоге → появится после рестарта сессии (Ф1 в проде). Пилот видит всех агентов через `agent_status_list`.
 
+**Командный режим (WP-398 Ф5):** если работаешь с файлами из командного репо (несколько участников в одном репо), передавай `repo="org/repo-name"` в `agent_status_update`. Это позволяет другим агентам команды видеть твои активные файлы и избегать конфликтов. Пример: `agent_status_update(agent="claude-code", status=working, task="WP-X фаза", files=["src/marathon.py"], repo="org/shared-repo")`.
+
 **Fail-safe:** если не вызвал сам — детерминированно пишет `{{HOME_DIR}}/IWE/scripts/agent-status-report.sh <agent> <status> [task] [files-csv]` (Claude — из Stop-хука, Kimi — из `kimi-peer-adapter.sh`). Не отменяет primary.
 
 ## WP-REGISTRY Naming — CRITICAL
