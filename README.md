@@ -204,7 +204,13 @@ multiplier_enabled: true    # Мультипликатор IWE
 A: Для полной установки (Claude Code) — рекомендуется Claude Pro ($20/мес). При необходимости можно перейти на Claude Max (~$100/мес) для работы без ограничений. Для минимальной (`setup.sh --core`) — работает с любым AI CLI. Подробнее: [SETUP-GUIDE.md](docs/SETUP-GUIDE.md).
 
 **Q: Работает ли с другими ИИ (не Claude)?**
-A: Частично. Все знания хранятся в открытых форматах (Markdown, YAML, Git) -- они переживут смену любого вендора. Но автоматика (протоколы ОРЗ, скиллы, хуки, роли) заточена под Claude Code CLI. Для Codex (OpenAI), Aider или других AI CLI потребуется адаптация `.claude/` и скриптов ролей. Минимальная установка (`setup.sh --core`) работает без привязки к конкретному LLM.
+A: Да, три агента поддерживаются из коробки:
+- **Claude Code** — полная поддержка: читает `CLAUDE.md`, все скиллы и хуки работают.
+- **Kimi Code** (VS Code) — читает `AGENTS.md` автоматически при открытии репо. Кастомизация: `extensions/` или `AGENTS-agent-blocks.md`. Скиллы (`/day-open` и др.) через Claude Code.
+- **Hermes Agent** — подключи Aisystant MCP через настройки Hermes, и он получит инструкции автоматически.
+
+Для других агентов (Cursor, Copilot, Gemini) потребуется адаптация. Подробнее: [PORTABILITY.md](docs/PORTABILITY.md).
+Минимальная установка (`setup.sh --core`) работает без привязки к конкретному агенту.
 
 **Q: Работает ли на Linux/Windows?**
 A: Да. Ядро работает на любой ОС. Автоматизация Стратега: macOS — launchd, Linux — cron, Windows — WSL. Подробнее: [SETUP-GUIDE.md](docs/SETUP-GUIDE.md).

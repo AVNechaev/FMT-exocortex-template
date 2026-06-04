@@ -1,6 +1,9 @@
 # AGENTS.md
 
-> **Сгенерировано `scripts/sync-agent-instructions.sh` (WP-394 Ф4.2). НЕ РЕДАКТИРОВАТЬ ВРУЧНУЮ.**
+> **Для Kimi Code:** этот файл читается автоматически при открытии репо в VS Code. Не редактируй вручную.
+> Кастомизация для Kimi → `extensions/` или `AGENTS-agent-blocks.md`. Claude читает `CLAUDE.md`. Hermes — через Aisystant MCP.
+>
+> **Сгенерировано `scripts/sync-agent-instructions.sh`. НЕ РЕДАКТИРОВАТЬ ВРУЧНУЮ.**
 > Общее ядро → блок `<!-- SYNC-CORE -->` в `CLAUDE.md`. Агент-специфика → `AGENTS-agent-blocks.md`.
 
 
