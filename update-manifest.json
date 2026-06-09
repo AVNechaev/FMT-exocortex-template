@@ -126,10 +126,10 @@
       "path": ".claude/skills-catalog.yaml"
     },
     {
-      "path": ".claude/skills/SKILL-INDEX.yaml"
+      "path": ".claude/skills-catalog.yaml"
     },
     {
-      "path": ".claude/skills-catalog.yaml"
+      "path": ".claude/skills/SKILL-INDEX.yaml"
     },
     {
       "path": ".claude/skills/SKILL-INDEX.yaml"
@@ -384,6 +384,15 @@
       "path": "docs/agent-coordination-manifest.md"
     },
     {
+      "path": "docs/developer/README.md"
+    },
+    {
+      "path": "docs/developer/card-template.md"
+    },
+    {
+      "path": "docs/developer/developer-guide.md"
+    },
+    {
       "path": "docs/hindsight-setup.md"
     },
     {
@@ -600,7 +609,6 @@
       "path": "pack-templates/digital-platform/08-service-clauses/DP.SC.NNN-external-session-request.md"
     },
     {
-
       "path": "roles/README.md"
     },
     {
@@ -959,97 +967,49 @@
     }
   ],
   "excluded_paths": [
+    {
+      "path": "roles/extractor/scripts/systemd/iwe-extractor-inbox-check.service",
+      "reason": "systemd template — processed by build-runtime.sh, not delivered directly"
+    },
+    {
+      "path": "roles/extractor/scripts/systemd/iwe-extractor-inbox-check.timer",
+      "reason": "systemd template — processed by build-runtime.sh, not delivered directly"
+    },
+    {
+      "path": "roles/strategist/scripts/systemd/iwe-strategist-morning.service",
+      "reason": "systemd template — processed by build-runtime.sh, not delivered directly"
+    },
+    {
+      "path": "roles/strategist/scripts/systemd/iwe-strategist-morning.timer",
+      "reason": "systemd template — processed by build-runtime.sh, not delivered directly"
+    },
+    {
+      "path": "roles/strategist/scripts/systemd/iwe-strategist-weekreview.service",
+      "reason": "systemd template — processed by build-runtime.sh, not delivered directly"
+    },
+    {
+      "path": "roles/strategist/scripts/systemd/iwe-strategist-weekreview.timer",
+      "reason": "systemd template — processed by build-runtime.sh, not delivered directly"
+    },
+    {
+      "path": "roles/synchronizer/scripts/systemd/iwe-exocortex-scheduler.service",
+      "reason": "systemd template — processed by build-runtime.sh, not delivered directly"
+    },
+    {
+      "path": "roles/synchronizer/scripts/systemd/iwe-exocortex-scheduler.timer",
+      "reason": "systemd template — processed by build-runtime.sh, not delivered directly"
+    },
+    {
+      "path": "inbox/fleeting-notes.md",
+      "reason": "personal notes — user-specific content, not part of template delivery"
+    },
+    "scripts/",
+    "scripts/tests/",
+    "promotion-status.yaml",
     "AGENTS-agent-blocks.md",
     "docs/BROWSER-CI-TEMPLATE.md",
     "docs/maintaining-skills.md",
-    "docs/release-audit-log.md",
-    "promotion-status.yaml",
-    "scripts/active-wp-sweep.sh",
-    "scripts/agent-dashboard.py",
-    "scripts/agent_fault_remind.py",
-    "scripts/agent_fault_remind.sh",
-    "scripts/archive-done-wp.sh",
-    "scripts/audit-ad-hoc-roles.py",
-    "scripts/backup-icloud.sh",
-    "scripts/changelog-append.sh",
-    "scripts/changelog-flush.sh",
-    "scripts/check-dirty-repos.sh",
-    "scripts/check-manifest-coverage.py",
-    "scripts/check-open-sessions.sh",
-    "scripts/check-script-collisions.sh",
-    "scripts/check-setup-update-parity.sh",
-    "scripts/check-wp-format.py",
-    "scripts/claude-peer-adapter.sh",
-    "scripts/close-wp.sh",
-    "scripts/content-filter-apply.py",
-    "scripts/content-filter-map.txt",
-    "scripts/coverage-skills.sh",
-    "scripts/create-skill.sh",
-    "scripts/create-wp.sh",
-    "scripts/day-close.sh",
-    "scripts/day-open-scaffold.sh",
-    "scripts/day-open-smoke-extended.sh",
-    "scripts/day-open-smoke.sh",
-    "scripts/fmt-critical-alert.sh",
-    "scripts/generate-catalogs.py",
-    "scripts/generate-diagnose-iwe-skill.py",
-    "scripts/generate-executor-catalog.py",
-    "scripts/generate-helper-catalog.py",
-    "scripts/generate-skills-catalog.sh",
-    "scripts/headless-runner.sh",
-    "scripts/hook-promote.sh",
-    "scripts/iwe-agent-dispatcher.py",
-    "scripts/iwe-audit.sh",
-    "scripts/iwe-backup-check.sh",
-    "scripts/iwe-catalog-list.py",
-    "scripts/iwe-drift-helpers/check-arch-version.sh",
-    "scripts/iwe-drift-helpers/check-status-legend.sh",
-    "scripts/iwe-drift.sh",
-    "scripts/iwe-grep-secret.sh",
-    "scripts/iwe-trace.py",
-    "scripts/ke-classify.sh",
-    "scripts/ke-queue-stats.sh",
-    "scripts/kimi-peer-adapter.sh",
-    "scripts/lesson-close.sh",
-    "scripts/memory-active-wp-update.sh",
-    "scripts/memory-bleed.sh",
-    "scripts/memory-health.sh",
-    "scripts/memory-migrate.sh",
-    "scripts/memory-validate.sh",
-    "scripts/migrate-initial-marker.sh",
-    "scripts/migrate-skills-to-v2.sh",
-    "scripts/migrate-to-runtime-target.sh",
-    "scripts/pack-ci-install.sh",
-    "scripts/peer-adapter-filter.py",
-    "scripts/pending-phases-sweep.sh",
-    "scripts/post-update-check-skills.sh",
-    "scripts/promote-common.sh",
-    "scripts/restore-from-exocortex.sh",
-    "scripts/route-task.sh",
-    "scripts/script-promote.sh",
-    "scripts/server-calendar.sh",
-    "scripts/server-news.sh",
-    "scripts/session-dispatcher-tsekh.py",
-    "scripts/settings-promote.sh",
-    "scripts/setup-extractor-feeders.sh",
-    "scripts/skill-promote.sh",
-    "scripts/skills-pull.sh",
-    "scripts/smoke-clean-env.sh",
-    "scripts/staging-audit.sh",
-    "scripts/style-check-post-run.sh",
-    "scripts/sync-agent-instructions.sh",
-    "scripts/sync-communication-style.py",
-    "scripts/sync-communication-style.yaml.example",
-    "scripts/sync-version-badge.sh",
-    "scripts/sync_feedback_to_memory.py",
-    "scripts/template-sync.sh",
-    "scripts/test-route-task.sh",
-    "scripts/tests/conftest.py",
-    "scripts/tests/test_agent_dashboard.py",
-    "scripts/validate-fmt-scripts.sh",
-    "scripts/validate-skill.sh",
-    "scripts/week-draft-append.sh",
-    "scripts/week-draft-init.sh"
+    "docs/release-audit-log.md"
   ],
   "deprecated_files": [
     {
@@ -1108,50 +1068,5 @@
       "path": "strategist-agent/scripts/strategist.sh",
       "reason": "strategist-agent directory removed"
     }
-  ],
-  "excluded_paths": [
-    {
-      "path": "roles/extractor/scripts/systemd/iwe-extractor-inbox-check.service",
-      "reason": "systemd template — processed by build-runtime.sh, not delivered directly"
-    },
-    {
-      "path": "roles/extractor/scripts/systemd/iwe-extractor-inbox-check.timer",
-      "reason": "systemd template — processed by build-runtime.sh, not delivered directly"
-    },
-    {
-      "path": "roles/strategist/scripts/systemd/iwe-strategist-morning.service",
-      "reason": "systemd template — processed by build-runtime.sh, not delivered directly"
-    },
-    {
-      "path": "roles/strategist/scripts/systemd/iwe-strategist-morning.timer",
-      "reason": "systemd template — processed by build-runtime.sh, not delivered directly"
-    },
-    {
-      "path": "roles/strategist/scripts/systemd/iwe-strategist-weekreview.service",
-      "reason": "systemd template — processed by build-runtime.sh, not delivered directly"
-    },
-    {
-      "path": "roles/strategist/scripts/systemd/iwe-strategist-weekreview.timer",
-      "reason": "systemd template — processed by build-runtime.sh, not delivered directly"
-    },
-    {
-      "path": "roles/synchronizer/scripts/systemd/iwe-exocortex-scheduler.service",
-      "reason": "systemd template — processed by build-runtime.sh, not delivered directly"
-    },
-    {
-      "path": "roles/synchronizer/scripts/systemd/iwe-exocortex-scheduler.timer",
-      "reason": "systemd template — processed by build-runtime.sh, not delivered directly"
-    },
-    {
-      "path": "inbox/fleeting-notes.md",
-      "reason": "personal notes — user-specific content, not part of template delivery"
-    },
-    "scripts/",
-    "scripts/tests/",
-    "promotion-status.yaml",
-    "AGENTS-agent-blocks.md",
-    "docs/BROWSER-CI-TEMPLATE.md",
-    "docs/maintaining-skills.md",
-    "docs/release-audit-log.md"
   ]
 }
