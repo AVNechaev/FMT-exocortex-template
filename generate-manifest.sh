@@ -21,6 +21,7 @@ echo "Генерация манифеста v$VERSION..."
 SKIP_PATTERNS=(
     ".git/"
     ".github/"
+    ".backups/"
     ".DS_Store"
     "generate-manifest.sh"
     "update-manifest.json"
