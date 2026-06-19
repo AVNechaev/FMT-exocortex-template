@@ -946,6 +946,8 @@
     }
   ],
   "excluded_paths": [
+    ".claude/skills/day-close/day-close/SKILL.md",
+    ".claude/skills/week-close/week-close/SKILL.md",
     "AGENTS-agent-blocks.md",
     "docs/BROWSER-CI-TEMPLATE.md",
     "docs/developer/README.md",
@@ -1042,7 +1044,9 @@
     "scripts/validate-skill.sh",
     "scripts/verify-manifest.sh",
     "scripts/week-draft-append.sh",
-    "scripts/week-draft-init.sh"
+    "scripts/week-draft-init.sh",
+    "translation-manifest.yaml",
+    "translation/glossary-v0.1.csv"
   ],
   "deprecated_files": [
     {
