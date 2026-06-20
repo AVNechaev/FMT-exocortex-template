@@ -79,9 +79,11 @@ substitute_file() {
         -e "s|$GOV_REPO_AUTHOR|\${IWE_GOVERNANCE_REPO:-$GOV_REPO_TMPL}|g" \
         -e "s|^layer: L3|layer: L1|" \
         "$file" > "$tmp"
-    # Сохранить права доступа (macOS compatible)
+    # Preserve permissions cross-platform. GNU stat (-c) FIRST: on Linux `stat -f` means
+    # --file-system and succeeds with garbage (not perms), so a BSD-first probe never falls
+    # through to -c there. On macOS `stat -c` fails and falls back to BSD `-f '%Lp'`.
     local mode
-    mode=$(stat -f '%Lp' "$file" 2>/dev/null || stat -c '%a' "$file" 2>/dev/null || echo "644")
+    mode=$(stat -c '%a' "$file" 2>/dev/null || stat -f '%Lp' "$file" 2>/dev/null || echo "644")
     chmod "$mode" "$tmp"
     mv "$tmp" "$file"
 }
