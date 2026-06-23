@@ -114,6 +114,8 @@ Versioning: [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- fix(update.sh): guard step [0] self-update from --check mode; add self-integrity hash guard (fix #205)
+- fix(CLAUDE.md §9): remove personal maintainer content, replace with neutral L3 stub (fix #199/#203)
 - `d8c8568` fix(validate-template): skip wakatime-heartbeat.sh in orphan hook check
 - `5917dd6` fix: pathspec enforcement in 6 finalizing skills + lesson-close + skill-promote
 - `b7d1c4c` fix(diagnose): remove duplicate /diagnose trigger entries after rename
