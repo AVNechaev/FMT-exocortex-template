@@ -159,6 +159,9 @@
       "path": ".claude/skills/archgate/SKILL.md"
     },
     {
+      "path": ".claude/skills/author-mode/SKILL.md"
+    },
+    {
       "path": ".claude/skills/artifactor/SKILL.md"
     },
     {
@@ -220,6 +223,9 @@
     },
     {
       "path": ".claude/skills/iwe-rules-review/SKILL.md"
+    },
+    {
+      "path": ".claude/skills/integration-gate/SKILL.md"
     },
     {
       "path": ".claude/skills/iwe-update/SKILL.md"
