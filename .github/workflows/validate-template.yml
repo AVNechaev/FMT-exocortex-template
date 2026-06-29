@@ -256,6 +256,16 @@ jobs:
         run: |
           bash scripts/verify-manifest.sh
 
+      # setup.sh ↔ update.sh parity. Root (29 июня, peer-session 2026-06-29-03):
+      # rules-lazy доставлялся через update.sh, но отсутствовал в setup.sh for-loop —
+      # fresh install терял компонент. check-setup-update-parity существовал (WP-315),
+      # но НЕ был подключён к CI (dormant guard), а его regex-контракт не покрывал
+      # измерение «список компонентов». Подключаем оба: контракт-паттерны + set-diff.
+      - name: Check setup/update parity contract
+        run: bash scripts/check-setup-update-parity.sh
+      - name: Check setup/update component-set parity
+        run: bash scripts/check-component-parity.sh
+
       # 7. Только допустимые placeholders
       - name: Check placeholders are valid
         run: |

@@ -57,10 +57,10 @@
       "path": ".claude/hooks/inject-fault-profile.sh"
     },
     {
-      "path": ".claude/hooks/lazy-context-loader.sh"
+      "path": ".claude/hooks/inject-role-prefixes.sh"
     },
     {
-      "path": ".claude/hooks/inject-role-prefixes.sh"
+      "path": ".claude/hooks/lazy-context-loader.sh"
     },
     {
       "path": ".claude/hooks/memory-exocortex-sync.sh"
@@ -165,9 +165,6 @@
       "path": ".claude/skills/archgate/SKILL.md"
     },
     {
-      "path": ".claude/skills/author-mode/SKILL.md"
-    },
-    {
       "path": ".claude/skills/artifactor/SKILL.md"
     },
     {
@@ -175,6 +172,9 @@
     },
     {
       "path": ".claude/skills/audit-installation/SKILL.md"
+    },
+    {
+      "path": ".claude/skills/author-mode/SKILL.md"
     },
     {
       "path": ".claude/skills/bottleneck-pick/SKILL.md"
@@ -222,6 +222,9 @@
       "path": ".claude/skills/fpf/SKILL.md"
     },
     {
+      "path": ".claude/skills/integration-gate/SKILL.md"
+    },
+    {
       "path": ".claude/skills/iwe-bug-report/SKILL.md"
     },
     {
@@ -229,9 +232,6 @@
     },
     {
       "path": ".claude/skills/iwe-rules-review/SKILL.md"
-    },
-    {
-      "path": ".claude/skills/integration-gate/SKILL.md"
     },
     {
       "path": ".claude/skills/iwe-update/SKILL.md"
@@ -1003,6 +1003,7 @@
     "scripts/backup-icloud.sh",
     "scripts/changelog-append.sh",
     "scripts/changelog-flush.sh",
+    "scripts/check-component-parity.sh",
     "scripts/check-dirty-repos.sh",
     "scripts/check-manifest-coverage.py",
     "scripts/check-open-sessions.sh",
@@ -1082,6 +1083,7 @@
     "scripts/validate-fmt-scripts.sh",
     "scripts/validate-skill.sh",
     "scripts/verify-manifest.sh",
+    "scripts/verify-template-integrity.sh",
     "scripts/week-draft-append.sh",
     "scripts/week-draft-init.sh"
   ],
