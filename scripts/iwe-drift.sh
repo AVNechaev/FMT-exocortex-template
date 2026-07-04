@@ -132,6 +132,27 @@ collect() {
     while IFS=$'\t' read -r id source derived relation check thresh crit owner symptom; do
         [ -z "$id" ] && continue
 
+        # issue #220: check: script:<path> раньше читался, но никогда не исполнялся —
+        # такие пары молча трактовались как mtime-lag (source==derived → lag всегда 0 → всегда "ok").
+        case "$check" in
+            script:*)
+                local helper_path="$IWE_ROOT/${check#script:}"
+                local script_status
+                if [ ! -f "$helper_path" ]; then
+                    script_status="missing"
+                elif bash "$helper_path" >/dev/null 2>&1; then
+                    script_status="ok"
+                else
+                    case "$?" in
+                        2) script_status="critical" ;;
+                        *) script_status="missing" ;;
+                    esac
+                fi
+                printf "%s\t%s\t%s\t%s\t%s\t%s\n" "?" "$id" "$relation" "$script_status" "$owner" "$symptom"
+                continue
+                ;;
+        esac
+
         local src_path="$source"
         local dst_path="$derived"
         case "$src_path" in /*) ;; *) src_path="$IWE_ROOT/$src_path" ;; esac
