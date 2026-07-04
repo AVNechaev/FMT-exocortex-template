@@ -114,6 +114,9 @@
       "path": ".claude/parity-contract.yaml"
     },
     {
+      "path": ".claude/process-pattern-catalog.yaml"
+    },
+    {
       "path": ".claude/rules-lazy/role-prefixes-full.md"
     },
     {
@@ -355,6 +358,9 @@
     },
     {
       "path": ".claude/styles/s0-core.md"
+    },
+    {
+      "path": ".claude/templates/drr-template.md"
     },
     {
       "path": ".claude/sync-manifest.yaml"

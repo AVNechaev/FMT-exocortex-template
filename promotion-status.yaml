@@ -243,3 +243,45 @@ promotions:
     fmt_sha: ""
     promoted_at: 2026-06-23T05:11:01Z
     verified_in_clean_env: na
+  - artifact_path: CLAUDE.md (§1 Лестница принципов)
+    type: rule
+    source_sha: ""
+    fmt_sha: ""
+    promoted_at: 2026-07-04T05:29:49Z
+    verified_in_clean_env: na
+  - artifact_path: memory/repo-type-rules.md (Лестница принципов секция)
+    type: rule
+    source_sha: ""
+    fmt_sha: ""
+    promoted_at: 2026-07-04T05:29:49Z
+    verified_in_clean_env: na
+  - artifact_path: .claude/process-pattern-catalog.yaml
+    type: catalog
+    source_sha: ""
+    fmt_sha: ""
+    promoted_at: 2026-07-04T05:29:49Z
+    verified_in_clean_env: true
+  - artifact_path: memory/protocol-work.md (§1a Микрошаговая собранность)
+    type: protocol
+    source_sha: ""
+    fmt_sha: ""
+    promoted_at: 2026-07-04T05:29:49Z
+    verified_in_clean_env: na
+  - artifact_path: .claude/skills/archgate (Шаг 4.6 DRR Adequacy Pass)
+    type: skill
+    source_sha: ""
+    fmt_sha: ""
+    promoted_at: 2026-07-04T05:29:49Z
+    verified_in_clean_env: na
+  - artifact_path: .claude/templates/drr-template.md
+    type: rule
+    source_sha: ""
+    fmt_sha: ""
+    promoted_at: 2026-07-04T05:29:49Z
+    verified_in_clean_env: na
+  - artifact_path: .claude/rules/distinctions.md (TPF ≠ DS)
+    type: rule
+    source_sha: ""
+    fmt_sha: ""
+    promoted_at: 2026-07-04T05:29:49Z
+    verified_in_clean_env: na
