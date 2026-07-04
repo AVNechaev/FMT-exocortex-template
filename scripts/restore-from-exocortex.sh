@@ -87,8 +87,11 @@ log "memory-файлов восстановлено: $mem_count"
 # === Шаг 2: CLAUDE.md → workspace root ===
 # issue #217: прямая подстановка {{HOME_DIR}} -> $HOME делает восстановление
 # ОС-агностичным (бэкап пишется на плейсхолдере в day-close.sh, шаг 1).
+# $HOME стоит в replacement-части sed s/// — экранируем & и \, иначе HOME с &
+# трактуется как «весь совпавший текст» и портит путь (cold-review находка).
+HOME_SED_SAFE=$(printf '%s' "$HOME" | sed 's/[&\]/\\&/g')
 if [ -f "$EXOCORTEX_SRC/CLAUDE.md" ]; then
-    run "sed 's|{{HOME_DIR}}|$HOME|g' \"$EXOCORTEX_SRC/CLAUDE.md\" > \"$WORKSPACE_DIR/CLAUDE.md\""
+    run "sed 's|{{HOME_DIR}}|$HOME_SED_SAFE|g' \"$EXOCORTEX_SRC/CLAUDE.md\" > \"$WORKSPACE_DIR/CLAUDE.md\""
     log "CLAUDE.md восстановлен → $WORKSPACE_DIR/CLAUDE.md"
 else
     warn "CLAUDE.md в exocortex отсутствует — пропуск"

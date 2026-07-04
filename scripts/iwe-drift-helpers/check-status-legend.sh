@@ -101,8 +101,11 @@ extract_id_status_pairs() {
             gsub(/^[[:space:]]+|[[:space:]]+$/, "", status_field)
             gsub(/~~/, "", status_field)
 
-            # issue #220: id может быть обёрнут **...** и/или содержать префикс WP-
-            # (`| **WP-58** |`, `| ~~**WP-60**~~ |`) — не только plain-numeric.
+            # issue #220: id может быть обёрнут **...** и/или содержать префикс WP-,
+            # независимо друг от друга (`| **WP-58** |`, `| ~~**WP-60**~~ |`,
+            # `| WP-61 |`, `| ~~WP-62~~ |`) — не только plain-numeric. Cold-review
+            # (2026-07-04) нашёл, что WP-N без ** тихо выпадал из парсинга — добавлены
+            # две ветки без **, симметрично уже имеющимся с **.
             if (match(id_field, /^~~[0-9]+~~$/)) {
                 id_format = "terminal"
                 gsub(/~~/, "", id_field)
@@ -114,6 +117,12 @@ extract_id_status_pairs() {
             } else if (match(id_field, /^\*\*(WP-)?[0-9]+\*\*$/)) {
                 id_format = "active"
                 gsub(/\*\*|WP-/, "", id_field)
+            } else if (match(id_field, /^~~WP-[0-9]+~~$/)) {
+                id_format = "terminal"
+                gsub(/~~|WP-/, "", id_field)
+            } else if (match(id_field, /^WP-[0-9]+$/)) {
+                id_format = "active"
+                gsub(/WP-/, "", id_field)
             } else {
                 next  # некорректный формат, пропускаем
             }
