@@ -44,6 +44,15 @@ EXCLUDED_EXACT=(
     "docs/release-audit-log.md"
 )
 
+# === scripts/ явно промотированные на платформу (иначе исключаются целиком EXCLUDED_PATTERNS) ===
+# scripts/script-promote.sh копирует файл в scripts/ и вызывает этот генератор,
+# но без allow-list здесь общий exclude "scripts/" тут же откатывает промоцию
+# на следующей регенерации манифеста (найдено issue #229/#228: регенерация
+# молча уронила scripts/iwe-bug-report.sh обратно в excluded_paths).
+SCRIPTS_ALLOWLIST=(
+    "scripts/iwe-bug-report.sh"
+)
+
 # === Исключения из files, но не в excluded_paths (пользовательское пространство) ===
 FILES_EXCLUDE_PATTERNS=(
     "seed/"
@@ -89,6 +98,9 @@ while IFS= read -r rel; do
     done
     for exact in "${EXCLUDED_EXACT[@]}"; do
         [ "$rel" = "$exact" ] && { is_excluded=true; break; }
+    done
+    for allowed in "${SCRIPTS_ALLOWLIST[@]}"; do
+        [ "$rel" = "$allowed" ] && { is_excluded=false; break; }
     done
 
     if $is_excluded; then

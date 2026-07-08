@@ -951,6 +951,9 @@
       "path": "roles/verifier/role.yaml"
     },
     {
+      "path": "scripts/iwe-bug-report.sh"
+    },
+    {
       "path": "sessions/00-index.md"
     },
     {
@@ -1044,7 +1047,6 @@
     "scripts/iwe-agent-dispatcher.py",
     "scripts/iwe-audit.sh",
     "scripts/iwe-backup-check.sh",
-    "scripts/iwe-bug-report.sh",
     "scripts/iwe-catalog-list.py",
     "scripts/iwe-drift-helpers/check-arch-version.sh",
     "scripts/iwe-drift-helpers/check-status-legend.sh",
