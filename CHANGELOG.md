@@ -76,10 +76,18 @@ Versioning: [Semantic Versioning](https://semver.org/).
 
 
 
+
+
+
+
+
+
+
 ## [Unreleased] — обновлено 2026-07-08
 
 ### Added
 
+- `1c71664` feat: promote day-open-pipeline.sh entry point (WP-7 FMT-PROMOTE-DAYOPEN1)
 - `c428393` feat(canon-sync): add iwesys/MimEcoSys publish jobs to translate-sync workflow
 - `a100fa6` feat: promote iwe-bug-report.sh to platform (WP-5 sub-#3)
 - `529e165` feat(wp-448-ф7): промоция TPF-рамки — 7 артефактов процессного слоя IWE
@@ -121,7 +129,6 @@ Versioning: [Semantic Versioning](https://semver.org/).
 - `84858e4` fix(release): sync-version-badge.sh --fix broken on macOS BSD sed + README badge drift
 - `0b5e140` fix(extractor): guard против запуска сырого файла шаблона + правка примеров
 - `b4d08a2` fix(v0.35.5): orphan-detection TypeError + DS-strategy validator + root detection (#214 #215)
-- `212fa2f` fix(setup): include rules-lazy in dry-run and section message
 
 
 ## [0.35.5] — 2026-06-30

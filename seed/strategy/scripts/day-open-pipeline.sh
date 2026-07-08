@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SNAPSHOT — synced manually via script-promote.sh from FMT-exocortex-template/scripts/. Do not edit here directly.
 # day-open-pipeline.sh — оркестратор полного конвейера Day Open (WP-356 DOE3)
 # Поток: preflight → scaffold → llm-fill (per-section) → checks → commit/push
 #
