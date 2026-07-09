@@ -117,14 +117,16 @@ gh repo clone ailev/FPF FPF -- --depth=1             # если нет FPF/
 - **`pilot-requested`** — пользователь сам просит закрепить имя, в любой момент.
 - **`agent-proposed-after-N-distinctions`** — агент предлагает финализацию после того, как в `01B-distinctions.md` появилось **минимум 3 различения** (не раньше — одного-двух недостаточно, чтобы оценить, ложится ли имя на содержание).
 
+Пути в `provisional_distinction_files` хранятся **относительно корня Pack** (например `01-domain-contract/01B-distinctions.md`, без префикса `PACK-{slug}/`) — резолвить их в реальный файловый путь всегда через ТЕКУЩЕЕ имя директории Pack на момент операции. Поэтому после `git mv` (шаг 2 ниже) пути из списка уже корректны без отдельной правки — искать нужно по `PACK-{new_slug}/<путь-из-списка>`.
+
 Порядок действий:
 1. Пользователь подтверждает текущее `pack_candidate`/`pack_id_slug` или называет новое.
-2. Если `pack_id_slug` изменился — `git mv PACK-{old_slug} PACK-{new_slug}`.
-3. Обновить пути в `provisional_distinction_files` (frontmatter `.pfad-decision.md`) — заменить старый префикс директории на новый.
-4. По каждому файлу из `provisional_distinction_files`: посчитать вхождения `{{PACK_ID}}` ДО замены (`grep -c '{{PACK_ID}}' <файл>` = N), затем заменить все вхождения `{{PACK_ID}}` → `{new_slug}` в заголовках различений.
-5. Проверить факт замены: `grep -c '{{PACK_ID}}' <файл>` после замены должен быть `0`, а число заголовков `### {new_slug}.D.NNN` в файле должно равняться N. Расхождение (остались `{{PACK_ID}}` или число новых заголовков ≠ N) — не коммитить, показать диф пользователю.
-6. Если `pack_id_slug` изменился — обновить все места, где материализовано имя: `pack_id`/`pack_name` в `00-pack-manifest.md`, заголовок `# PACK-{slug}` в `CLAUDE.md` Pack'а, поля `pack_id_slug`/`pack_candidate` в самом `.pfad-decision.md`.
-7. Очистить `provisional_distinction_files`, проставить `name_status: finalized` в манифесте **и** `status: finalized` в frontmatter `.pfad-decision.md`, дозаполнить секцию «Финальный выбор» в `.pfad-decision.md` (`decided_by`, `proposed_by`).
+2. Если `pack_id_slug` изменился: проверить, что `PACK-{new_slug}/` ещё не существует (`git mv` в уже существующую директорию перенесёт файлы ВНУТРЬ неё вместо переименования) — при коллизии остановиться и попросить пилота другой slug. Иначе выполнить `git mv PACK-{old_slug} PACK-{new_slug}`.
+3. По каждому пути из `provisional_distinction_files`, резолвя его как `PACK-{new_slug}/<путь>` (см. выше): посчитать вхождения `{{PACK_ID}}` ДО замены (`grep -c '{{PACK_ID}}' <файл>` = N), затем заменить все вхождения `{{PACK_ID}}` → `{new_slug}` в заголовках различений.
+4. Проверить факт замены: `grep -c '{{PACK_ID}}' <файл>` после замены должен быть `0`, а число заголовков `### {new_slug}.D.NNN` в файле должно равняться N. Расхождение (остались `{{PACK_ID}}` или число новых заголовков ≠ N) — не коммитить, показать диф пользователю.
+5. Если `pack_id_slug` изменился — обновить все места, где материализовано имя: `pack_id`/`pack_name` в `00-pack-manifest.md`, заголовок `# PACK-{slug}` в `CLAUDE.md` Pack'а, поля `pack_id_slug`/`pack_candidate` в самом `.pfad-decision.md`, переименовать `06-sota/{old_slug}-sota-sheet.md` → `06-sota/{new_slug}-sota-sheet.md` (если файл существует — Шаг 1.5 мог быть пропущен). Если на Шаге 4 был создан GitHub-репозиторий под старым именем — сообщить пилоту, что его нужно переименовать отдельно (`gh repo rename`), скилл это не делает автоматически.
+6. Очистить `provisional_distinction_files`, проставить `name_status: finalized` в манифесте **и** `status: finalized` в frontmatter `.pfad-decision.md`, дозаполнить секцию «Финальный выбор» в `.pfad-decision.md` (`decided_by`, `proposed_by`).
+7. Закоммитить изменённые файлы (конкретным списком путей, не `git add -A`) — сообщением вида `feat: finalize Pack name → PACK-{new_slug}`.
 
 ---
 
