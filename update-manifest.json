@@ -1005,6 +1005,7 @@
   "excluded_paths": [
     "AGENTS-agent-blocks.md",
     "docs/BROWSER-CI-TEMPLATE.md",
+    "docs/assets/orz-cycle.svg",
     "docs/developer/README.md",
     "docs/developer/card-template.md",
     "docs/developer/developer-guide.md",

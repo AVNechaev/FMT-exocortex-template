@@ -14,15 +14,20 @@ argument-hint: "<путь к pack или wp-контексту пакета>"
 
 ## Шаг 1. Загрузить материалы
 
-1. Прочитать контекст пакета (WP-контекст или frontmatter Pack-папки)
-2. Извлечь:
-   - `title` / `slug` / `pack_id_code` — идентификаторы пакета
-   - `status` — seed / mature / deprecated
-   - Наличие файлов из фаз Ф1-Ф3:
-     - Ф1: `06-sota/{slug}-sota-sheet.md` (SoTA-лист)
-     - Ф2: `.pfad-decision.md` (decision record с границами/альтернативами)
-     - Ф3: `01B-distinctions.md` с маркером `**Maturity:** seed` и mature-lite чек-листом
-3. **Особое внимание:** для seed-пакета ожидается, что некоторые координаты будут `missing(seed-expected)` — это НОРМАЛЬНО, не FAIL. Проверка честно оценивает то, что ЕСТь, не то, что еще развивается.
+1. Прочитать `00-pack-manifest.md` Pack'а (и WP-контекст, если указан)
+2. Извлечь из манифеста:
+   - `pack_id` (короткий код) / `pack_name` — идентификаторы пакета
+   - `status` (`draft | active | deprecated`) и `name_status` (`provisional | finalized`)
+   - `sota_sources` (`none | grounded`)
+3. **Определение «seed-пакет» (фиксированное, для seed-expected-логики):** Pack считается seed, если манифест содержит `status: draft`. Maturity различений (`**Maturity:** seed` в 01B) — атрибут отдельного различения, НЕ Pack'а; для классификации Pack'а не используется.
+4. Проверить наличие файлов-свидетельств (фазы Ф1-Ф3 WP-474):
+   - `06-sota/{slug}-sota-sheet.md` (SoTA-лист, Ф1)
+   - `.pfad-decision.md` (decision record: таблицы Домен/Имя/Граница/Kind + «Финальный выбор», Ф2+Ф5)
+   - `01-domain-contract/01B-distinctions.md` (различения с маркерами `**Maturity:**`, Ф3)
+   - `ontology.md` (термины домена, SPF/pack-template)
+5. **Особое внимание:** для seed-пакета ожидается, что часть координат будет `missing(seed-expected)` — это НОРМАЛЬНО, не FAIL. Проверка честно оценивает то, что ЕСТЬ, не то, что ещё развивается.
+
+**Плейсхолдер-конвенция (используется флагами ниже, фиксированная):** значение ячейки/поля считается плейсхолдером, если оно пустое, обёрнуто в `_..._` (курсив шаблона), `{{...}}` или `<...>`, либо равно (case-insensitive) одному из: `...`, `TBD`, `todo`, `—`.
 
 ## Шаг 2. Проверить 11 координат D1-D11
 
@@ -51,12 +56,12 @@ argument-hint: "<путь к pack или wp-контексту пакета>"
 
 **Проверка:** Пакет показывает путь от informal (мем, интуиция) к formal (спецификация, доказательство), включая промежуточные уровни. Seed-пакет должен хотя бы обозначить эту лестницу.
 
-**Evidence:**
-- Маркер `**Maturity:** seed` в 01B-distinctions.md → даёт сигнал о статусе (seed vs mature)
-- Mature-lite чек-лист (Проблема / Forces / Пример / Ошибка / Последствия) → обозначает путь формализации
-- Вместе они достаточны для порога → **addressed**
+**Evidence (только артефакты Pack'а — mature-lite чек-лист живёт в pack-new/SKILL.md как процесс и в Pack не материализуется, его искать НЕ нужно):**
+- `01B-distinctions.md` содержит ≥1 различение, и у каждого различения maturity определена: либо строка `**Maturity:** seed` под заголовком, либо её отсутствие (= mature по конвенции Ф3) → лестница seed→mature обозначена → **addressed**
+- `01B-distinctions.md` существует, но различений нет (только шаблон-заготовка) → **missing(seed-expected: различения ещё не добавлены)**
+- Файла нет → **missing**
 
-**Вердикт:** **addressed** если оба артефакта есть, иначе **missing**
+**Вердикт:** по правилам выше, детерминированно
 
 ### D4 — CoreDependencyAndDomainBoundaryAdequacy
 
@@ -70,20 +75,25 @@ argument-hint: "<путь к pack или wp-контексту пакета>"
 
 **Проверка:** Пакет описан в единообразном формате (не смешаны разные нотации, стили). Слои пакета (definitions / rules / patterns / tools) чётко разделены.
 
-**Evidence:** Для seed-пакета структура дерева само по себе — evidence. Если Pack создан через `pack-new` → структура соответствует `SPF/pack-template/`.
+**Evidence (детерминированное правило):** проверить наличие 8 корневых элементов структуры, создаваемой `pack-new` Шаг 4 (НЕ дерева `SPF/pack-template/` — там нет README/REPO-TYPE/CLAUDE.md): `README.md`, `REPO-TYPE.md`, `CLAUDE.md`, `00-pack-manifest.md`, `ontology.md`, `01-domain-contract/`, `06-sota/` (или `sota_sources: none` в манифесте вместо директории), `07-map/`.
 
-**Вердикт:** **missing(seed-expected)** если явная спецификация формата отсутствует; **partial** если структура есть, но не формализована; **addressed** если есть явная формализация (редко для seed)
+**Вердикт:** **partial** — все 8 элементов на месте (форма выдержана по шаблону, но собственной спецификации слоёв у Pack'а нет — для seed это потолок); **missing(seed-expected: структура частична)** — хотя бы один элемент отсутствует. `addressed` на seed-стадии недостижим (требует явной формализации слоёв — mature-уровень).
 
 ### D6 — DomainLexiconAndKindSettlementAdequacy
 
-**Проверка:** Пакет ясно определяет ключевые термины домена (лексикон), различает их от похожих терминов. Определяет базовый Kind (род сущности) для основного концепта домена.
+**Проверка:** Пакет определяет лексикон домена (термины + различения) и фиксирует решение о базовом Kind (роде сущности) основного концепта. Лексикон живёт в `ontology.md` + `01B-distinctions.md`; kind-settlement — в `.pfad-decision.md` (пир-сессия 2026-07-10-18: PFAD = decision record, дублировать в нём термины из ontology запрещено).
 
-**Evidence:**
-- 01B-distinctions.md содержит различения → partial evidence
-- Если `.pfad-decision.md` содержит раздел «отвергнутые/выбранные термины и kind» → **partial** или **addressed**
-- Если ни в одном файле нет явного решения про kind → **missing**
+**Три бинарных флага (плейсхолдер-конвенция — Шаг 1):**
+- **O** (лексикон, часть 1) = `ontology.md` §Domain Glossary содержит ≥1 строку, в которой ВСЕ ТРИ ячейки — Term (RU/EN), Definition, Parent Concept (SPF) — не-плейсхолдерные
+- **D** (лексикон, часть 2) = `01B-distinctions.md` содержит ≥1 различение (заголовок вида `### <код>.D.NNN` или `### {{PACK_ID}}.D.NNN`)
+- **S** (settlement) = строка `**Kind:**` в секции «Финальный выбор» `.pfad-decision.md` заполнена не-плейсхолдерным значением. Таблица `## Kind` (отвергнутые альтернативы) свидетельством settlement НЕ является — она может быть заполнена без принятого решения.
 
-**Вердикт:** Условно partial; уточнить по файлам
+**Вердикт (полная таблица истинности):**
+- **addressed** = O ∧ D ∧ S
+- **missing** = ¬O ∧ ¬D ∧ ¬S
+- **partial** = любая другая комбинация
+
+**Отвергнутые термины (не kind) — вне scope D6-lite, осознанно:** (а) lite-прогон измеряет floor (addressed=4), реестр отвергнутых терминов — уровень зрелого пакета, покрывается полной ординальной шкалой E.4.DPF.DA на mature-стадии; (б) места для такого реестра в текущем шаблоне нет — `ontology.md` не имеет колонки отклонённых синонимов (проверено), её добавление = правка SPF/pack-template по процедуре §8.2, отдельное решение.
 
 ### D7 — PracticeUtilityAndProblemResolutionAdequacy
 
@@ -124,28 +134,29 @@ argument-hint: "<путь к pack или wp-контексту пакета>"
 
 **Проверка:** Пакет явно ссылается на современное state-of-art знание в домене (источники). Пакет не живёт в вакууме — он response на реальный статус knowledge.
 
-**Evidence:**
-- `06-sota/{slug}-sota-sheet.md` содержит список источников (минимум 3 источника + claims/evidence) → **addressed**
-- Если файл отсутствует → **missing**
-- Если файл есть, но источники неполные (0-2 источника) → **partial**
+**Evidence (порог = дизайн Ф1 SoTA-Sheet-lite: ОДИН источник достаточен для floor; порога «3 источника» в спецификации lite-прогона НЕТ):**
+- `06-sota/*-sota-sheet.md` существует и содержит ≥1 источник с не-плейсхолдерными полями **Claims** и **Evidence** → **addressed**
+- Файл существует, но Claims или Evidence плейсхолдерные → **partial**
+- Файла нет И манифест `sota_sources: none` → **missing(seed-expected: sota_sources=none зафиксировано в манифесте; добрать источник или формализованную практику автора на стадии наполнения)**
+- Файла нет, А манифест `sota_sources: grounded` → **missing** БЕЗ пометки (рассинхрон манифеста и факта — триггер FAIL)
 
-**Вердикт:** Зависит от наличия и качества 06-sota файла. **КРИТИЧНА ДЛЯ АГРЕГАТНОГО FAIL**
+**Вердикт:** по правилам выше. **КРИТИЧНА ДЛЯ АГРЕГАТНОГО FAIL**
 
 ## Шаг 3. Построить таблицу оценок
 
 | Координата | Статус | Маппинг (addressed/partial/missing) | Evidence / Комментарий |
 |---|---|---|---|
-| D1 DomainScopeAndUseAdequacy | — | 4/2/0 | проверено выше |
+| D1 DomainScopeAndUseAdequacy | — | 4/2/0 | .pfad-decision.md граница |
 | D2 DidacticEntryAndAdoptionAdequacy | — | missing(seed-expected) | педагогика — развитие |
-| D3 ScalableFormalityAndAssurancePathAdequacy | — | 4/2/0 | маркер seed + чек-лист |
+| D3 ScalableFormalityAndAssurancePathAdequacy | — | 4/2/0 | maturity-маркеры в 01B |
 | D4 CoreDependencyAndDomainBoundaryAdequacy | — | missing(seed-expected) | зависимости — mapping |
-| D5 PackageFormLayeringAndRelationAdequacy | — | 4/2/0 | структура по SPF шаблону |
-| D6 DomainLexiconAndKindSettlementAdequacy | — | 4/2/0 | различения + PFAD раздел |
+| D5 PackageFormLayeringAndRelationAdequacy | — | 2/0 (addressed недостижим на seed) | 8 корневых элементов шаблона |
+| D6 DomainLexiconAndKindSettlementAdequacy | — | 4/2/0 | флаги O/D/S, таблица истинности |
 | D7 PracticeUtilityAndProblemResolutionAdequacy | — | missing(seed-expected) | практики — Ф7+ **КРИТ** |
 | D8 HeterogeneousCaseAndTransferAdequacy | — | missing(seed-expected) | трансфер — развитие |
 | D9 EditionStateAndCurrentnessAdequacy | — | 4/2/0 | маркер + дата |
 | D10 ImprovementAndRefreshAdequacy | — | missing(seed-expected) | operations — Ф8+ |
-| D11 DomainSoTAAlignmentAdequacy | — | 4/2/0 | SoTA-лист **КРИТ** |
+| D11 DomainSoTAAlignmentAdequacy | — | 4/2/0 | SoTA-лист, ≥1 источник **КРИТ** |
 
 ## Шаг 4. Вернуть агрегатный verdict
 
