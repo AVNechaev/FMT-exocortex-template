@@ -131,7 +131,12 @@ jobs:
             sed -i "s|\[English version\](https://github.com/iwesys/IWE)|[Russian-language source]($SRC)|" "$R"
             sed -i "s|\[English version\](README.en.md)|[Russian-language source]($SRC)|" "$R"
             # Docs referenced by the README but not in the published set.
+            # ONTOLOGY.md is bilingual by design (RU term column + EN term
+            # column) — translating it would destroy the RU→EN mapping and
+            # trips the tier-1 glossary check, so it stays RU-source-only
+            # (learned from failed run 29099359739).
             sed -i "s|(extensions/README.md)|($SRC/blob/main/extensions/README.md)|" "$R"
+            sed -i "s|(ONTOLOGY.md)|($SRC/blob/main/ONTOLOGY.md)|" "$R"
           fi
 
       - name: Write EN-only community redirect stubs to en-draft

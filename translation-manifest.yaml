@@ -67,7 +67,6 @@ categories:
     glossary: translation/glossary-v0.1.csv
     files:
       - README.md
-      - ONTOLOGY.md
       - CODE_OF_CONDUCT.md
       - SECURITY.md
       - PRIVACY.md
