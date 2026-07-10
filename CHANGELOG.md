@@ -84,10 +84,11 @@ Versioning: [Semantic Versioning](https://semver.org/).
 
 
 
-## [Unreleased] — обновлено 2026-07-09
+## [Unreleased] — обновлено 2026-07-10
 
 ### Added
 
+- `fed2e79` feat(wp401): governance-файлы публичной витрины (CODE_OF_CONDUCT/SECURITY/PRIVACY/CODEOWNERS/CITATION.cff) + доставка в iwesys
 - `2381d7f` feat(wp-7): promote 6 day-open scripts + fix scaffold drift + seed new-user scripts
 - `927808b` feat(wp-7): promote 6 day-open scripts + fix scaffold drift + seed new-user scripts
 - `1c71664` feat: promote day-open-pipeline.sh entry point (WP-7 FMT-PROMOTE-DAYOPEN1)
@@ -101,6 +102,8 @@ Versioning: [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- `65e5534` rename(canon-sync): target repo iwesys/iwe-template -> iwesys/IWE
+- `e4a23f0` fix(wp415): jq null-guard for per-commit added/modified/removed in translate-sync
 - `039ccf8` chore(hygiene): untrack .DS_Store, добавить в .gitignore
 - `bdb2c9b` docs(changelog): thank users for #229/#228 reports, sync Unreleased section
 - `5b72787` rename(canon-sync): target repo iwesys/FMT-exocortex-template-en -> iwesys/iwe-template
