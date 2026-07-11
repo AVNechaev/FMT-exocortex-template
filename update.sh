@@ -101,6 +101,27 @@ is_author_mode() {
     grep -qE '^author_mode:[[:space:]]*true' "$params_file"
 }
 
+# author_diverged FPATH — author_mode: SCRIPT_DIR — git-клон этого самого шаблона,
+# из которого качается upstream. Git — точный арбитр «locally stale vs автор доработал»,
+# не список защищённых путей (issue #238, тот же класс бага, что стёр 66 файлов —
+# guard 86cf080 защитил только .claude/*, а манифест несёт roles/docs/pack-templates/
+# и другие каталоги вне списка). Диверженс = (1) файл dirty/untracked, ИЛИ (2) закоммичен
+# локально, но не в origin/$BRANCH (ещё не запромотирован). Fail-closed: не git-репо
+# или fetch не удался → защищаем (считаем diverged), чтобы не потерять данные молча.
+_AUTHOR_FETCH_DONE=false
+author_diverged() {
+    local fpath="$1"
+    is_author_mode || return 1
+    git -C "$SCRIPT_DIR" rev-parse --is-inside-work-tree >/dev/null 2>&1 || return 0
+    if [ "$_AUTHOR_FETCH_DONE" = false ]; then
+        git -C "$SCRIPT_DIR" fetch --quiet origin "$BRANCH" 2>/dev/null || true
+        _AUTHOR_FETCH_DONE=true
+    fi
+    [ -n "$(git -C "$SCRIPT_DIR" status --porcelain --untracked-files=all -- "$fpath" 2>/dev/null)" ] && return 0
+    [ -n "$(git -C "$SCRIPT_DIR" log --oneline "origin/$BRANCH..HEAD" -- "$fpath" 2>/dev/null)" ] && return 0
+    return 1
+}
+
 # === Detect directories ===
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
@@ -224,6 +245,11 @@ repair_pass() {
                         : # issue #229: owner: user в frontmatter — пилот владеет файлом, stale-repair не применяется никогда
                     elif is_personal_config "$fname"; then
                         : # личный L4-конфиг без frontmatter (day-rhythm-config.yaml) — НЕ stale-repair
+                    elif is_author_mode; then
+                        # issue #238: та же дыра, что уже закрыта для .claude/*-веток ниже —
+                        # автор мог доработать live-копию memory-файла напрямую, stale-repair
+                        # молча затирал бы её версией из SCRIPT_DIR.
+                        echo "  ⚠ $fpath — author_mode: memory/ рабочая копия не тронута. Сверь: diff \"$SCRIPT_DIR/$fpath\" \"$mem_dst\""
                     elif [ -r "$mem_dst" ] && [ "$(hash_file "$SCRIPT_DIR/$fpath")" != "$(hash_file "$mem_dst")" ]; then
                         cp "$SCRIPT_DIR/$fpath" "$mem_dst"
                         echo "  ⟲ $fpath → memory/ (stale repair)"
@@ -488,10 +514,18 @@ echo "Применяю обновления..."
 
 APPLIED=0
 REMOVED=0
+AUTHOR_SKIPPED=0
+APPLIED_PATHS=()
 
 for f in "${NEW_FILES[@]}"; do
+    if author_diverged "$f"; then
+        echo "  ⚠ $f — author_mode: локально изменён/удалён, не восстанавливаю. Сверь: git -C \"$SCRIPT_DIR\" status -- \"$f\""
+        AUTHOR_SKIPPED=$((AUTHOR_SKIPPED + 1))
+        continue
+    fi
     mkdir -p "$SCRIPT_DIR/$(dirname "$f")"
     cp "$TMPDIR_UPDATE/files/$f" "$SCRIPT_DIR/$f"
+    APPLIED_PATHS+=("$f")
     # Make scripts executable
     case "$f" in *.sh) chmod +x "$SCRIPT_DIR/$f" ;; esac
     echo "  + $f"
@@ -499,6 +533,17 @@ for f in "${NEW_FILES[@]}"; do
 done
 
 for f in "${UPDATED_FILES[@]}"; do
+    # issue #238: author_mode-guard ДО всех спецкейсов ниже (CLAUDE.md 3-way merge,
+    # SKILL.md USER-SPACE preserve, generic cp) — иначе несмёрженная авторская правка
+    # в любом из них та же участь, что уже стёрла 66 файлов (86cf080 закрыл только
+    # .claude/*-ветку в repair_pass()/Step 6, не эту, более раннюю точку входа).
+    if author_diverged "$f"; then
+        echo "  ⚠ $f — author_mode: несмёрженные правки, файл не тронут."
+        echo "    Сверь: diff \"$TMPDIR_UPDATE/files/$f\" \"$SCRIPT_DIR/$f\""
+        AUTHOR_SKIPPED=$((AUTHOR_SKIPPED + 1))
+        continue
+    fi
+    APPLIED_PATHS+=("$f")
     # Special handling for CLAUDE.md: 3-way merge preserving user customizations
     if [ "$f" = "CLAUDE.md" ] && [ -f "$SCRIPT_DIR/$f" ]; then
         BASE_FILE="$SCRIPT_DIR/.claude.md.base"
@@ -879,6 +924,10 @@ if [ -d "$CLAUDE_MEMORY_DIR" ]; then
                         echo "  ✓ $fname — owner: user, не перезаписан"
                     elif is_personal_config "$fname" && [ -f "$dst" ]; then
                         echo "  ✓ $fname — личный L4-конфиг, не перезаписан"
+                    elif is_author_mode && [ -f "$dst" ]; then
+                        # issue #238: тот же класс, что уже закрыт для .claude/*-веток —
+                        # эта ветка тоже слепо копировала SCRIPT_DIR поверх live-копии.
+                        echo "  ⚠ $fname — author_mode: memory/ рабочая копия не тронута. Сверь: diff \"$SCRIPT_DIR/$f\" \"$dst\""
                     else
                         cp "$SCRIPT_DIR/$f" "$dst"
                         MEM_UPDATED=$((MEM_UPDATED + 1))
@@ -1239,7 +1288,16 @@ fi
 
 if ! $SKIP_COMMIT; then
     if ! git diff --quiet 2>/dev/null || [ -n "$(git ls-files --others --exclude-standard 2>/dev/null)" ]; then
-        git add -A
+        if is_author_mode; then
+            # issue #238: стейджить только реально применённые файлы update.sh (APPLIED_PATHS),
+            # иначе незапромоченные авторские правки в SCRIPT_DIR попадут в коммит
+            # «chore: update» с неверной атрибуцией (выглядит как часть update, а не авторская работа).
+            for fpath in "${APPLIED_PATHS[@]}"; do
+                git add "$fpath" 2>/dev/null || true
+            done
+        else
+            git add -A
+        fi
         git commit -m "chore: update from upstream template v$UPSTREAM_VERSION" --no-verify 2>&1 | sed 's/^/  /'
         echo "  ✓ Изменения закоммичены"
     else
@@ -1274,6 +1332,10 @@ SUMMARY_MSG="  Обновление завершено ($APPLIED файлов"
 [ "$REMOVED" -gt 0 ] && SUMMARY_MSG="$SUMMARY_MSG, $REMOVED удалено"
 SUMMARY_MSG="$SUMMARY_MSG)"
 echo "$SUMMARY_MSG"
+if [ "${AUTHOR_SKIPPED:-0}" -gt 0 ]; then
+    echo "  ⚠ author_mode: $AUTHOR_SKIPPED файлов пропущено (несмёрженные локальные правки)."
+    echo "    Синхронизация — через promote-скрипты, либо вручную после git push."
+fi
 echo "=========================================="
 echo ""
 echo "Перезапустите Claude Code для применения обновлений в memory/."
