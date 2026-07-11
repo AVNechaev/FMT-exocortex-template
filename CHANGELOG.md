@@ -85,10 +85,13 @@ Versioning: [Semantic Versioning](https://semver.org/).
 
 
 
+
 ## [Unreleased] — обновлено 2026-07-11
 
 ### Added
 
+- `695033d` feat(residency-gate): ResidencyGate full implementation
+- `c286e98` feat: promote day-open-pipeline.sh to platform
 - `1d66115` feat(docs): принцип резидентности персональных данных (WP-475 Ф4)
 - `e919c04` feat(update.sh): add --fast check mode, version-only comparison (#230)
 - `34bcc57` feat(en-projection): community channels live on iwesys/IWE itself (pilot decision)
@@ -130,6 +133,11 @@ Versioning: [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- `242ec42` fix(manifest): deliver scripts/ by default instead of blanket-excluding it (#247, root #246)
+- `a5c6d0f` fix(day-open-scaffold): bound remaining unprotected network calls (#241 residual)
+- `b0ad33b` fix(update.sh): git-based author_diverged() guard replaces path whitelist (#238)
+- `65e6b76` fix(dry-run-gate): unified sentinel + command-split matcher closes 4 bypass holes (#237)
+- `39b58ac` fix(update.sh): --check не должен писать файлы при TOTAL_CHANGES=0
 - `86cf080` fix(update.sh): author_mode-guard для repair_pass()/Step 6 L1-паттерна — устраняет клоббер 66 файлов
 - `448daac` fix(note-review): страховка от воскрешения уже закрытого DayPlan (D6 РП-7)
 - `f37d93a` fix(exocortex): back up and restore extensions/, matching DATA-POLICY.md promise (#235)
@@ -180,9 +188,6 @@ Versioning: [Semantic Versioning](https://semver.org/).
 - `84858e4` fix(release): sync-version-badge.sh --fix broken on macOS BSD sed + README badge drift
 - `0b5e140` fix(extractor): guard против запуска сырого файла шаблона + правка примеров
 - `b4d08a2` fix(v0.35.5): orphan-detection TypeError + DS-strategy validator + root detection (#214 #215)
-- `212fa2f` fix(setup): include rules-lazy in dry-run and section message
-- `b7d75a8` fix(template): verify-template-integrity mirrors CI contract+smoke jobs
-- `0200a93` fix(template): close manifest drift + setup/update rules-lazy gap, wire parity gate
 
 
 ## [0.35.5] — 2026-06-30
