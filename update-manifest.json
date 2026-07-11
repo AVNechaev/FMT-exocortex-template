@@ -129,6 +129,12 @@
       "path": ".claude/rules-lazy/drift-guard.md"
     },
     {
+      "path": ".claude/rules-lazy/hooks-bypass-gate.md"
+    },
+    {
+      "path": ".claude/rules-lazy/integration-gate.md"
+    },
+    {
       "path": ".claude/rules-lazy/new-files-guard.md"
     },
     {

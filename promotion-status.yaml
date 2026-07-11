@@ -303,3 +303,15 @@ promotions:
     fmt_sha: ""
     promoted_at: 2026-07-11T14:45:00Z
     verified_in_clean_env: na
+  - artifact_path: .claude/rules-lazy/hooks-bypass-gate.md
+    type: rule
+    source_sha: 0d1ddf3
+    fmt_sha: ""
+    promoted_at: 2026-07-11T15:10:00Z
+    verified_in_clean_env: na
+  - artifact_path: .claude/rules-lazy/integration-gate.md
+    type: rule
+    source_sha: eb41d3d
+    fmt_sha: ""
+    promoted_at: 2026-07-11T15:10:00Z
+    verified_in_clean_env: na
