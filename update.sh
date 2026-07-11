@@ -92,6 +92,15 @@ is_personal_config() {
     esac
 }
 
+# is_author_mode — true когда WORKSPACE_DIR/params.yaml объявляет author_mode: true.
+# Автор правит L1 напрямую до промоции в шаблон — расхождение хэша тут не staleness.
+# См. inbox/bugs/bug-2026-07-11-update-sh-author-mode-blind-clobber.md.
+is_author_mode() {
+    local params_file="$WORKSPACE_DIR/params.yaml"
+    [ -f "$params_file" ] || return 1
+    grep -qE '^author_mode:[[:space:]]*true' "$params_file"
+}
+
 # === Detect directories ===
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
@@ -230,6 +239,8 @@ repair_pass() {
                     case "$fpath" in *.sh) chmod +x "$dst" ;; esac
                     echo "  ⟲ $fpath → workspace (repair)"
                     REPAIRED=$((REPAIRED + 1))
+                elif [ -r "$dst" ] && is_author_mode && [ "$(hash_file "$SCRIPT_DIR/$fpath")" != "$(hash_file "$dst")" ]; then
+                    echo "  ⚠ $fpath — author_mode: рабочая копия не тронута. Сверь: diff \"$SCRIPT_DIR/$fpath\" \"$dst\""
                 elif [ -r "$dst" ] && [ "$(hash_file "$SCRIPT_DIR/$fpath")" != "$(hash_file "$dst")" ]; then
                     cp "$SCRIPT_DIR/$fpath" "$dst"
                     case "$fpath" in *.sh) chmod +x "$dst" ;; esac
@@ -883,6 +894,10 @@ for f in "${NEW_FILES[@]}" "${UPDATED_FILES[@]}"; do
         .claude/skills/*/SKILL.md)
             src="$SCRIPT_DIR/$f"
             dst="$WORKSPACE_DIR/$f"
+            if is_author_mode && [ -f "$dst" ]; then
+                echo "  ⚠ $f — author_mode: рабочая копия не тронута. Сверь: diff \"$src\" \"$dst\""
+                continue
+            fi
             mkdir -p "$(dirname "$dst")"
             # 1. Extract USER_SECTION from workspace before overwriting
             if [ -f "$dst" ]; then
@@ -920,6 +935,10 @@ for f in "${NEW_FILES[@]}" "${UPDATED_FILES[@]}"; do
         .claude/skills/*|.claude/hooks/*|.claude/rules/*|.claude/rules-lazy/*|.claude/lib/*|.claude/config/*|.claude/detectors/*|.claude/scripts/*|.claude/agents/*|.claude/styles/*|.claude/templates/*)
             src="$SCRIPT_DIR/$f"
             dst="$WORKSPACE_DIR/$f"
+            if is_author_mode && [ -f "$dst" ]; then
+                echo "  ⚠ $f — author_mode: рабочая копия не тронута. Сверь: diff \"$src\" \"$dst\""
+                continue
+            fi
             mkdir -p "$(dirname "$dst")"
             cp "$src" "$dst"
             echo "  ✓ $f → workspace"
