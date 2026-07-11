@@ -397,7 +397,13 @@ if [ "$TOTAL_CHANGES" -eq 0 ]; then
     # issue #226: TOTAL_CHANGES=0 значит SCRIPT_DIR уже совпадает с upstream — но
     # workspace мог остаться stale (прерванный предыдущий запуск). Чиним прямо тут,
     # иначе repair-pass ниже никогда не выполнится (недостижим после этого exit).
-    repair_pass
+    # bug-2026-07-11-update-sh-author-mode-blind-clobber: repair_pass() пишет файлы
+    # на диск — под --check (без --fast) это ложное «превью без изменений».
+    if $CHECK_ONLY; then
+        echo "  ℹ Режим --check: repair-pass пропущен (может чинить workspace, запусти без --check)."
+    else
+        repair_pass
+    fi
     echo "✓ Всё актуально. Обновлений нет. ($UNCHANGED файлов проверено)"
     exit 0
 fi
