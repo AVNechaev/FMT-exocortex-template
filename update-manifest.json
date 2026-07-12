@@ -1119,6 +1119,12 @@
       "path": "scripts/headless-runner.sh"
     },
     {
+      "path": "scripts/hindsight_adapter.py"
+    },
+    {
+      "path": "scripts/hindsight_trigger.py"
+    },
+    {
       "path": "scripts/hook-promote.sh"
     },
     {
