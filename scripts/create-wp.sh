@@ -244,6 +244,14 @@ with open(registry_path, "w", encoding="utf-8") as f:
 print("   ✅ REGISTRY: строка {} добавлена".format(wp_num))
 PYEOF
 
+# Post-write verification (issue #256): create-wp.sh once reported success here
+# without the row actually landing in REGISTRY — the writer above has no retry/lock,
+# so confirm the row is really there before moving on.
+if ! grep -qF "| ${WP_NUM} |" "$REGISTRY"; then
+  echo "❌ REGISTRY write verification FAILED: строка WP-${WP_NUM} не найдена после записи" >&2
+  exit 1
+fi
+
 # --- Шаг 3: WeekPlan ---
 echo "4/6 WeekPlan..."
 
