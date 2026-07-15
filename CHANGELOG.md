@@ -96,10 +96,15 @@ Versioning: [Semantic Versioning](https://semver.org/).
 
 
 
-## [Unreleased] — обновлено 2026-07-14
+
+
+## [Unreleased] — обновлено 2026-07-15
 
 ### Added
 
+- `c65f9d0` feat(WP-450 S-50): promote hot-files.list auto-discovery to FMT
+- `33ebbf9` feat(WP-450): promote verify-context-budget.sh to FMT (S-50)
+- `4bebc58` feat: complete gate-metrics.sh promotion — manifest coverage + changelog
 - `39421f0` feat(strategist): вызвать week-open-day-section-patch после session-prep (WP-484 Ф3)
 - `dd011fa` feat(hindsight): deliver hindsight_trigger.py + hindsight_adapter.py, closing L2 integration gap (#252)
 - `046aec3` feat(wp-450-ф5): промоция hooks-bypass-gate.md + integration-gate.md
@@ -153,6 +158,14 @@ Versioning: [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- `7e5be12` fix: resolve WP-REGISTRY schema drift cluster (#263)
+- `fc763e4` fix(WP-450): promote missing checklists.md pointer + ailev↔IWE glossary
+- `8b61285` fix(changelog): restore 0200a93 entry dropped by the auto-regeneration step
+- `0e933ee` fix(audit-installation): mark github_status as subscription-gated
+- `d55b855` fix(day-close): correct check-index-health.py path
+- `51f30fc` fix(iwe-drift): resolve script: helpers relative to the template, not IWE_ROOT
+- `b0d1fe0` fix(day-open-scaffold): resolve template-owned scripts locally, not via governance repo
+- `40c2d70` fix(strategist): retire redundant day-plan scenario on non-strategy-days (WP-484)
 - `a007d15` fix(create-wp): три отставших фикса из root-версии — папка WP-434, consent-file, WeekPlan replace-limit
 - `3c82107` fix(day-open): CP_PROFILE указывал на несуществующий cp-profile.json
 - `7cbd225` fix: 3 template bugs from bot-flagged issue sweep (#253, #255, #256)
@@ -224,9 +237,6 @@ Versioning: [Semantic Versioning](https://semver.org/).
 - `84858e4` fix(release): sync-version-badge.sh --fix broken on macOS BSD sed + README badge drift
 - `0b5e140` fix(extractor): guard против запуска сырого файла шаблона + правка примеров
 - `b4d08a2` fix(v0.35.5): orphan-detection TypeError + DS-strategy validator + root detection (#214 #215)
-- `212fa2f` fix(setup): include rules-lazy in dry-run and section message
-- `b7d75a8` fix(template): verify-template-integrity mirrors CI contract+smoke jobs
-- `0200a93` fix(template): close manifest drift + setup/update rules-lazy gap, wire parity gate
 
 
 ## [0.35.5] — 2026-06-30
