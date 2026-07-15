@@ -1,0 +1,102 @@
+#!/bin/bash
+# verify-context-budget.sh — M1 contract: hot-framework ≤55K tokens per session (WP-445 Ф6)
+# Comments in English per engineering code style (IWE meeting 2026-06-14).
+set -euo pipefail
+
+IWE_ROOT="${IWE_ROOT:-$HOME/IWE}"
+IWE_RULES="$IWE_ROOT/.claude/rules"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Files auto-loaded as hot-framework every session — single source: hot-files.list
+# (macOS ships bash 3.2 — no mapfile; while-read is the portable equivalent.)
+HOT_FILES=()
+while IFS= read -r line; do
+  HOT_FILES+=("$line")
+done < <(sed "s|\$IWE_ROOT|$IWE_ROOT|" "$SCRIPT_DIR/hot-files.list")
+
+TOTAL_BYTES=0
+MISSING=0
+echo "=== Hot-framework token audit (WP-445 M1) ==="
+for f in "${HOT_FILES[@]}"; do
+  if [ -f "$f" ]; then
+    bytes=$(wc -c < "$f")
+    TOTAL_BYTES=$((TOTAL_BYTES + bytes))
+    printf "  %-60s %6d bytes\n" "$(basename "$f")" "$bytes"
+  else
+    echo "  MISSING: $f"
+    MISSING=$((MISSING + 1))
+  fi
+done
+
+# Real bytes/token ratio if calibrated (scripts/calibrate-median-ratio.py), else placeholder /5.
+MEDIAN_RATIO_CONF="$SCRIPT_DIR/median-ratio.conf"
+CALIBRATED=false
+if [ -f "$MEDIAN_RATIO_CONF" ]; then
+  # shellcheck source=/dev/null
+  source "$MEDIAN_RATIO_CONF"
+  awk -v r="$MEDIAN_RATIO" 'BEGIN { exit !(r > 0) }' \
+    || { echo "ERROR: invalid MEDIAN_RATIO ('$MEDIAN_RATIO') in $MEDIAN_RATIO_CONF — must be > 0" >&2; exit 1; }
+  CALIBRATED=true
+else
+  MEDIAN_RATIO=5
+fi
+# Round to nearest (not truncate) — truncation biases hard -le thresholds toward false PASS at the boundary.
+TOTAL_TOKENS=$(awk -v bytes="$TOTAL_BYTES" -v ratio="$MEDIAN_RATIO" 'BEGIN { printf "%.0f", bytes / ratio }')
+echo ""
+echo "Total bytes: $TOTAL_BYTES"
+if [ "$CALIBRATED" = true ]; then
+  echo "Est. tokens: ~$TOTAL_TOKENS (@ ${MEDIAN_RATIO} bytes/token, calibrated — see median-ratio.conf)"
+else
+  echo "Est. tokens: ~$TOTAL_TOKENS (@ 5 bytes/token placeholder, NOT calibrated — run scripts/calibrate-median-ratio.py)"
+fi
+echo ""
+
+PASS=true
+
+# M1 check: ≤20,000 tokens (tightened from 55K — peer-session 2026-06-28-02)
+# Threshold = measured fact ~18.2K + ~10% margin (early-warning, not comfort).
+if [ "$TOTAL_TOKENS" -le 20000 ]; then
+  echo "✅ M1 PASS: hot-framework ~${TOTAL_TOKENS}t ≤ 20K limit"
+else
+  echo "❌ M1 FAIL: hot-framework ~${TOTAL_TOKENS}t exceeds 20K limit (delta: $((TOTAL_TOKENS - 20000))t over)"
+  PASS=false
+fi
+
+# M2 check: ≤12,000 tokens — only meaningful once calibrated (WP-450 F3, peer-session 2026-07-02-14).
+# Uncalibrated /5 placeholder is not trustworthy enough to fail the build on; PASS/FAIL only after calibration.
+if [ "$CALIBRATED" = true ]; then
+  if [ "$TOTAL_TOKENS" -le 12000 ]; then
+    echo "✅ M2 PASS: hot-framework ~${TOTAL_TOKENS}t ≤ 12K limit"
+  else
+    echo "❌ M2 FAIL: hot-framework ~${TOTAL_TOKENS}t exceeds 12K limit (delta: $((TOTAL_TOKENS - 12000))t over)"
+    PASS=false
+  fi
+else
+  echo "⏭️  M2 SKIPPED: not calibrated (run scripts/calibrate-median-ratio.py with ANTHROPIC_API_KEY)"
+fi
+
+# HOT line-count check on distinctions.md (≤150 lines per WP-7 NR1.2)
+DISTINCTIONS="$IWE_RULES/distinctions.md"
+if [ -f "$DISTINCTIONS" ]; then
+  LINE_COUNT=$(wc -l < "$DISTINCTIONS")
+  if [ "$LINE_COUNT" -le 150 ]; then
+    echo "✅ LINE PASS: distinctions.md has $LINE_COUNT lines (≤150)"
+  else
+    echo "❌ LINE FAIL: distinctions.md has $LINE_COUNT lines (exceeds 150)"
+    PASS=false
+  fi
+fi
+
+# Missing files check
+if [ "$MISSING" -gt 0 ]; then
+  echo "⚠️  WARNING: $MISSING hot file(s) not found"
+fi
+
+echo ""
+if [ "$PASS" = true ]; then
+  echo "=== PASS ==="
+  exit 0
+else
+  echo "=== FAIL ==="
+  exit 1
+fi
