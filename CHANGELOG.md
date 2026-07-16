@@ -101,6 +101,7 @@ Versioning: [Semantic Versioning](https://semver.org/).
 
 
 
+
 ## [Unreleased] — обновлено 2026-07-16
 
 ### Added
@@ -141,6 +142,7 @@ Versioning: [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- `d68413b` docs: regenerate [Unreleased] CHANGELOG after #234 promotion
 - `a5697c3` docs: regenerate [Unreleased] CHANGELOG after #247 local-manifest feature
 - `387dd77` docs: regenerate [Unreleased] CHANGELOG after issue sweep (#264/#240/#222/#223/#254/#234)
 - `750eaf6` chore: remove __pycache__ .pyc from tree + gitignore (sync 238a5c1 garbage)
