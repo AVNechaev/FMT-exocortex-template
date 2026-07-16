@@ -102,10 +102,8 @@ jobs:
       - name: Copy verbatim (non-translated) files to en-draft
         # LICENSE/CODEOWNERS/CITATION.cff are legal/machine-readable text —
         # publish as-is (WP-401 Ф5.2), never through the LLM translation path.
-        # CHANGELOG.md added 2026-07-10: entries are terse commit-style lines,
-        # already almost entirely English — verbatim avoids both an LLM-translation
-        # policy call on Category G (still MVP manual_adapt) and the risk of
-        # mistranslating a technical log, while fixing the Version badge on iwesys.
+        # CHANGELOG.md is NOT copied verbatim since 2026-07-16 — the script
+        # below projects it to a bare version index (see its comment).
         if: always() && steps.en_draft.outcome == 'success'
         run: |
           for f in LICENSE CODEOWNERS CITATION.cff; do
@@ -113,24 +111,23 @@ jobs:
               cp "$f" "../en-draft/$f"
             fi
           done
-          # CHANGELOG.md is mixed-language (RU entry lines under EN version
-          # headings), and the Cyrillic gate in publish-to-iwesys rejects any
-          # Cyrillic — so publish an English-only projection instead of a
-          # verbatim copy. Safe to filter: the Version badge only LINKS to
-          # this file (static badge), nothing parses its content.
+          # CHANGELOG.md: publish a version index only (release headings,
+          # no entry bodies). Entry bodies are mixed-language and describe
+          # internal pipeline work -- neither belongs in the distribution,
+          # and the published page must carry no pipeline provenance at all
+          # (pilot decision 2026-07-16). Safe to project: the Version badge
+          # only LINKS to this file (static badge), nothing parses it.
           python3 - <<'PYEOF'
           import re
 
           cyr = re.compile(r"[\u0400-\u04FF\u0500-\u052F]")
           lines = open("CHANGELOG.md", encoding="utf-8").read().splitlines()
-          note = [
-              "> English-only projection of the changelog: entries written",
-              "> in Russian are omitted by the publishing pipeline.",
-              "",
+          versions = [
+              line for line in lines
+              if line.startswith("## [") and not cyr.search(line)
           ]
-          kept = [line for line in lines if not cyr.search(line)]
           with open("../en-draft/CHANGELOG.md", "w", encoding="utf-8") as out:
-              out.write("\n".join(note + kept) + "\n")
+              out.write("\n".join(["# Changelog", ""] + versions) + "\n")
           PYEOF
           # Hero image for the README: published locally so the EN page
           # does not fetch assets from the RU repo (WP-401 Ф5, 2026-07-10).
@@ -393,6 +390,15 @@ jobs:
           # as github-actions[bot] instead of the app and gets a 403.
           persist-credentials: false
 
+      - name: Exclude pipeline bookkeeping from the published tree
+        # .translation-state.yaml and badge-data.json live on en-draft for
+        # the pipeline's own use (delta state, RU-side badge); neither
+        # belongs in the public distribution. Removed from the index only —
+        # the publish step builds its tree via write-tree, and the Cyrillic
+        # gate below lists files from the same index, so both see exactly
+        # the published set.
+        run: git rm -q --cached --ignore-unmatch .translation-state.yaml badge-data.json
+
       - name: "Cyrillic gate: block any Cyrillic from reaching iwesys"
         # Hard boundary (WP-415 Phase V): the public EN distribution must
         # contain no Cyrillic at all — file contents, file names, or commit
@@ -478,7 +484,12 @@ jobs:
           # of iwesys's own existing history — iwesys keeps its own clean,
           # append-only history, one attributed commit per publish, and never
           # inherits en-draft's past commits.
-          TREE=$(git rev-parse HEAD^{tree})
+          # write-tree (not HEAD^{tree}): picks up the bookkeeping exclusions
+          # applied to the index above. The commit message is deliberately
+          # provenance-free: the public repo must not record what produced
+          # its content (pilot decision 2026-07-16) — no pipeline names, no
+          # source-repo commit ids.
+          TREE=$(git write-tree)
           if git ls-remote --exit-code --heads iwesys main > /dev/null 2>&1; then
             git fetch iwesys main
             PARENT=$(git rev-parse FETCH_HEAD)
@@ -487,9 +498,9 @@ jobs:
               exit 0
             fi
             NEW_COMMIT=$(git commit-tree "$TREE" -p "$PARENT" \
-              -m "chore(translate-sync): sync EN draft from $(git rev-parse --short HEAD)")
+              -m "chore(release): distribution update")
           else
             NEW_COMMIT=$(git commit-tree "$TREE" \
-              -m "chore(translate-sync): sync EN draft from $(git rev-parse --short HEAD)")
+              -m "chore(release): distribution update")
           fi
           git push iwesys "$NEW_COMMIT:refs/heads/main"
