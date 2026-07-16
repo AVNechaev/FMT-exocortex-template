@@ -99,10 +99,12 @@ Versioning: [Semantic Versioning](https://semver.org/).
 
 
 
+
 ## [Unreleased] — обновлено 2026-07-16
 
 ### Added
 
+- `f4ca48e` feat(manifest): update-manifest.local.json — fork-local exclusions survive update.sh (#247)
 - `c65f9d0` feat(WP-450 S-50): promote hot-files.list auto-discovery to FMT
 - `33ebbf9` feat(WP-450): promote verify-context-budget.sh to FMT (S-50)
 - `4bebc58` feat: complete gate-metrics.sh promotion — manifest coverage + changelog
@@ -137,6 +139,7 @@ Versioning: [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- `387dd77` docs: regenerate [Unreleased] CHANGELOG after issue sweep (#264/#240/#222/#223/#254/#234)
 - `750eaf6` chore: remove __pycache__ .pyc from tree + gitignore (sync 238a5c1 garbage)
 - `8e69322` docs: regenerate [Unreleased] CHANGELOG after #263 fix
 - `806ba4c` docs(changelog): add cec81a3 (DayPlan follow-up to #248)
