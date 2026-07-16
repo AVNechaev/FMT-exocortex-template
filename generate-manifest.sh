@@ -60,10 +60,12 @@ EXCLUDED_SCRIPTS=(
     "scripts/iwe-trace.py"                      # нет ссылок из доставляемого
     "scripts/session-dispatcher-tsekh.py"       # нет ссылок из доставляемого
     "scripts/iwe-catalog-list.py"               # ссылается только docs/maintaining-skills.md (сам dev-only)
+    "scripts/guide-kit-sync.sh"                 # author-only: заносит релиз iwesys/guide-kit в дерево шаблона (WP-483 Ф4)
 )
 
 EXCLUDED_EXACT=(
     "promotion-status.yaml"
+    "scripts/guide-kit-sync-state.yaml"         # provenance vendored-копии guide-kit/ — нужен CI drift-check, не пользователям
     "AGENTS-agent-blocks.md"
     "docs/BROWSER-CI-TEMPLATE.md"
     "docs/maintaining-skills.md"

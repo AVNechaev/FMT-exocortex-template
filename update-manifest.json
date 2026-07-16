@@ -1387,6 +1387,7 @@
     "scripts/check-manifest-rename-coverage.py",
     "scripts/delivery_checks.py",
     "scripts/generate-helper-catalog.py",
+    "scripts/guide-kit-sync.sh",
     "scripts/iwe-catalog-list.py",
     "scripts/iwe-trace.py",
     "scripts/session-dispatcher-tsekh.py",

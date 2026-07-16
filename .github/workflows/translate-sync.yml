@@ -203,6 +203,20 @@ jobs:
           [issue]($EN/issues) describing the change instead.
           EOF
 
+      # Tripwire (WP-483 Ф4): the vendored guide-kit/ copy must never reach the
+      # EN distribution — the original already lives at iwesys/guide-kit, and a
+      # second copy inside iwesys/IWE would be a diverging duplicate. Today this
+      # is structurally impossible (paths-filter above + category-D manifest do
+      # not cover guide-kit/), but both defenses are DATA that gets edited;
+      # this check is the blocking backstop. A failure here fails the sync job,
+      # so publish-to-iwesys (needs: sync) never runs on a polluted tree.
+      # Honest limitation: the always()-guarded commit step below still pushes
+      # the polluted tree to en-draft (staging), and every later run re-fails
+      # here until en-draft is cleaned manually — accepted, because the hard
+      # boundary being defended is the public iwesys/IWE distribution.
+      - name: "Tripwire: guide-kit must never enter en-draft (WP-483)"
+        run: test ! -e ../en-draft/guide-kit
+
       - name: Formal + content delivery checks (Tier-1 fail / Tier-2-3 warn)
         id: delivery_checks
         run: |
