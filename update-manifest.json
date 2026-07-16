@@ -324,10 +324,16 @@
       "path": ".claude/skills/residency-gate/lib/state.py"
     },
     {
+      "path": ".claude/skills/residency-gate/pre-grant.yaml"
+    },
+    {
       "path": ".claude/skills/residency-gate/residency-gate.py"
     },
     {
       "path": ".claude/skills/residency-gate/tests/test_parser.py"
+    },
+    {
+      "path": ".claude/skills/residency-gate/tests/test_pre_grant.py"
     },
     {
       "path": ".claude/skills/restore-exocortex/SKILL.md"
