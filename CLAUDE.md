@@ -1,6 +1,6 @@
 # Инструкции для всех репозиториев
 
-> Kimi → `AGENTS.md`, Hermes → Aisystant MCP `get_instructions`; доставка ядра в шаблон — `FMT-exocortex-template/scripts/template-sync.sh`. Slim-ядро: триггеры + правила hot; детали → `memory/`, `.claude/rules-lazy/`, `.claude/skills/`.
+> Kimi → `AGENTS.md`, Hermes → Aisystant MCP `get_instructions`; доставка ядра в шаблон — `template-sync.sh` (защищённый конвейер, `--dry-run`/`--check`). Slim-ядро: триггеры + правила hot; детали → `memory/`, `.claude/rules-lazy/`, `.claude/skills/`.
 
 ## 1. Архитектура репозиториев
 
@@ -23,7 +23,7 @@
 1. **WP Gate:** ЛЮБОЕ задание → `memory/protocol-open.md` ДО начала работы. Новый РП → Ритуал согласования → явное «да»/«делаем»/«открывай»; без этого не регистрировать.
 2. **Push:** «заливай»/«запуши»/«закрывай» → commit + push без вопросов, ДО отчёта Закрытия. Любой Close: `git status --short` по всем репо → незафиксированное commit + push ДО следующего шага.
 3. **Close:** Триггер Закрытия → протокол Закрытия → выполнить.
-4. **Pull-on-Touch:** `git pull --rebase` при первом обращении к репо за сессию (все `{{HOME_DIR}}/IWE/*`). Dirty → stash; конфликт → `memory/reference/agent-core.md`.
+4. **Pull-on-Touch:** `git pull --rebase` при первом обращении к репо за сессию (все `{{WORKSPACE_DIR}}/*`). Dirty → stash; конфликт → `memory/reference/agent-core.md`.
 5. **Чеклист-верификация:** Quick/Day Close — sub-agent Haiku R23 сверяет с чеклистом. Исключения: ≤15 мин или без изменений файлов.
 6. **Hooks/Scripts Bypass Gate (S-33):** без явного разрешения не менять `.claude/hooks|scripts/`, `.iwe-runtime/`, `FMT-exocortex-template/`, не обходить хуки; блок хука → bug-файл + пилоту + ждать. → `.claude/rules-lazy/hooks-bypass-gate.md`.
 7. **Автономность:** не спрашивать подтверждения — выполни → отчитайся. Исключения: необратимо-разрушительное; WP Gate Ритуал; choice-question. → `memory/feedback_behaviour.md` П.1.
@@ -108,7 +108,7 @@ Discrepancy found (file ≠ plan, stale content): **report to pilot, do not sile
 
 ## Working Directory
 
-`{{HOME_DIR}}/IWE/`
+`{{WORKSPACE_DIR}}/`
 
 ## Status Reporting — Agent Status Registry (РП-395)
 
@@ -146,7 +146,6 @@ Respond in Russian unless the user writes in English.
 
 ## Code Style — Engineering (DP.SC.172)
 
-При написании/правке кода — инженерный стиль craft-уровня (L0 — `engineering-code-style-base.md`, PACK-digital-platform). База = запахи с «было/стало»; вкус = отсутствие запахов. Детектор: «есть ли у кода будущий читатель?» Да → обязательны.
 
 **P-правила, short:** P0 перед коммитом — форматтер+линтер репо (механику закрывает инструмент); P1 тест без проверки наблюдаемого результата запрещён (`assert True` — запах); P2 третье повторение → функция, не `locals()[str]`; P3 мёртвую ветку/enum удалять, не «для совместимости»; P4 `except: pass` без логирования запрещён; P5 длинную функцию со смешанными обязанностями / булевы флаги-режимы — разбить. Граница: жёсткие запреты (`git add -A`, секреты) — в PACK-agent-rules (AR.*), не здесь. (Доставка/детекторы по агенту → `memory/reference/agent-core.md`.)
 
@@ -161,178 +160,25 @@ Respond in Russian unless the user writes in English.
 **Активная запись:** S-45 Agent Inbox (WP-324) — `inbox/agent/` + `iwe-agent-dispatcher.py`, промотировано в FMT `extensions/agent-inbox/`. Status: testing.
 
 ---
+
 ## 9. Авторское (только мой IWE)
 
-### Блокирующие (авторские)
+> Элаборации всех пунктов → `memory/reference/agent-core.md`.
 
-- **Pull-before-Commit:** перенесён в §2 п.5 (платформенное правило для ВСЕХ репо).
-- **Без Obsidian (DS-strategy):** Просмотр через VS Code.
-- **S-33 (Hooks/Scripts Bypass Gate):** перенесён в §2 п.6 (платформенное правило). Авторское дополнение: путь `FMT-exocortex-template/` включён в §2 п.6.
-- **Комментарии кода — только на английском (решение Андрея, ИТ-встреча 14 июня 2026).** Все inline-комментарии, docstring'и и README внутри кода писать на EN. Мотив: AI-инструменты (Cursor/Claude) лучше работают с EN-комментариями; код публикуется в мировой орг — кириллица в комментариях = барьер для не-русскоязычных читателей. Область применения: весь код в `{{WORKSPACE_DIR}}/**`, включая DS и Pack-скрипты. Исключение: user-facing строки в интерфейсах (UX-тексты, сообщения пользователю) — по языку интерфейса.
-
-### Различения (авторские)
-
-> Хранятся в `.claude/rules/distinctions.md` в зоне AUTHOR-ONLY — не затираются при `update.sh`.
-
-
-### Именование
-
-- `DS-strategy` (не `DS-strategy`) — личный governance-хаб
-- `{{HOME_DIR}}/IWE/` — рабочая директория
-
-### Read-only репо
-
-
-### Extensions Gate (БЛОКИРУЮЩЕЕ)
-
-**Для пользователей:** кастомизация протоколов/скиллов → ТОЛЬКО в `extensions/*.md`.
-Прямое редактирование `.claude/skills/` или `memory/protocol-*.md` = ошибка.
-**Архитектурное обоснование:** платформенные файлы (L1) и пользовательские расширения (L3) -- разные слои. Смешение слоёв = хрупкость при обновлении. Разделение: платформенное → `FMT-exocortex-template` → `update.sh`. Пользовательское → `extensions/` + `params.yaml`.
-
-**Для автора шаблона (`params.yaml → author_mode: true`):** прямое редактирование L1 файлов РАЗРЕШЕНО.
-- **Flow (единый для всего L1):** авторский IWE (source-of-truth) → доставка в FMT (с отрезанием личного) → GitHub → `update.sh` → пользователи. Авторский IWE = SoT для ВСЕГО: CLAUDE.md, скриптов, хуков, скиллов.
-- **CLAUDE.md:** авторский IWE → `bash $IWE_TEMPLATE/scripts/template-sync.sh` → автоматически в FMT (плейсхолдеры + отрезание §9). Режимы: без флагов = sync, `--dry-run` = diff, `--check` = drift (exit 1).
-- **Промоция артефактов в шаблон** — единая команда по типу:
-  - Скрипт: `bash $IWE_SCRIPTS/script-promote.sh <личный-скрипт>.sh [--dry-run]` → FMT/scripts/
-  - Хук: `bash $IWE_SCRIPTS/hook-promote.sh <личный-хук>.sh [--dry-run]` → FMT/.claude/hooks/
-  - Скилл: `bash $IWE_SCRIPTS/skill-promote.sh <папка-скилла>/ [--dry-run]` → FMT/.claude/skills/
-  - CLAUDE.md: `bash $IWE_SCRIPTS/template-sync.sh` (автозамена §9 + плейсхолдеры)
-- **Все promote-скрипты:** применяют одинаковые подстановки (личные пути и repo-имя → env vars) → прогоняют `validate-fmt-scripts.sh` → копируют. Флаг `--dry-run` показывает результат без копирования.
-- **Валидатор** запускается автоматически после каждого `template-sync.sh`. Вручную: `bash $IWE_SCRIPTS/validate-fmt-scripts.sh $IWE_SCRIPTS/`.
-
-
-### README.md (FMT-exocortex-template)
-
-> Изменение структуры — по согласованию с владельцем.
-
-### WP Entry Filter (S-47, БЛОКИРУЮЩЕЕ, авторское)
-
-> **Принято Strategy Session 1 июня 2026 (С.6 proposal-2026-06 v4).** Метод от R31 Менеджера оргразвития: оргхаос потока задач = тип системы «организация» → дисциплина «системный менеджмент» → правило входа.
-
-Новый РП открывается **ТОЛЬКО при выполнении одного из двух условий**:
-
-1. **Связь со стратегической целью R1-R6** месяца (см. Strategy.md §«Результаты месяца R1-R6»). Цель должна быть явной — не «полезно для платформы», а «двигает R{N} к Q результату».
-2. **Явный заказчик извне:** Ильшат (Track A), волонтёр когорты, регулятор (юрист/налоговая), Андрей (Track B), партнёр.
-
-**Иначе** — задача попадает в `DS-strategy/inbox/backlog-with-triggers.md` (а не в WP-REGISTRY) с условием возврата:
-- **Триггер «N=10 повторений»** — если идея повторяется в captures/peer-сессиях/обсуждениях ≥10 раз → пересмотр на следующем Month Close.
-- **Auto-перевод активного РП в backlog: 30 дней без коммита** в context-файл / связанные репо → automatic transition (детектор R31 Ф2.7 уже работает на сигнал «stuck >14 дней» → 30-day trigger автоматизировать в следующей сессии).
-
-**Цель:** удержать WIP в норме 8-15 (вместо текущих 30+). 91 активный РП на 31 мая = inflated WIP в 6 раз, мёртвый капитал → throughput падает.
-
-**Применение Claude:** при предложении нового РП в Strategy Session или сессии — **сначала** проверять filter:
-- (Q1) К какой R{N} цели месяца этот РП ведёт? Конкретно одной фразой.
-- (Q2) Если нет цели — есть ли явный внешний заказчик с именем?
-- Если оба ответа отрицательные → не открывать РП. Записать в `backlog-with-triggers.md` с краткой формулировкой + дата + источник идеи.
-
-**Исключения:**
-- spin-off от закрытого РП (Ф-N → отдельный РП) — допустимо без явной R{N} цели, если родитель был привязан к R{N}.
-- пилот явно называет задачу как РП («открой РП», «создай WP», «это новый РП для X») — это прямое поручение, не предложение агента. S-47 не применяется.
-
-### Именование РП
-
-**Название РП = существительное-артефакт**, а не глагол-действие.
-- ✅ «Дизайн системы стратегирования», «Архитектура MCP», «Концепция подписок»
-- ❌ «Разработать систему», «Настроить MCP», «Сделать концепцию»
-
-**Название в WP-REGISTRY.md = ≤80 символов, только русский.** Допустимо вкрапление кодовых идентификаторов и Pack-ID, если они являются собственным именем артефакта (`projection-worker`, `DP.SC.125`, `cut-over`, `IWE`). Реестр — индекс, не карточка РП.
-
-Запрещено в названии:
-- статус, даты, commit hash, фазы, метрики («closed 27 апр», «Ф1 done», «PASS», «1.5h факт vs 3h»)
-- список под-задач через `+`/`;` или parenthetical-нарратив
-- английские пояснения (`spawn`, `closes drift`, `runtime activation`)
-- ссылки на другие РП («child WP-268», «parent zonтик», «source: feedback_*»)
-
-Контекст РП (фазы, handoff, ArchGate, бюджеты, решения) живёт в `DS-strategy/inbox/WP-NNN-*.md` для активных и `DS-strategy/archive/wp-contexts/` для закрытых. В реестре — только имя артефакта.
-
-Эталоны: WP-254 «Миграция учебных объектов #6 aist-bot → #11 learning», WP-258 «Plugin API L2 для IWE (регистр MCP-расширений + контракт плагина)», WP-264 «Day Open enforcement — diagnostic logging + deterministic scaffold».
-
-**Синхронизация REGISTRY→производные:** при переименовании РП → обновить одновременно REGISTRY.md + MEMORY.md + WeekPlan + DayPlan (если активен) + WP-context file.
-
-### Память (Memory Lifecycle) — S-35
-
-> Spec: `memory/memory-lifecycle-spec.md` (WP-217 Ф10.1, ArchGate 2026-04-30).
-
-**Обязательный frontmatter** для всех новых файлов `memory/*.md`:
-
-```yaml
----
-name: "..."
-description: "одна строка для MEMORY.md"
-type: user | feedback | project | reference | lesson | protocol
-horizon: hot | warm | cold | archive
-domains: [тег1, тег2]
-status: active | dormant | superseded | archived
-valid_from: YYYY-MM-DD
-owner: user | platform
-schema_version: 1
----
-```
-
-**Правила горизонта:**
-- `hot` — загружается каждую сессию. Суммарный лимит: ≤150 строк по всем HOT-файлам (без frontmatter).
-- `warm` — по триггеру. Default для `project`, `reference`, `lesson`, `protocol`.
-- HOT-лимит превышен → предложить понизить один из HOT-файлов в WARM перед добавлением нового.
-
-**Архивация:** предлагает агент при Week/Month Close — не выполняет автономно. HOT→WARM: 14 дней без обращения. WARM→COLD: 30 дней. COLD→archive: 90 дней.
-
-### Security Audit Cadence (WP-212, S-36)
-
-> **Три уровня периодичности:**
-> - **Per-ArchGate (каждое архитектурное решение):** §Б чеклист в ArchGate (B7.1 ✅) + STRIDE для нового сервиса → обновить B7.2 scope-таблицу.
-> - **Week Close (2 мин):** проверить `security-posture.md §3` — `open_critical_count > 0`? Если да → добавить WP-212 в следующий WeekPlan.
-> - **Daily (tsekh-1, 04:45 МСК):** systemd-timer `iwe-overnight-auditor` → VR.R.002 daily-headless по B7.4 A-D (~10-15 мин, $1.5). Critical flags → Day Open «Требует внимания».
-> - **Month Close (VR.R.002 Аудитор monthly-deep, ~1h):** sub-agent VR.R.002 (catalog R24, context isolation, Sonnet) → разделы A-F чеклиста B7.4 → обновить `security-posture.md` → коммит `docs(WP-212): security audit YYYY-MM`.
-
-**Файлы:**
-
-### WeekPlan / WeekReport split (ОПТ-5, WP-297)
-
-**WeekPlan** = намерения недели (planning, inbox triage, НЭП, приоритеты, контент-план). **Только интенты.** Нет прошлого.
-**WeekReport** = факты недели (итоги дней, что сделано, коммиты). **Только история.** Нет планов.
-
-**Правило:** при создании WeekPlan — предыдущие «Итоги дня» и «Итоги прошлой недели» → новый `WeekReport W{N} YYYY-MM-DD.md`. WeekPlan держит только `week_report: WeekReport W{N}...` в frontmatter как ссылку.
-**Мотив:** WeekPlan смешивал факты и намерения → 545 строк → непригоден как planning-документ. Split → WeekPlan ≤200 строк.
-
-### Режим «на пальцах» (S-37)
-
-**Явные триггеры:** «объясни», «на пальцах», «что сделали», «расскажи понятно», «простыми словами» — любая просьба объяснить итоги или суть работы.
-
-**Детектор канала (peer-session 2026-06-01-27, добавлено):**
-- **Технический режим** в чате с пилотом — если в сообщении пилота сами встречаются: `grep`, `git`, имена файлов с путями, флаги команд, SHA, английские термины из кода.
-- **Режим «на пальцах»** по умолчанию для всего остального: ответы на «что произошло», «почему не работает», «объясни», или задание без технических деталей в формулировке.
-- **report.md** при синтезе peer-сессии: §1-§4 (Постановка, Позиции, Альтернативы, Решение) — режим «на пальцах»; прямые цитаты из ходов внутри §2 — плотный технический стиль (доказательство, не синтез).
-- **Стенограммы ходов** (NN-writer / NN-peer) — плотный технический стиль, правила режима НЕ применяются.
-- **Commit messages, PR descriptions** — плотный технический стиль.
-
-**Правила ответа в режиме «на пальцах» (полная нумерация A1-A11 — в `feedback_response_clarity_for_pilot.md`, единый источник — `communication-style-base.md`):**
-- Только русский язык. Английские термины и коды — только после русского описания в скобках. Исключение — термины, которые сам пилот употребляет (бот, чек-ин, deploy, smoke, merge, push, commit, MCP, Pack). Не «WP-330», а «марафон (РП330)». Не «G3 PASS», а «финальная проверка (G3) прошла успешно». **(A2 + A2-ext)**
-- Путь к файлу — никогда не подлежащее. Только в скобках после русского глагола («бот пишет ноль в счётчик (`handlers/marathon.py:65`)»). **(A1)**
-- Блок `<details>` — только при наличии деталей, нужных пилоту для решения/действия, или явно им запрошенных. SHA, коммиты, дефекты, scope — только в файл отчёта (report.md, handoff.md), никогда в чат. **(A7 + A7.1)**
-- При первом упоминании имени колонки/функции/переменной — расшифровка одним словом. **(A3)**
-- Никаких английских маркеров успеха/неудачи как факта: «exit 0», «PASS», «SHA: abc» → «получилось», «прошло проверку», «залил правкой». **(A10)**
-- Никакого пассивного залога при ошибке или находке: «было обнаружено» → «я нашёл», «я ошибся». **(A11)**
-- Объяснять через аналогии из физического мира или инженерии: что делает система, зачем, что было сломано, что починили. **(A5)**
-- Допустимо: цифры, проценты, сравнения «было / стало», схемы словами.
-- Формат: свободный текст или маркированный список.
-
-**Пример нарушения:** «Исправлен `activity_domain` фильтр в `load_rcs_metrics` — заменён на `SELF_DEV_EVENT_TYPES`.»
-**Правильно:** «Раньше система считала рабочие дни вместе с учебными — теперь считает только те дни, человек реально занимался саморазвитием.»
-
-**Полные правила, 12 паттернов и примеры «было / стало»:** [feedback_response_clarity_for_pilot.md](memory/feedback_response_clarity_for_pilot.md).
-
-### Календарный конвейер (WP-357)
-
-> Single source-of-truth для датозависимых процессов IWE. Полная спецификация → `DS-strategy/docs/calendar-pipeline.md`.
-
-**Каталог:** `DS-strategy/exocortex/process-catalog.yaml` (10 процессов: 6 A-класс + 4 B-класс).
-**Ledger (generated):** `DS-strategy/current/date-ledger.yaml` (регенерируется при каждом Day Open).
-**Watchdog:** in-band (Day Open hook) + out-of-band (launchd, каждый час). Telegram-дайджест при пропусках (cooldown 12h).
-**Установка:** `bash DS-strategy/scripts/install-launchd.sh` (12 plist, требует ручного запуска пилота).
-**Smoke-test:** `bash DS-strategy/scripts/calendar-pipeline-smoke.sh`.
-
-Добавление нового процесса = добавить запись в process-catalog.yaml + плист в exocortex/launchd/ + entry в install-launchd.sh PLISTS. Не редактировать date-ledger.yaml вручную (derived).
+- **Без Obsidian (DS-strategy):** просмотр через VS Code.
+- **Комментарии кода — только EN (решение Андрея, 14.06.2026):** весь `{{WORKSPACE_DIR}}/**`; исключение — user-facing строки по языку интерфейса.
+- **Различения (авторские):** `.claude/rules/distinctions.md` (секция «Авторские») + `memory/distinctions-warm.md` (в т.ч. «Бот = интерфейс, не место агентов»).
+- **Именование:** `DS-strategy` (не `DS-strategy`); рабочая директория `{{HOME_DIR}}/IWE/`.
+- **Extensions Gate (БЛОКИРУЮЩЕЕ):** пользователи кастомизируют ТОЛЬКО `extensions/*.md` + `params.yaml` (правка `.claude/skills/` или `memory/protocol-*.md` = ошибка); автор (`author_mode: true`) редактирует L1 напрямую — авторский IWE = SoT, доставка в FMT через `template-sync.sh`.
+- **README.md (FMT-exocortex-template):** изменение структуры — по согласованию с владельцем.
+- **WP Entry Filter (S-47, БЛОКИРУЮЩЕЕ):** новый РП — только при явной связи с R1-R6 месяца или внешнем заказчике; иначе → `inbox/backlog-with-triggers.md`. Исключения: spin-off закрытого РП; прямое поручение пилота.
+- **Именование РП:** существительное-артефакт, только русский (Pack-ID допустим); реестр ≤80 символов → SYNC-CORE; переименование — синхронно REGISTRY+MEMORY.md+WeekPlan+DayPlan+WP-context.
+- **Память (S-35):** новые `memory/*.md` — обязательный frontmatter; шаблон и горизонты → `memory/memory-lifecycle-spec.md` (единственный источник).
+- **Security Audit Cadence (WP-212, S-36):** per-ArchGate (§Б B7.1 + STRIDE) · Week Close (`security-posture.md §3`) · Daily (tsekh-1) · Month Close (VR.R.002).
+- **WeekPlan/WeekReport split (WP-297):** WeekPlan = только интенты, WeekReport = только факты; при создании WeekPlan итоги уезжают в WeekReport.
+- **Режим «на пальцах» (S-37):** триггеры «объясни», «на пальцах», «что сделали», «простыми словами» → Response Style + `memory/feedback_response_clarity_for_pilot.md`.
+- **Календарный конвейер (WP-357):** SoT — `DS-strategy/calendar/process-catalog.yaml` (+ derived `date-ledger.yaml`, не редактировать); новый процесс = каталог + plist; спецификация → `docs/calendar-pipeline.md`.
 
 ---
 
-*Последнее обновление: 2026-05-26*
+*Последнее обновление: 2026-07-16 (M2-слим, WP-7 HOTBUDGET-M2)*

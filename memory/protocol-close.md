@@ -35,19 +35,32 @@ schema_version: 1
 > «Закрывай» = push сразу без вопросов (пользователь дал согласие словом).
 > **Day Close ≠ Quick Close.** Day Close самодостаточен — Quick Close внутри него не повторять.
 
+### Раннер — обязательный драйвер (WP-482 Ф3+Ф5, дефолт с 17.07)
+
+> Пилотный статус снят: раньше «если использовался — пропустить молча, если нет», теперь первое действие Quick Close.
+
+```bash
+cd DS-strategy && python3 scripts/process-runner.py start quick-close --slug <slug сессии> \
+  --input '{"agent":"<agent>","slug":"<slug>","session_file":"<путь или null>","repos":["<repo1>", ...]}'
+```
+
+Раннер сам ведёт по шагам ниже и останавливается на каждом `pilot`/`ai`/`requires_input`; отвечать `process-runner.py next <run_id> --input '{...}'`, используя текст под каждым шагом как содержание ответа (какой JSON собрать), не как отдельный ручной прогон в обход раннера. Шаг раннера указан в скобках при каждом пункте ниже.
+
+**Три пункта чеклиста раннер пока не покрывает** (нет для них шага в `quick-close.yaml`) — выполнять вручную, как раньше: Decision log (п. ниже), Docs Gate (условный), conversational-report. Раннер их не подменяет, не пропускать из-за того, что появился раннер.
+
 ### Шаги (4 обязательных)
 
-1. **Pre-commit checks → Commit + Push**
+1. **Pre-commit checks → Commit + Push** (шаги раннера `precommit-checks` → `commit-push` → `commit-push-check`)
 
-   **1a. Pre-commit checks (БЛОКИРУЮЩЕЕ).** `bash .claude/scripts/load-extensions.sh protocol-close checks` — exit 0 → `Read` каждый файл из вывода (alphabetic) → выполнить. Exit 1 → пропустить. Поддерживает `extensions/protocol-close.checks.md` И `extensions/protocol-close.checks.<suffix>.md`. **При ❌ commit запрещён** — исправить, повторить checks, только потом 1b. Семантика идентична Day/Week Close (см. `run-protocol/SKILL.md` Шаг 1b). [[gate]]
+   **1a. Pre-commit checks (БЛОКИРУЮЩЕЕ, шаг `precommit-checks`).** `bash .claude/scripts/load-extensions.sh protocol-close checks` — exit 0 → `Read` каждый файл из вывода (alphabetic) → выполнить. Exit 1 → пропустить. Поддерживает `extensions/protocol-close.checks.md` И `extensions/protocol-close.checks.<suffix>.md`. **При ❌ commit запрещён** — исправить, повторить checks, только потом 1b. Семантика идентична Day/Week Close (см. `run-protocol/SKILL.md` Шаг 1b). [[gate]]
 
-   **1b. Commit + Push (БЛОКИРУЮЩЕЕ).** `git status --short` по ВСЕМ репо, которых касалась сессия (не только governance). Незафиксированные изменения → `git add <specific paths>` → commit → push. Затем убедиться что `git status` чист. Только после этого переходить к шагу 2. [[gate:AR.005]]
+   **1b. Commit + Push (БЛОКИРУЮЩЕЕ, шаг `commit-push`, вход `{"commits":[{"repo","paths","message"}, ...]}`).** `git status --short` по ВСЕМ репо, которых касалась сессия (не только governance). Незафиксированные изменения → `git add <specific paths>` → commit → push (раннер делает это через хендлер, не руками в обход). Затем убедиться что `git status` чист. Провал push → раннер сам стоит на `blocked-push-failed`, не идти дальше в обход. [[gate:AR.005]]
 
-   **1c. Session Index (WP-7, 07.07 — фикс недосчёта одиночных сессий).** Если сессия зафиксирована файлом `sessions/YYYY-MM-DD-<тема>.md` (не folder-структура peer-conversation, у той регистрацию уже делает `peer-session-finalize.sh`) — добавить строку в `sessions/00-index.md`: `Агенты` = только исполнявший агент (без пары), `Ходы`/`Эскал` = `—`, `Отчёт` = ссылка на сам файл сессии. Причина: Day Close считает мультипликатор по этому индексу как по полному журналу дня (§ Мультипликатор IWE ниже) — без этой строки одиночные сессии выпадают из расчёта бюджета. [[narrative]]
+   **1c. Session Index (шаг `session-index`/`session-index-write`, раннер маршрутизирует по наличию `session_file` сам — WP-7, 07.07, фикс недосчёта одиночных сессий).** Если сессия зафиксирована файлом `sessions/YYYY-MM-DD-<тема>.md` (не folder-структура peer-conversation, у той регистрацию уже делает `peer-session-finalize.sh`) — добавить строку в `sessions/00-index.md`: `Агенты` = только исполнявший агент (без пары), `Ходы`/`Эскал` = `—`, `Отчёт` = ссылка на сам файл сессии. Причина: Day Close считает мультипликатор по этому индексу как по полному журналу дня (§ Мультипликатор IWE ниже) — без этой строки одиночные сессии выпадают из расчёта бюджета. [[narrative]]
 
-2. **WP Context File (БЛОКИРУЮЩЕЕ, факт а не шаблон)** — обновить секцию «Осталось» (structured формат): [[gate]]
+2. **WP Context File (БЛОКИРУЮЩЕЕ, факт а не шаблон, шаг `wp-context-update` — ai-контракт: вход `[git_diff, session_summary]`, выход `[status, what_tried, what_learned, what_next]`)** — обновить секцию «Осталось» (structured формат): [[gate]]
    - in_progress → structured handoff
-   - done → пометить `status: done` **→ и немедленно архивировать:**
+   - done → пометить `status: done` **→ и немедленно архивировать (шаг `wp-archive-run`, вход `{"wp","repo"}`, раннер зовёт его сам после `wp-archive-check`):**
      ```bash
      git mv inbox/WP-N archive/wp-contexts/WP-N   # папка
      git mv inbox/WP-N-slug.md archive/wp-contexts/WP-N-slug.md  # файл
@@ -59,14 +72,14 @@ schema_version: 1
    - **Обнаружено «уже сделано» во время сессии (пункт, который значился pending, но по факту закрыт раньше)** → пометить done в WP-context ПРЯМО СЕЙЧАС, не переносить на следующий Close. Запрещено писать «Осталось» шаблонной фразой без связи с тем, что реально проверено в этой сессии — R23 (ниже) это отбраковывает.
    - Source: peer-сессия [2026-07-09-17-close-actualization-gap](../DS-strategy/sessions/2026-07/2026-07-09-17-close-actualization-gap/report.md) — разрыв не в том, что Close «забывает» актуализировать, а в том, что требование факт-чека не было явным/проверяемым.
 
-2.5. **KE** — прочитать поле «Что узнали» в «Осталось». Маршрутизировать СЕЙЧАС: [[gate]]
+2.5. **KE (шаг `ke-routing` — ai-контракт: вход `[what_learned]`, выход `[routed_to]`)** — прочитать поле «Что узнали» в «Осталось». Маршрутизировать СЕЙЧАС: [[gate]]
    - правило (1-3 строки) → `CLAUDE.md` или `distinctions.md`
    - доменное знание → Pack (конкретный файл)
    - урок → `memory/lessons_*.md` + строка в MEMORY.md
    - нет нового знания → пропустить молча (анонс не нужен)
    Анонс при маршрутизации: *«Capture: [что] → [куда]»*
 
-2.6. **Session-Close Feeder (WP-247 Ф-MULTI-SOURCE.1, авто >30мин / opt-in для коротких):** [[narrative]]
+2.6. **Session-Close Feeder (шаг `session-close-feeder`/`session-close-feeder-run`, раннер сам маршрутизирует по `duration_min`; WP-247 Ф-MULTI-SOURCE.1, авто >30мин / opt-in для коротких):** [[narrative]]
    Дополняет Шаг 2.5: вызывает R2 в feeder-режиме для автоматического захвата кандидатов из транскрипта сессии + git diff в `captures.md`.
 
    **Триггер автозапуска:** длительность сессии >30 мин (по timestamps первого и последнего сообщения). Иначе — пропустить (юзер может вызвать вручную: `/ke session-close-feed`).
@@ -77,7 +90,7 @@ schema_version: 1
 
    **Защита от дубля:** если за сессию уже был ручной `/ke` или `/apply-captures` — feeder пропустить (по маркерам в текущем `captures.md`).
 
-3. **MEMORY.md** — обновить статус РП (одна строка: `in_progress` / `done`) [[gate]]
+3. **MEMORY.md (часть шага `memory-update` — ai-контракт: вход `[wp_status]`, выход `[memory_line]`)** — обновить статус РП (одна строка: `in_progress` / `done`) [[gate]]
 
 ### Формат «Осталось»
 
@@ -118,7 +131,7 @@ schema_version: 1
 1. «Осталось» не шаблонная — содержит конкретику этой сессии (конкретные файлы/решения из `git diff`), не общую фразу, годную для любой сессии.
 2. Если в ходе сессии агент упоминал «уже сделано» / «оказалось done» — соответствующий пункт в WP-context помечен done, не оставлен pending.
 3. Расхождение (пункт помечен pending, хотя в сессии есть явное свидетельство done) → ❌, вернуть на исправление до отчёта пользователю.
-4. **Дисциплина раннера (WP-482 Ф3, пилотный процесс quick-close):** если для этой сессии запускался раннер типизированных процессов (`process-runner.py start quick-close --slug <slug сессии>`) — карточка находится по `inbox/agent/tasks/RUN-quick-close-<slug>*.md` (slug передан явно через `--slug`, чтобы карточка была детерминированно находимой, не по случайному timestamp). Проверить: `process_id == "quick-close"` и `status` ∈ {`completed`, `failed`} (терминальный статус через раннер, не в обход него). Отдельно зафиксировать `runner_terminated_cleanly: <true при completed, false при failed>` — это метрика качества исполнения, не дисциплины, смешивать с п.3 нельзя (peer-session 2026-07-14-06-wp-482-f3-pilot, ход 3). Раннер ещё не обязателен для каждой сессии (пилотируется) — нет карточки → пропустить пункт молча, это не ❌.
+4. **Дисциплина раннера (WP-482 Ф3+Ф5, quick-close — обязательный процесс с 17.07, не пилот).** Карточка находится по `inbox/agent/tasks/RUN-quick-close-<slug>*.md` (slug передан явно через `--slug`, чтобы карточка была детерминированно находимой, не по случайному timestamp). Проверить: `process_id == "quick-close"` и `status` ∈ {`completed`, `failed`} (терминальный статус через раннер, не в обход него). Отдельно зафиксировать `runner_terminated_cleanly: <true при completed, false при failed>` — это метрика качества исполнения, не дисциплины, смешивать с п.3 нельзя (peer-session 2026-07-14-06-wp-482-f3-pilot, ход 3). **Карточки нет → ❌** (сессия прошла в обход раннера — сам факт обхода и есть находка для отчёта, не тихий пропуск). Исключение (не ❌): сессия ≤15 мин / сессия-вопрос без изменений файлов — те же исключения, что у самой R23-проверки выше.
 
 ### Чеклист Quick Close
 
@@ -129,7 +142,7 @@ schema_version: 1
 - [ ] Decision log: прочитать записи сессии в `decisions/decision-log-YYYY-MM.md`, скорректировать если неточно
 - [ ] **Docs Gate (условный):** РП затрагивал UX или поведение онбординга (skills, MCP-сервисы, бот `/start`, тиры доступа T0-T4, имена ролей)? → проверить и обновить вводные документы в `FMT-exocortex-template/docs/` (QUICK-START, SETUP-GUIDE, onboarding/, LEARNING-PATH, IWE-HELP) + `/verify` обновлённый файл. Владелец: пользователь. Если не затрагивал → пропустить молча.
 - [ ] **Conversational-сессии:** report.md создан ИЛИ status: interrupted (DP.SC.154 Q8)
-- [ ] **Раннер (условный, WP-482 Ф3):** если использовался — карточка `RUN-quick-close-*` в терминальном статусе `completed`/`failed`, `runner_terminated_cleanly` зафиксирован. Раннера ещё не было в сессии → пропустить молча.
+- [ ] **Раннер (обязательный, WP-482 Ф3+Ф5):** карточка `RUN-quick-close-<slug>*` существует и в терминальном статусе `completed`/`failed`, `runner_terminated_cleanly` зафиксирован. Нет карточки → ❌, кроме исключений (сессия ≤15 мин / вопрос без изменений файлов).
 
 
 ## Week Close (Неделя)
@@ -144,7 +157,7 @@ schema_version: 1
 1. **Бэкап + грязные репо** — `backup-icloud.sh` + `check-dirty-repos.sh` (платформа) [[gate]]
 2. **Memory Validate** — `memory-bleed.sh` (HOT-лимит, orphans, superseded_by) [[gate]]
 3. **ТО памяти (T, SC.024.3)** — проверка здоровья статической нагрузки: [[narrative]]
-   - `wc -l {{HOME_DIR}}/IWE/.claude/rules/distinctions.md` → **> 80 строк = drift-флаг** (по правилу DP.KR.001 §6: 1-3 строки на различение). Предложить аудит в WP-7.
+   - `wc -l {{WORKSPACE_DIR}}/.claude/rules/distinctions.md` → **> 80 строк = drift-флаг** (по правилу DP.KR.001 §6: 1-3 строки на различение). Предложить аудит в WP-7.
    - `wc -l` по MEMORY.md текущего проекта в `~/.claude/projects/<слаг-проекта>/memory/` (слаг = путь рабочей директории, `/` → `-`) → **> 200 строк = флаг** (превышен лимит).
    - Feedback/lessons файлы в `memory/` с `mtime > 14 дней` без обращения → предложить понизить `horizon: warm`.
    - Флаги — информативно. Пользователь решает действие.
