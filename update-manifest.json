@@ -633,6 +633,129 @@
       "path": "extensions/protocol-open.after.fault.md"
     },
     {
+      "path": "guide-kit/.gitignore"
+    },
+    {
+      "path": "guide-kit/FORMAT.md"
+    },
+    {
+      "path": "guide-kit/LICENSE"
+    },
+    {
+      "path": "guide-kit/README.md"
+    },
+    {
+      "path": "guide-kit/demo/README.md"
+    },
+    {
+      "path": "guide-kit/demo/cards/CAT.002.A1.json"
+    },
+    {
+      "path": "guide-kit/demo/cards/CAT.003.METHOD.001.json"
+    },
+    {
+      "path": "guide-kit/demo/curriculum/M-D1.md"
+    },
+    {
+      "path": "guide-kit/generator/adapter.py"
+    },
+    {
+      "path": "guide-kit/generator/horizons.py"
+    },
+    {
+      "path": "guide-kit/generator/llm_backends/__init__.py"
+    },
+    {
+      "path": "guide-kit/generator/llm_backends/anthropic.py"
+    },
+    {
+      "path": "guide-kit/generator/llm_backends/local.py"
+    },
+    {
+      "path": "guide-kit/generator/llm_backends/openai_compatible.py"
+    },
+    {
+      "path": "guide-kit/generator/onboarding_ctas.py"
+    },
+    {
+      "path": "guide-kit/generator/planner.py"
+    },
+    {
+      "path": "guide-kit/generator/policies/default.yaml"
+    },
+    {
+      "path": "guide-kit/generator/prompt.md"
+    },
+    {
+      "path": "guide-kit/generator/test_adapter_work_section.py"
+    },
+    {
+      "path": "guide-kit/generator/test_demo_catalog.py"
+    },
+    {
+      "path": "guide-kit/generator/test_horizons.py"
+    },
+    {
+      "path": "guide-kit/generator/test_onboarding_ctas.py"
+    },
+    {
+      "path": "guide-kit/generator/test_work_section.py"
+    },
+    {
+      "path": "guide-kit/generator/work_section.py"
+    },
+    {
+      "path": "guide-kit/guide-kit.config.yaml.example"
+    },
+    {
+      "path": "guide-kit/structurer/classify.py"
+    },
+    {
+      "path": "guide-kit/structurer/extractors.py"
+    },
+    {
+      "path": "guide-kit/structurer/freshness.py"
+    },
+    {
+      "path": "guide-kit/structurer/homes.py"
+    },
+    {
+      "path": "guide-kit/structurer/media.py"
+    },
+    {
+      "path": "guide-kit/structurer/quarantine.py"
+    },
+    {
+      "path": "guide-kit/structurer/residency.py"
+    },
+    {
+      "path": "guide-kit/structurer/sidecar.py"
+    },
+    {
+      "path": "guide-kit/structurer/signals.py"
+    },
+    {
+      "path": "guide-kit/structurer/test_classify.py"
+    },
+    {
+      "path": "guide-kit/structurer/test_extractors.py"
+    },
+    {
+      "path": "guide-kit/structurer/test_freshness.py"
+    },
+    {
+      "path": "guide-kit/structurer/test_media.py"
+    },
+    {
+      "path": "guide-kit/structurer/test_quarantine.py"
+    },
+    {
+      "path": "guide-kit/structurer/test_residency.py"
+    },
+    {
+      "path": "guide-kit/structurer/test_sidecar.py"
+    },
+    {
       "path": "memory/MEMORY.md"
     },
     {
@@ -1396,6 +1519,7 @@
     "scripts/check-manifest-rename-coverage.py",
     "scripts/delivery_checks.py",
     "scripts/generate-helper-catalog.py",
+    "scripts/guide-kit-sync-state.yaml",
     "scripts/guide-kit-sync.sh",
     "scripts/iwe-catalog-list.py",
     "scripts/iwe-trace.py",
