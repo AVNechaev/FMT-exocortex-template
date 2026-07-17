@@ -104,10 +104,11 @@ Versioning: [Semantic Versioning](https://semver.org/).
 
 
 
-## [Unreleased] — обновлено 2026-07-16
+## [Unreleased] — обновлено 2026-07-17
 
 ### Added
 
+- `017235c` feat(wp483-f4): deliver guide-kit v0.1.0 to the template (demo catalog + work_section)
 - `8c9c305` feat(wp415): provenance-free iwesys publication
 - `63c2ec5` feat(wp415): Cyrillic gate — publish-to-iwesys rejects any Cyrillic
 - `58b8602` feat(residency-gate): mandatory schema_version + pilot-approved pre-grant.yaml (WP-476 F1 cond. 2/6, pilot decisions 2026-07-16)
