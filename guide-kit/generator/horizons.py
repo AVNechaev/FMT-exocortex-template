@@ -1,11 +1,10 @@
 """
-agents/tailor/horizons.py — Types for Tailor-2 (horizon cascade + RCS input).
-# see WP-149 Phase 11, WP-203 Phase 1.5
+horizons.py — types for the horizon-aware planner (horizon cascade + RCS input).
 
 Contains only data types — selection business logic lives in planner.py.
 
 Two input formats for RCS:
-  - full (WP-151 Phase 12): {worldview: N, mastery: {m1_focus: N, ...}, it_level: N, agency: N}
+  - full: {worldview: N, mastery: {m1_focus: N, ...}, it_level: N, agency: N}
   - compact (render-pilot-guides.py): {W: N, M1: N, M2: N, M4: N, stage: N}
 """
 
@@ -31,6 +30,58 @@ SLOT_LABELS: dict[str, str] = {
 
 _ALL_SLOTS = ("W", "M1", "M2", "M3", "M4", "IT", "A")
 
+# Compact key names recognized by RCSProfile
+_COMPACT_KEYS = frozenset({
+    "W", "M1", "M2", "M3", "M4", "IT", "A",
+    "bottleneck", "stage_derived", "source", "confidence",
+})
+
+# Full-format sub-keys under "mastery" → compact names
+_MASTERY_SUB = {
+    "m1_focus": "M1",
+    "m2_iwe": "M2",
+    "m3_domain": "M3",
+    "m4_systems": "M4",
+}
+
+
+def normalize_rcs_dict(d: dict) -> dict:
+    """Normalize any RCS dict (full or compact format) to compact keys.
+
+    Compact key set: W, M1-M4, IT, A, bottleneck, stage_derived, source, confidence.
+    Only keys actually present in *d* appear in the output — no defaults are injected.
+    from_dict() reuses this function so the key-mapping table is never duplicated.
+    """
+    if "worldview" not in d:
+        # Already compact (or aliases only) — rename known aliases, drop unknowns.
+        # Aliases are applied first, then canonical keys always overwrite them —
+        # so when both an alias and its canonical key are present, the canonical
+        # key wins deterministically regardless of dict iteration order.
+        result: dict = {}
+        _ALIAS_TO_CANONICAL = {"stage": "stage_derived", "it_level": "IT", "agency": "A"}
+        for alias, canonical in _ALIAS_TO_CANONICAL.items():
+            if alias in d:
+                result[canonical] = d[alias]
+        for k, v in d.items():
+            if k in _COMPACT_KEYS:
+                result[k] = v
+        return result
+
+    # Full format
+    mastery = d.get("mastery") or {}
+    result = {"W": d["worldview"]}
+    for sub, compact in _MASTERY_SUB.items():
+        if sub in mastery:
+            result[compact] = mastery[sub]
+    if "it_level" in d:
+        result["IT"] = d["it_level"]
+    if "agency" in d:
+        result["A"] = d["agency"]
+    for k in ("bottleneck", "stage_derived", "source", "confidence"):
+        if k in d:
+            result[k] = d[k]
+    return result
+
 
 @dataclass
 class RCSProfile:
@@ -52,36 +103,19 @@ class RCSProfile:
     @classmethod
     def from_dict(cls, d: dict) -> "RCSProfile":
         """Build from a dict. Supports both the full and the compact format."""
-        if "worldview" in d:
-            # Full format (WP-151 Phase 12)
-            mastery = d.get("mastery", {})
-            return cls(
-                W=int(d.get("worldview", 1)),
-                M1=int(mastery.get("m1_focus", 1)),
-                M2=int(mastery.get("m2_iwe", 1)),
-                M3=int(mastery.get("m3_domain", 1)),
-                M4=int(mastery.get("m4_systems", 1)),
-                IT=int(d.get("it_level", 1)),
-                A=int(d.get("agency", 1)),
-                bottleneck=str(d.get("bottleneck", "M1")),
-                stage_derived=int(d.get("stage_derived", 1)),
-                source=str(d.get("source", "manual")),
-                confidence=float(d.get("confidence", 0.0)),
-            )
-        # Compact format (render-pilot-guides.py)
-        stage = int(d.get("stage", d.get("stage_derived", 1)))
+        c = normalize_rcs_dict(d)
         return cls(
-            W=int(d.get("W", 1)),
-            M1=int(d.get("M1", 1)),
-            M2=int(d.get("M2", 1)),
-            M3=int(d.get("M3", 1)),
-            M4=int(d.get("M4", 1)),
-            IT=int(d.get("IT", d.get("it_level", 1))),
-            A=int(d.get("A", d.get("agency", 1))),
-            bottleneck=str(d.get("bottleneck", "M1")),
-            stage_derived=stage,
-            source=str(d.get("source", "manual")),
-            confidence=float(d.get("confidence", 0.0)),
+            W=int(c.get("W", 1)),
+            M1=int(c.get("M1", 1)),
+            M2=int(c.get("M2", 1)),
+            M3=int(c.get("M3", 1)),
+            M4=int(c.get("M4", 1)),
+            IT=int(c.get("IT", 1)),
+            A=int(c.get("A", 1)),
+            bottleneck=str(c.get("bottleneck", "M1")),
+            stage_derived=int(c.get("stage_derived", 1)),
+            source=str(c.get("source", "manual")),
+            confidence=float(c.get("confidence", 0.0)),
         )
 
     def weakest_slots(self, n: int = 2) -> list[str]:
@@ -101,7 +135,45 @@ class RCSProfile:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Orchestrator triggers (WP-203 Phase 1.5)
+# Qualification degree (DP.D.050 ladder) — a separate axis from RCS stage.
+# See DP.D.252: stage reflects behavior and may be self-reported; degree is
+# assigned only by the methodological council. guide-kit reads it as context
+# for the assumed knowledge level, it never assigns or infers one.
+# ─────────────────────────────────────────────────────────────────────────────
+
+@dataclass
+class QualificationDegree:
+    """Qualification degree. `degree` is whatever code the source uses (e.g. the
+    platform's own "DEG.Worker") or the user's own words — not validated against
+    a fixed list, since the platform's full DEG.* enum isn't confirmed anywhere
+    in the Pack beyond DEG.Worker/DEG.Freshman. Empty degree = unknown, not a
+    default level; the planner must not assume "DEG.Freshman" for an unset field."""
+
+    degree: str = ""
+    source: str = ""            # platform | declared
+    certified_at: str = ""      # ISO date, optional — informational freshness signal
+    use_declared: bool = False  # explicit, auditable override: platform record is stale
+
+    @classmethod
+    def from_dict(cls, d: dict) -> "QualificationDegree":
+        return cls(
+            degree=str(d.get("degree") or ""),
+            source=str(d.get("source") or ""),
+            certified_at=str(d.get("certified_at") or ""),
+            use_declared=bool(d.get("use_declared", False)),
+        )
+
+    def to_dict(self) -> dict:
+        result = {"degree": self.degree, "source": self.source}
+        if self.certified_at:
+            result["certified_at"] = self.certified_at
+        if self.use_declared:
+            result["use_declared"] = True
+        return result
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Orchestrator triggers
 # ─────────────────────────────────────────────────────────────────────────────
 
 TriggerKind = Literal[
@@ -172,25 +244,26 @@ class DayEvents:
 
 @dataclass
 class ArtifactsSummary:
-    """What the user created over the period (from the WP-109 classifier)."""
+    """What the user created over the period (from the artifact classifier)."""
     count: int = 0
     by_type: dict[str, int] = field(default_factory=dict)    # {artifact_type: count}
     recent_titles: list[str] = field(default_factory=list)   # last N titles
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# HorizonContext — Tailor-2's main input
+# HorizonContext — the horizon-aware planner's main input
 # ─────────────────────────────────────────────────────────────────────────────
 
 @dataclass
 class HorizonContext:
-    """Tailor-2's full input (WP-149 Phase 11): RCS + 4 horizons + artifacts + trigger.
+    """The horizon-aware planner's full input: RCS + 4 horizons + artifacts + trigger.
 
     Replaces the flat TailorContext for horizon-aware mode.
     Compatible with the current render-pilot-guides.py via from_render_context().
     """
 
     rcs: RCSProfile
+    qualification_degree: QualificationDegree = field(default_factory=QualificationDegree)
     trigger: OrchestratorTrigger = field(default_factory=OrchestratorTrigger)
 
     # 4 horizons (empty fields -> planner.py derives them from RCS)
@@ -230,7 +303,7 @@ class HorizonContext:
     ) -> "HorizonContext":
         """Compatibility constructor for render-pilot-guides.py.
 
-        Used until the Orchestrator (WP-203) is fully implemented.
+        Used until the Orchestrator is fully implemented.
         The quarter/week/day horizons stay empty — planner.py will fill them from RCS.
         """
         rcs = RCSProfile.from_dict(rcs_dict)
@@ -243,7 +316,7 @@ class HorizonContext:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# PlanDay — Tailor-2's output
+# PlanDay — the horizon-aware planner's output
 # ─────────────────────────────────────────────────────────────────────────────
 
 @dataclass
@@ -260,7 +333,7 @@ class DZItem:
 
 @dataclass
 class PlanDay:
-    """Tailor-2's output — daily assignment package + narrative (WP-149 Phase 11).
+    """The horizon-aware planner's output — daily assignment package + narrative.
 
     Replaces plan()'s dict output for horizon-aware mode.
     Compatible: plan() returns a dict, plan_horizon() returns a PlanDay.

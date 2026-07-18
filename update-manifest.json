@@ -642,6 +642,9 @@
       "path": "guide-kit/FORMAT.md"
     },
     {
+      "path": "guide-kit/HOW-IT-WORKS.md"
+    },
+    {
       "path": "guide-kit/LICENSE"
     },
     {
@@ -663,6 +666,9 @@
       "path": "guide-kit/generator/adapter.py"
     },
     {
+      "path": "guide-kit/generator/conftest.py"
+    },
+    {
       "path": "guide-kit/generator/horizons.py"
     },
     {
@@ -681,6 +687,9 @@
       "path": "guide-kit/generator/onboarding_ctas.py"
     },
     {
+      "path": "guide-kit/generator/personal_export.py"
+    },
+    {
       "path": "guide-kit/generator/planner.py"
     },
     {
@@ -688,6 +697,12 @@
     },
     {
       "path": "guide-kit/generator/prompt.md"
+    },
+    {
+      "path": "guide-kit/generator/render_work_section_runner.py"
+    },
+    {
+      "path": "guide-kit/generator/test_acceptance_backends.py"
     },
     {
       "path": "guide-kit/generator/test_adapter_work_section.py"
@@ -702,7 +717,13 @@
       "path": "guide-kit/generator/test_onboarding_ctas.py"
     },
     {
+      "path": "guide-kit/generator/test_personal_export.py"
+    },
+    {
       "path": "guide-kit/generator/test_work_section.py"
+    },
+    {
+      "path": "guide-kit/generator/test_zero_upload.py"
     },
     {
       "path": "guide-kit/generator/work_section.py"
@@ -757,6 +778,12 @@
     },
     {
       "path": "guide-kit/structurer/test_sidecar.py"
+    },
+    {
+      "path": "guide-kit/tests/acceptance/stub_llm_server.py"
+    },
+    {
+      "path": "guide-kit/tests/acceptance/test_p1_clean_machine.sh"
     },
     {
       "path": "memory/MEMORY.md"
