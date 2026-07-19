@@ -387,6 +387,9 @@
       "path": ".claude/skills/vdv/test_cases.md"
     },
     {
+      "path": ".claude/skills/verify-hypotheses/SKILL.md"
+    },
+    {
       "path": ".claude/skills/verify/SKILL.md"
     },
     {
