@@ -80,6 +80,46 @@ hash_file() {
     sha256sum "$1" 2>/dev/null | cut -d' ' -f1
 }
 
+# substitute_claude_placeholders SRC DST — копирует SRC в DST с подставленными
+# {{PLACEHOLDER}} (issue #269). setup.sh подставляет их в workspace/CLAUDE.md И
+# в .claude.md.base при установке; update.sh раньше копировал upstream-файл в
+# 3-way merge и в новый .base сырым — плейсхолдер, который апстрим добавил в
+# CLAUDE.md, приезжал нерезолвленным и застревал в merge-base для всех
+# последующих обновлений. Читает .exocortex.env тем же безопасным парсером,
+# что и Step 5b (только простые KEY=VALUE, без source/eval).
+substitute_claude_placeholders() {
+    local src="$1" dst="$2"
+    local env_file=""
+    [ -f "$WORKSPACE_DIR/.exocortex.env" ] && env_file="$WORKSPACE_DIR/.exocortex.env"
+    [ -z "$env_file" ] && [ -f "$SCRIPT_DIR/.exocortex.env" ] && env_file="$SCRIPT_DIR/.exocortex.env"
+
+    cp "$src" "$dst"
+    [ -z "$env_file" ] && return 0
+    grep -qE '^\s*(source|eval|exec|\.|`|;|\$\()' "$env_file" 2>/dev/null && return 0
+
+    local key value
+    while IFS= read -r line; do
+        case "$line" in \#*|"") continue ;; esac
+        key="${line%%=*}"; value="${line#*=}"
+        key=$(echo "$key" | tr -d '[:space:]')
+        [ -z "$key" ] && continue
+        declare "SUBST_$key=$value"
+    done < "$env_file"
+
+    sed_inplace \
+        -e "s|{{GITHUB_USER}}|${SUBST_GITHUB_USER:-}|g" \
+        -e "s|{{WORKSPACE_DIR}}|${SUBST_WORKSPACE_DIR:-$WORKSPACE_DIR}|g" \
+        -e "s|{{CLAUDE_PATH}}|${SUBST_CLAUDE_PATH:-}|g" \
+        -e "s|{{CLAUDE_PROJECT_SLUG}}|${SUBST_CLAUDE_PROJECT_SLUG:-$CLAUDE_PROJECT_SLUG}|g" \
+        -e "s|{{TIMEZONE_HOUR}}|${SUBST_TIMEZONE_HOUR:-}|g" \
+        -e "s|{{TIMEZONE_DESC}}|${SUBST_TIMEZONE_DESC:-}|g" \
+        -e "s|{{HOME_DIR}}|${SUBST_HOME_DIR:-$HOME}|g" \
+        -e "s|{{GOVERNANCE_REPO}}|${SUBST_GOVERNANCE_REPO:-}|g" \
+        -e "s|{{IWE_TEMPLATE}}|${SUBST_IWE_TEMPLATE:-$SCRIPT_DIR}|g" \
+        -e "s|{{IWE_RUNTIME}}|${SUBST_IWE_RUNTIME:-}|g" \
+        "$dst"
+}
+
 # Личные L4-конфиги в memory/: update.sh сеет их при ОТСУТСТВИИ (новая инсталляция),
 # но НИКОГДА не перезаписывает поверх существующего — там персональные правки
 # пользователя (напр. calendar_ids, slot-настройки в day-rhythm-config.yaml).
@@ -580,7 +620,8 @@ for f in "${UPDATED_FILES[@]}"; do
     # Special handling for CLAUDE.md: 3-way merge preserving user customizations
     if [ "$f" = "CLAUDE.md" ] && [ -f "$SCRIPT_DIR/$f" ]; then
         BASE_FILE="$SCRIPT_DIR/.claude.md.base"
-        NEW_FILE="$TMPDIR_UPDATE/files/$f"
+        NEW_FILE="$TMPDIR_UPDATE/files/claude-new-substituted.md"
+        substitute_claude_placeholders "$TMPDIR_UPDATE/files/$f" "$NEW_FILE"
         CURRENT_FILE="$SCRIPT_DIR/$f"
 
         if [ -f "$BASE_FILE" ] && command -v git >/dev/null 2>&1; then
