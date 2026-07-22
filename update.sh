@@ -284,7 +284,12 @@ repair_pass() {
                 fname=$(basename "$fpath")
                 [ "$fname" = "MEMORY.md" ] && continue
                 if [ -d "$CLAUDE_MEMORY_DIR" ]; then
-                    mem_dst="$CLAUDE_MEMORY_DIR/$fname"
+                    # Относительный путь от memory/ сохраняет вложенность (issue #287/#294) —
+                    # basename ронял memory/reference/agent-core.md на плоский memory/agent-core.md,
+                    # и 9 ссылок на него в CLAUDE.md указывали в никуда.
+                    rel="${fpath#memory/}"
+                    mem_dst="$CLAUDE_MEMORY_DIR/$rel"
+                    mkdir -p "$(dirname "$mem_dst")"
                     if [ ! -f "$mem_dst" ]; then
                         cp "$SCRIPT_DIR/$fpath" "$mem_dst"
                         echo "  ⟲ $fpath → memory/ (repair)"
@@ -749,9 +754,10 @@ for i in "${!DEPRECATED_FOUND[@]}"; do
             [ -f "$ws_path" ] && rm "$ws_path" && echo "    (также из workspace)"
             ;;
         esac
-        # Also remove from Claude memory dir (memory/* files)
+        # Also remove from Claude memory dir (memory/* files) — relative path from
+        # memory/ (not basename), symmetric with repair_pass() delivery (issue #287).
         case "$f" in memory/*.md|memory/*.yaml|memory/*.yml)
-            mem_path="$CLAUDE_MEMORY_DIR/$(basename "$f")"
+            mem_path="$CLAUDE_MEMORY_DIR/${f#memory/}"
             [ -f "$mem_path" ] && rm "$mem_path" && echo "    (также из memory/)"
             ;;
         esac
@@ -1001,7 +1007,10 @@ if [ -d "$CLAUDE_MEMORY_DIR" ]; then
         case "$f" in
             memory/*.md|memory/*.yaml|memory/*.yml)
                 fname=$(basename "$f")
-                dst="$CLAUDE_MEMORY_DIR/$fname"
+                # Относительный путь от memory/, не basename — сохраняет вложенность
+                # (memory/reference/agent-core.md), симметрично repair_pass() (issue #287).
+                dst="$CLAUDE_MEMORY_DIR/${f#memory/}"
+                mkdir -p "$(dirname "$dst")"
                 if [ "$fname" != "MEMORY.md" ]; then
                     # issue #229: same owner:user guard as repair_pass() — this loop runs on
                     # every update.sh call (not just repair), so it's the more common path
