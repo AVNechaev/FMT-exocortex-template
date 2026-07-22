@@ -2,8 +2,12 @@ name: Weekly Release
 
 # Еженедельно (Вс 20:00 UTC = Пн 00:00 MSK+1) проверяет CHANGELOG.md:
 # если секция [Unreleased] непустая — бампает patch-версию в
-# update-manifest.json и коммитит. Коммит триггерит release.yml,
+# update-manifest.json и коммитит, затем явно запускает release.yml,
 # который создаёт тег и GitHub Release.
+#
+# Явный запуск (не push-триггер): коммит идёт от github-actions[bot] через
+# стандартный GITHUB_TOKEN, а такие коммиты по политике GitHub не каскадируют
+# в другие workflow (anti-recursion), поэтому release.yml сам не подхватится.
 #
 # Причина: раньше версия бампалась только вручную — паузы между
 # выпусками доходили до 2-3 недель, хотя коммиты в [Unreleased]
@@ -16,6 +20,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 jobs:
   weekly-bump:
@@ -72,3 +77,9 @@ jobs:
           git add update-manifest.json CHANGELOG.md
           git commit -m "chore(release): weekly auto-bump to v${{ steps.bump.outputs.version }}"
           git push origin main
+
+      - name: Trigger Release workflow
+        if: steps.check.outputs.has_content == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run release.yml --ref main
