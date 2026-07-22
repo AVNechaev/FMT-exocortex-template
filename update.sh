@@ -1290,6 +1290,16 @@ if $ROLES_CHANGED && command -v launchctl >/dev/null 2>&1; then
     done
 fi
 
+# === Step 6d2: Regenerate hot-files.list (issue #294/#291) ===
+# hot-files.list ships pre-baked with the author's GOVERNANCE_REPO name; regenerate
+# so verify-context-budget.sh resolves the governance CLAUDE.md on THIS install
+# (script reads GOVERNANCE_REPO from $WORKSPACE_DIR/.exocortex.env itself).
+if [ -f "$SCRIPT_DIR/scripts/generate-hot-files-list.sh" ]; then
+    HOTFILES_OUTPUT=$(IWE_ROOT="$WORKSPACE_DIR" bash "$SCRIPT_DIR/scripts/generate-hot-files-list.sh" 2>&1) && \
+        echo "$HOTFILES_OUTPUT" | sed 's/^/  /' || \
+        { echo "$HOTFILES_OUTPUT" | sed 's/^/  /'; echo "  ⚠ hot-files.list не пересобран — запусти вручную: bash $SCRIPT_DIR/scripts/generate-hot-files-list.sh"; }
+fi
+
 # === Step 6e: Replace local manifest with downloaded remote manifest ===
 # Replaces entire manifest (files + deprecated_files + version), not just version field.
 # This ensures validators (D1/D9/D10) and future updates see the correct file list.

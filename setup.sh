@@ -683,6 +683,23 @@ else
     fi
 fi
 
+# === 4f. Regenerate hot-files.list for the actual governance repo (issue #294/#291) ===
+# The repo ships hot-files.list pre-baked with the author's GOVERNANCE_REPO name —
+# without regenerating here, verify-context-budget.sh reports MISSING on any install
+# where GOVERNANCE_REPO differs from the author's.
+if $DRY_RUN; then
+    echo "[DRY RUN] Would regenerate hot-files.list (IWE_GOVERNANCE_REPO=$GOVERNANCE_REPO)"
+else
+    echo "[4f] Regenerating hot-files.list..."
+    if HOTFILES_OUTPUT=$(IWE_ROOT="$WORKSPACE_DIR" IWE_GOVERNANCE_REPO="$GOVERNANCE_REPO" bash "$TEMPLATE_DIR/scripts/generate-hot-files-list.sh" 2>&1); then
+        echo "$HOTFILES_OUTPUT" | sed 's/^/  /'
+    else
+        echo "$HOTFILES_OUTPUT" | sed 's/^/  /'
+        echo "  ⚠ hot-files.list не пересобран — запусти вручную:"
+        echo "    IWE_GOVERNANCE_REPO=$GOVERNANCE_REPO bash $TEMPLATE_DIR/scripts/generate-hot-files-list.sh"
+    fi
+fi
+
 # === 5. Install roles (autodiscovery via role.yaml) ===
 if $CORE_ONLY; then
     echo "[5/6] Автоматизация... пропущена (core mode)"
