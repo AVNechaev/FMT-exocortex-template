@@ -31,8 +31,12 @@ AUTO_YES=false
 FAST_CHECK=false
 
 # Allow extra curl flags via env var (e.g. CURL_OPTS="--insecure" for Windows corporate firewall).
+# --max-time 20: without it a stalled/slow connection hangs update.sh forever with no
+# output (found 2026-07-22, WP-5 Ubuntu-audit — an interactive run produced zero output
+# and had to be killed). CURL_OPTS overrides the whole string, so a caller who needs a
+# different timeout can still set it explicitly.
 # shellcheck disable=SC2086  # $CURL_BASE_OPTS intentionally unquoted (multi-token flag)
-CURL_BASE_OPTS="${CURL_OPTS:-}"
+CURL_BASE_OPTS="${CURL_OPTS:---max-time 20}"
 
 # Windows (msys/cygwin) schannel backend may fail with CRYPT_E_NO_REVOCATION_CHECK.
 # Detect the best available SSL revocation flag without making a network call.
