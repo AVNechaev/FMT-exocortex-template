@@ -183,10 +183,19 @@ trap cleanup_peer EXIT INT TERM
 
 # === Запуск Codex headless: `codex exec`, -o для чистого файла с финальным ответом + 5min timeout ===
 OUT_FILE="$TMP_ROOT/codex-output.txt"
-PRIMARY_DIR="${ADD_DIRS[0]:-$PWD}"
+# BUGFIX (found by review, issue #296): -C is Codex's sandbox root — Codex reads
+# from and writes to whatever this points at. Using $ADD_DIRS[0] (the RAW,
+# unfiltered original directory) here defeated the whole PII/.agentigore filter
+# above: FILTERED_DIRS holds the scrubbed copies in $TMP_ROOT, but the sandbox
+# root itself was still the unfiltered source. Must be the FILTERED copy of the
+# first --add-dir (FILTERED_DIRS[1] — [0] is the literal "--add-dir" token).
+PRIMARY_DIR="${FILTERED_DIRS[1]:-$PWD}"
 
 CODEX_EXEC_ARGS=(exec -s workspace-write -C "$PRIMARY_DIR" -o "$OUT_FILE")
-for ((i=1; i<${#FILTERED_DIRS[@]}; i+=2)); do
+# Start at 3, not 1: FILTERED_DIRS[0..1] is the pair already consumed as
+# PRIMARY_DIR above — re-adding it as --add-dir would just be a harmless-but-
+# redundant duplicate, skip it.
+for ((i=3; i<${#FILTERED_DIRS[@]}; i+=2)); do
   CODEX_EXEC_ARGS+=("--add-dir" "${FILTERED_DIRS[$i]}")
 done
 if [ ${#MODEL_ARG[@]} -ge 2 ]; then

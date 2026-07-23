@@ -36,11 +36,11 @@ concurrency:
 jobs:
   sync:
     if: >-
+      github.repository == 'TserenTserenov/FMT-exocortex-template' &&
       github.actor != 'github-actions[bot]' &&
       github.actor != 'canon-sync[bot]' &&
       !contains(github.event.head_commit.message, '[skip-translate]')
     runs-on: ubuntu-latest
-    if: github.repository == 'TserenTserenov/FMT-exocortex-template'
     permissions:
       contents: write
     outputs:

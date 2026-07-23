@@ -40,11 +40,11 @@ jobs:
   backup-memory:
     name: Backup memory → exocortex
     runs-on: ubuntu-latest
-    if: github.repository == 'TserenTserenov/FMT-exocortex-template'
     if: >-
+      github.repository == 'TserenTserenov/FMT-exocortex-template' && (
       github.event_name == 'schedule' ||
       github.event.inputs.task == 'all' ||
-      github.event.inputs.task == 'backup'
+      github.event.inputs.task == 'backup' )
     steps:
       - name: Checkout strategy repo
         if: env.STRATEGY_REPO != ''
@@ -100,11 +100,11 @@ jobs:
   health-check:
     name: Health check (ночная автоматика)
     runs-on: ubuntu-latest
-    if: github.repository == 'TserenTserenov/FMT-exocortex-template'
     if: >-
+      github.repository == 'TserenTserenov/FMT-exocortex-template' && (
       github.event_name == 'schedule' ||
       github.event.inputs.task == 'all' ||
-      github.event.inputs.task == 'health-check'
+      github.event.inputs.task == 'health-check' )
     steps:
       - name: Checkout strategy repo
         if: env.STRATEGY_REPO != ''

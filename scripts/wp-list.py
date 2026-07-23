@@ -51,10 +51,16 @@ def _clean_value(raw):
 
 
 def parse_frontmatter(path):
-    """Return a dict of frontmatter fields (best-effort, not full YAML)."""
+    """Return a dict of frontmatter fields (best-effort, not full YAML).
+
+    UnicodeDecodeError (found by review): one card anywhere in inbox/ with a
+    stray non-UTF-8 byte used to crash the whole discovery run uncaught —
+    every OTHER valid card silently vanished from the output along with it.
+    Best-effort here means exactly that: skip the one bad card, not the run.
+    """
     try:
         text = path.read_text(encoding="utf-8")
-    except OSError:
+    except (OSError, UnicodeDecodeError):
         return {}
     m = FRONTMATTER_RE.match(text)
     if not m:
@@ -108,7 +114,11 @@ def registry_done_status(registry_path):
     done = {}
     if not registry_path.is_file():
         return done
-    for line in registry_path.read_text(encoding="utf-8").splitlines():
+    try:
+        text = registry_path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return done
+    for line in text.splitlines():
         m = re.match(r"^\|\s*~~0*(\d+)~~", line)
         if m:
             done[m.group(1)] = True

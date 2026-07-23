@@ -295,10 +295,20 @@ if local_files is None or upstream_files is None:
 else:
     print('match' if local_files == upstream_files else 'differ')
 " 2>/dev/null)
-        if [ "$FILES_MATCH" = "match" ] && [ -n "$LOCAL_VERSION" ] && [ "$LOCAL_VERSION" = "$UPSTREAM_VERSION" ]; then
+        VERSIONS_MATCH=false
+        [ -n "$LOCAL_VERSION" ] && [ "$LOCAL_VERSION" = "$UPSTREAM_VERSION" ] && VERSIONS_MATCH=true
+        # issue #288 review fix: FILES_MATCH="unknown" (manifest JSON unparseable
+        # on either side) used to fall into the generic "версия отличается" branch
+        # even when the two version STRINGS were in fact identical — printed the
+        # same version number twice while claiming a mismatch. Four distinct cases
+        # now, not three collapsed into one catch-all.
+        if [ "$FILES_MATCH" = "match" ] && $VERSIONS_MATCH; then
             echo "✓ Версия и состав манифеста совпадают с upstream (v$UPSTREAM_VERSION). Обновлений нет."
         elif [ "$FILES_MATCH" = "differ" ]; then
-            echo "⚠ Состав манифеста изменился (файлы добавлены/удалены/обновлены), версия та же (v$UPSTREAM_VERSION)."
+            echo "⚠ Состав манифеста изменился (файлы добавлены/удалены/обновлены)."
+            echo "  Для полного списка изменений: bash update.sh --check (без --fast)."
+        elif $VERSIONS_MATCH; then
+            echo "⚠ Версия совпадает (v$UPSTREAM_VERSION), но не удалось сверить состав манифеста (не распарсился JSON)."
             echo "  Для полного списка изменений: bash update.sh --check (без --fast)."
         else
             echo "⚠ Версия отличается: локально v${LOCAL_VERSION:-неизвестно}, upstream v$UPSTREAM_VERSION."
