@@ -13,7 +13,7 @@ higher-risk follow-up) — this is the reusable primitive the issue asked for.
 
 Usage:
     python3 wp-list.py --list-cards [--source inbox|archive|all]
-                        [--fields wp,title,status,created,closed,deferred,budget,card]
+                        [--fields wp,title,status,status_raw,registry_done,created,closed,deferred,budget,card]
                         [--format json|tsv]
                         [--governance-repo NAME] [--iwe-root PATH]
 
@@ -31,10 +31,23 @@ import sys
 from pathlib import Path
 
 DEFAULT_FIELDS = ["wp", "title", "status", "card"]
-ALL_FIELDS = ["wp", "title", "status", "created", "closed", "deferred", "budget", "card"]
+ALL_FIELDS = ["wp", "title", "status", "status_raw", "registry_done", "created", "closed", "deferred", "budget", "card"]
 
 FRONTMATTER_RE = re.compile(r"^---\n(.*?)\n---\n", re.DOTALL)
-FIELD_RE = re.compile(r'^(\w+):\s*["\']?(.*?)["\']?\s*$')
+FIELD_RE = re.compile(r"^(\w+):\s*(.*)$")
+
+
+def _clean_value(raw):
+    """Strip surrounding quotes, or — only for unquoted values — a trailing
+    inline `# comment` (this codebase's cards routinely write
+    `status: in_progress  # 16 июля: ...` — a bare status-equality check
+    against the raw line would silently miss every commented status)."""
+    raw = raw.strip()
+    if raw[:1] in ('"', "'"):
+        quote = raw[0]
+        m = re.match(re.escape(quote) + r"(.*)" + re.escape(quote) + r"\s*(?:#.*)?$", raw)
+        return m.group(1) if m else raw.strip(quote)
+    return re.split(r"\s+#", raw, maxsplit=1)[0].strip()
 
 
 def parse_frontmatter(path):
@@ -50,7 +63,7 @@ def parse_frontmatter(path):
     for line in m.group(1).splitlines():
         fm = FIELD_RE.match(line)
         if fm:
-            fields[fm.group(1)] = fm.group(2)
+            fields[fm.group(1)] = _clean_value(fm.group(2))
     return fields
 
 
@@ -104,13 +117,19 @@ def registry_done_status(registry_path):
 
 def build_row(num, card_path, registry_done):
     fm = parse_frontmatter(card_path)
-    status = fm.get("status", "")
-    if registry_done.get(num) and status != "done":
-        status = "done"
+    status_raw = fm.get("status", "")
+    is_registry_done = bool(registry_done.get(num))
+    status = "done" if (is_registry_done and status_raw != "done") else status_raw
     return {
         "wp": num,
         "title": fm.get("title", ""),
+        # "status": REGISTRY-merged (done wins) — what a "give me the current
+        # state" consumer wants. "status_raw": frontmatter only, unmerged —
+        # what a drift detector wants (compare against registry_done itself
+        # to find zombies: frontmatter says active, REGISTRY already ✅).
         "status": status,
+        "status_raw": status_raw,
+        "registry_done": "true" if is_registry_done else "false",
         "created": fm.get("created", ""),
         "closed": fm.get("closed", ""),
         "deferred": fm.get("deferred", ""),
