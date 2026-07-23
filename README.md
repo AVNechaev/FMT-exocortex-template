@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/version-0.36.0-blue.svg)](CHANGELOG.md)
-[![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows%20(WSL)-lightgrey.svg)]()
+[![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows%20(Git%20Bash)-lightgrey.svg)]()
 [![EN sync](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/TserenTserenov/FMT-exocortex-template/en-draft/badge-data.json)](https://github.com/TserenTserenov/FMT-exocortex-template/tree/en-draft)
 
 <img src="https://raw.githubusercontent.com/TserenTserenov/FMT-exocortex-template/main/docs/assets/orz-cycle.svg" alt="Open, Work, Close — the same cycle at every scale: session, day, week" width="100%">
@@ -216,7 +216,7 @@ A: Да, три агента поддерживаются из коробки:
 Минимальная установка (`setup.sh --core`) работает без привязки к конкретному агенту.
 
 **Q: Работает ли на Linux/Windows?**
-A: Да. Ядро работает на любой ОС. Автоматизация Стратега: macOS — launchd, Linux — cron, Windows — WSL. Подробнее: [SETUP-GUIDE.md](docs/SETUP-GUIDE.md).
+A: Да. Ядро работает на любой ОС. Автоматизация Стратега: macOS — launchd, Linux — systemd (пользовательские юниты), облачный вариант (не завязан на ОС) — GitHub Actions. Windows: `setup.sh` и ядро запускаются через Git Bash (ставится вместе с Git for Windows) — WSL не обязателен; WSL остаётся резервным путём для тех, кто предпочитает полноценный Linux-слой. Не проверено вживую на реальном Windows (нет Windows-раннера в CI) — подробнее и честная оговорка: [SETUP-GUIDE.md](docs/SETUP-GUIDE.md) § Windows.
 
 **Q: Что если компьютер выключен или спит — автоматика остановится?**
 A: Cloud Scheduler (GitHub Actions) работает в облаке даже при выключенном компьютере. Для локальных агентов: скрипты автоматически предотвращают сон на время работы (macOS: `caffeinate`, Linux: `systemd-inhibit`). Для ноутбуков рекомендуется настроить автоматическое пробуждение и запрет idle sleep — см. [SETUP-GUIDE.md](docs/SETUP-GUIDE.md).
