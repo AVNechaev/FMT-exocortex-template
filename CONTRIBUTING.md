@@ -122,6 +122,23 @@ first reading the developer-guide. If either check fails, it belongs in the deve
 3. Changes to L1 files require maintainer approval
 4. Extensions and docs usually merge faster
 
+### For External Contributors
+
+`.github/PULL_REQUEST_TEMPLATE.md` (the text that auto-fills your PR body) describes
+IWE's internal WP-Gate pipeline — that's the maintainer's own daily workflow, not a bar
+external PRs are held to. If you're not running that pipeline, delete the auto-filled
+text and use this instead:
+
+- **What changed and why** — a sentence or two
+- **How you tested it** — ran the relevant script/test, or describe the manual check
+- **One concern per PR** — see "What Makes a Good PR" above
+
+Labels [`good first issue`](https://github.com/TserenTserenov/FMT-exocortex-template/labels/good%20first%20issue)
+and [`Linux-portability`](https://github.com/TserenTserenov/FMT-exocortex-template/labels/Linux-portability)
+mark issues that are scoped for a first PR without needing deep context on the rest of
+the platform — the [Linux portability tracking issue](https://github.com/TserenTserenov/FMT-exocortex-template/issues/300)
+is a good starting point if you're coming from a non-macOS install.
+
 ---
 
 ## Development Setup

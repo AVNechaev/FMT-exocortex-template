@@ -3,6 +3,11 @@
 Разработчик T4+ заполняет его, проходя конвейер. Ревьюер (ведущий разработчик / пилот)
 видит статус всех 6 станций до того, как откроет код.
 Подробно про конвейер: docs/developer/README.md
+
+First-time / external contributor? This template assumes IWE's internal
+WP-Gate pipeline — you don't need to fill it out. Delete everything below
+and use the plain checklist instead: see CONTRIBUTING.md § Pull Request
+Guidelines § For external contributors. That's the actual bar for your PR.
 -->
 
 ## Карточка задачи
