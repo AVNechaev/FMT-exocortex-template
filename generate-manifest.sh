@@ -45,7 +45,8 @@ SKIP_PATTERNS=(
 # не растущий с каждым новым skill (в отличие от прежнего allow-list на *доставку*).
 EXCLUDED_PATTERNS=(
     "scripts/tests/"
-    "docs/developer/"
+    "docs/"        # WP-401 Ф6.1: documentation pipeline deprecated, consolidated in memory/ (was: only docs/developer/)
+    "sessions/"    # WP-401 Ф6.1: session transcripts archived, not for delivery
 )
 
 EXCLUDED_SCRIPTS=(
@@ -67,9 +68,8 @@ EXCLUDED_EXACT=(
     "promotion-status.yaml"
     "scripts/guide-kit-sync-state.yaml"         # provenance vendored-копии guide-kit/ — нужен CI drift-check, не пользователям
     "AGENTS-agent-blocks.md"
-    "docs/BROWSER-CI-TEMPLATE.md"
-    "docs/maintaining-skills.md"
-    "docs/release-audit-log.md"
+    "CHANGELOG.md"                              # WP-401 Ф6.1: consolidated in CLAUDE.md and memory/ files
+    "ONTOLOGY.md"                                # WP-401 Ф6.1: consolidated in CLAUDE.md and memory/ files
     "${EXCLUDED_SCRIPTS[@]}"
 )
 
