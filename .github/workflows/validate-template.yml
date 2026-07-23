@@ -346,6 +346,13 @@ jobs:
       - name: Check setup/update component-set parity
         run: bash scripts/check-component-parity.sh
 
+      # seed-снапшоты (WP-5 Ubuntu-audit, 2026-07-22 факт #3): script-promote.sh
+      # промотирует личный скрипт → scripts/, но НЕ пишет в seed/strategy/scripts/ —
+      # без этого гейта дрейф молчит, пока новый пользователь не упрётся в старый
+      # пайплайн (нашлось: day-open-pipeline.sh/scaffold.sh разошлись на сотни строк).
+      - name: Check seed snapshots match scripts/ (drift guard)
+        run: bash scripts/check-seed-drift.sh
+
       # 7. Только допустимые placeholders
       - name: Check placeholders are valid
         run: |
