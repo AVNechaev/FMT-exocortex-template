@@ -45,7 +45,8 @@ SKIP_PATTERNS=(
 # не растущий с каждым новым skill (в отличие от прежнего allow-list на *доставку*).
 EXCLUDED_PATTERNS=(
     "scripts/tests/"
-    "docs/"        # WP-401 Ф6.1: documentation pipeline deprecated, consolidated in memory/ (was: only docs/developer/)
+    "docs/developer/"    # never delivered since the first manifest commit (23b0494, WP-7 MFC4) —
+                          # unrelated to the WP-401 Ф6.1 docs/ freeze below, keep excluded
     "sessions/2026-06/"    # WP-401 Ф6.1: archived transcript, not for delivery. NOTE: sessions/00-index.md
                             # stays OUT of this exclusion on purpose — it's a protected seed-once-then-never-
                             # touch file like memory/MEMORY.md (see is_protected_user_file() in update.sh),
@@ -72,8 +73,6 @@ EXCLUDED_EXACT=(
     "promotion-status.yaml"
     "scripts/guide-kit-sync-state.yaml"         # provenance vendored-копии guide-kit/ — нужен CI drift-check, не пользователям
     "AGENTS-agent-blocks.md"
-    "CHANGELOG.md"                              # WP-401 Ф6.1: consolidated in CLAUDE.md and memory/ files
-    "ONTOLOGY.md"                                # WP-401 Ф6.1: consolidated in CLAUDE.md and memory/ files
     "${EXCLUDED_SCRIPTS[@]}"
 )
 
