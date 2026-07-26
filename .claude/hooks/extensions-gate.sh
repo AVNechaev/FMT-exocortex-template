@@ -31,7 +31,13 @@ if echo "$FILE_PATH" | grep -qE '\.claude/skills/|memory/protocol-'; then
 
   # Исключение 3 (issue #311): свой навык — .claude/skills/<name>/ отсутствует
   # в манифесте платформы, update.sh его не затронет и не затрёт.
-  if echo "$FILE_PATH" | grep -qE '\.claude/skills/'; then
+  # Требуем ИМЕННО поддиректорию (name/...) — плоский файл прямо в .claude/skills/
+  # (напр. SKILL-INDEX.yaml, платформенный манифест-файл) НЕ подпадает под это
+  # исключение и должен падать в блокировку ниже как раньше. Без этого якоря sed
+  # на непарном пути не находит совпадения и молча пропускает FILE_PATH целиком —
+  # такой SKILL_NAME никогда не совпадёт в манифесте → гейт открывался бы для
+  # любого файла прямо в .claude/skills/ (найдено код-ревью).
+  if echo "$FILE_PATH" | grep -qE '\.claude/skills/[^/]+/'; then
     SKILL_NAME=$(echo "$FILE_PATH" | sed -E 's#.*\.claude/skills/([^/]+)/.*#\1#')
     MANIFEST="$WORKSPACE_DIR/update-manifest.json"
     if [ -n "$SKILL_NAME" ] && [ -f "$MANIFEST" ]; then
