@@ -104,6 +104,11 @@ for pattern in "tserentserenov" "PACK-MIM" "aist_bot_newarchitecture" \
             case "$(basename "$f")" in
                 validate-template.sh|LEARNING-PATH.md|CHANGELOG.md) continue ;;
             esac
+            # issue #308: docs/adr/* — historical ADR docs describing the past
+            # authorial install, same exemption class as LEARNING-PATH.md/CHANGELOG.md above.
+            case "$f" in
+                docs/adr/*) continue ;;
+            esac
             file_hits=$(cd "$TEMPLATE_DIR" && git show ":$f" 2>/dev/null \
                 | grep -n "$pattern" | grep -v 'github.com/' | grep -v 'docs/adr/' || true)
             if [ -n "$file_hits" ]; then
@@ -115,7 +120,7 @@ for pattern in "tserentserenov" "PACK-MIM" "aist_bot_newarchitecture" \
         count=$(grep -rn "$pattern" "$TEMPLATE_DIR" --include="*.md" --include="*.sh" \
                 --include="*.py" --include="*.json" --include="*.plist" --include="*.yaml" \
                 --exclude='validate-template.sh' --exclude='LEARNING-PATH.md' \
-                --exclude='CHANGELOG.md' --exclude-dir='guide-kit' 2>/dev/null \
+                --exclude='CHANGELOG.md' --exclude='ADR-*.md' --exclude-dir='guide-kit' 2>/dev/null \
                 | grep -v 'github.com/' | grep -v 'docs/adr/' | wc -l | tr -d ' ' || true)
     fi
     if [ "$count" -gt 0 ]; then
@@ -127,7 +132,7 @@ for pattern in "tserentserenov" "PACK-MIM" "aist_bot_newarchitecture" \
             grep -rn "$pattern" "$TEMPLATE_DIR" --include="*.md" --include="*.sh" \
                 --include="*.py" --include="*.json" --include="*.plist" \
                 --exclude='validate-template.sh' --exclude='LEARNING-PATH.md' \
-                --exclude='CHANGELOG.md' --exclude-dir='guide-kit' 2>/dev/null \
+                --exclude='CHANGELOG.md' --exclude='ADR-*.md' --exclude-dir='guide-kit' 2>/dev/null \
                 | grep -v 'github.com/' | grep -v 'docs/adr/' | head -3 || true
         fi
         CHECK1_FAIL=1

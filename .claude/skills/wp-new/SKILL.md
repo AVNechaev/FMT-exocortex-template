@@ -74,13 +74,14 @@ gates_rationale: "операционный скилл; WP Gate применим 
 
 ## Шаг 4. Запись — запустить `scripts/create-wp.sh`
 
-Все шаги ниже автоматизированы скриптом `scripts/create-wp.sh`. Скрипт пишет в 5 мест:
+Все шаги ниже автоматизированы скриптом `scripts/create-wp.sh`. Скрипт пишет в 4 места:
 
 1. **`inbox/WP-{N}/WP-{N}.md`** → context file (всегда папка — WP-434, см. INBOX-CONVENTION)
-2. **`archive/wp-contexts/WP-{N}-{slug}.md`** → заготовка §Закрытия (stub с frontmatter)
-3. **`docs/WP-REGISTRY.md`** → новая строка таблицы
-4. **`current/WeekPlan W{N}…md`** → новая строка в таблице РП
-5. **`current/active-wp.md`** → пересобирается автоматически (`build-active-wp.py`)
+2. **`docs/WP-REGISTRY.md`** → новая строка таблицы
+3. **`current/WeekPlan W{N}…md`** → новая строка в таблице РП
+4. **`current/active-wp.md`** → пересобирается автоматически (`build-active-wp.py`)
+
+> **issue #280:** до этого фикса скрипт дополнительно создавал заготовку `archive/wp-contexts/WP-{N}-{slug}.md` (§Закрытия stub). Эта заготовка больше не создаётся при регистрации — `close-wp.sh` сам создаёт файл заново при закрытии РП, канонический путь `git mv` из `protocol-close.md` не конфликтует с существующим файлом. Пустые заготовки, найденные в `archive/wp-contexts/` с датой до этого фикса, — след старого поведения, не действующая норма.
 
 **После скрипта — агент вызывает MCP (не вручную):**
 - **Linear issue** — вызвать `mcp__claude_ai_linear__save_issue`:
@@ -127,7 +128,7 @@ hypothesis: "{H-NNN или —}"
 
 ## Шаг 5. Подтверждение
 
-Выведи: *«РП #{N} создан. Скрипт записал в 5 местах: context file, archive stub, Registry, WeekPlan, active-wp пересобран. Linear — {TSR-NN}.»*
+Выведи: *«РП #{N} создан. Скрипт записал в 4 местах: context file, Registry, WeekPlan, active-wp пересобран. Linear — {TSR-NN}.»*
 Если ≥3h и `--result` не передан: добавить «+ добавить маппинг в Strategy.md вручную».
 
 ```bash

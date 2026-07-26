@@ -7,6 +7,9 @@
 #   - FMT-exocortex-template (шаблон — всегда разрешён)
 #   - author_mode: true в params.yaml (автор шаблона — source-of-truth в IWE,
 #     пропагация в FMT через template-sync.sh)
+#   - issue #311: новая директория .claude/skills/<name>/, которой нет в
+#     update-manifest.json — свой навык, update.sh её не тронет. extend/SKILL.md
+#     документирует ровно этот путь как штатный, гейт не должен его перекрывать.
 
 INPUT=$(cat)
 FILE_PATH=$(echo "$INPUT" | jq -r '.tool_input.file_path // empty')
@@ -19,10 +22,26 @@ if echo "$FILE_PATH" | grep -qE '\.claude/skills/|memory/protocol-'; then
     exit 0
   fi
 
-  # Исключение 2: author_mode в params.yaml
   WORKSPACE_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
+
+  # Исключение 2: author_mode в params.yaml
   if [ -f "$WORKSPACE_DIR/params.yaml" ] && grep -qE '^author_mode:\s*true' "$WORKSPACE_DIR/params.yaml" 2>/dev/null; then
     exit 0
+  fi
+
+  # Исключение 3 (issue #311): свой навык — .claude/skills/<name>/ отсутствует
+  # в манифесте платформы, update.sh его не затронет и не затрёт.
+  if echo "$FILE_PATH" | grep -qE '\.claude/skills/'; then
+    SKILL_NAME=$(echo "$FILE_PATH" | sed -E 's#.*\.claude/skills/([^/]+)/.*#\1#')
+    MANIFEST="$WORKSPACE_DIR/update-manifest.json"
+    if [ -n "$SKILL_NAME" ] && [ -f "$MANIFEST" ]; then
+      IN_MANIFEST=$(jq -r --arg prefix ".claude/skills/${SKILL_NAME}/" \
+        '.files[]? | select(.path | startswith($prefix)) | .path' \
+        "$MANIFEST" 2>/dev/null | head -1)
+      if [ -z "$IN_MANIFEST" ]; then
+        exit 0
+      fi
+    fi
   fi
 
   # Блокировать для обычных пользователей
