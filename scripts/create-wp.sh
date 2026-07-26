@@ -2,7 +2,7 @@
 # routing: helper  called-by=wp-gate  deterministic=true
 # see DP.SC.159, DP.ROLE.059
 # create-wp.sh — атомарное создание РП в 4 местах (inbox, REGISTRY, WeekPlan, Linear)
-# see WP-297 Ф6.2 (${IWE_GOVERNANCE_REPO:-DS-strategy}/inbox/WP-297-wp-lifecycle-architecture.md)
+# see WP-297 Ф6.2 (DS-my-strategy/inbox/WP-297-wp-lifecycle-architecture.md)
 # see DP.M.010, DP.ROLE.037
 #
 # Использование:
@@ -24,7 +24,23 @@
 set -uo pipefail
 
 IWE="${IWE_ROOT:-$HOME/IWE}"
-GOV_REPO="${IWE_GOVERNANCE_REPO:-DS-strategy}"
+
+# --- Определить governance-репо ---
+# Приоритет: (1) явная переменная IWE_GOVERNANCE_REPO → (2) DS-my-strategy → (3) DS-strategy
+GOV_REPO="${IWE_GOVERNANCE_REPO:-}"
+if [[ -z "$GOV_REPO" ]]; then
+  for candidate in DS-my-strategy DS-strategy; do
+    if [[ -d "$IWE/$candidate" ]]; then
+      GOV_REPO="$candidate"
+      break
+    fi
+  done
+fi
+if [[ -z "$GOV_REPO" ]]; then
+  echo "ERROR: IWE_GOVERNANCE_REPO not set and neither DS-my-strategy nor DS-strategy found in $IWE" >&2
+  exit 1
+fi
+
 STRATEGY="$IWE/$GOV_REPO"
 REGISTRY="$STRATEGY/docs/WP-REGISTRY.md"
 INBOX="$STRATEGY/inbox"
@@ -192,7 +208,7 @@ print(result)
 fi
 
 # Inbox convention (WP-434): every WP is a folder inbox/WP-N/ with main file WP-N.md.
-# Slug is dropped from the filename (lives in title: frontmatter).
+# Slug is dropped from the filename (lives in title: frontmatter); archive stub keeps it.
 WP_DIR="$INBOX/WP-${WP_NUM}"
 WP_FILE="$WP_DIR/WP-${WP_NUM}.md"
 mkdir -p "$WP_DIR"
@@ -218,7 +234,7 @@ fi
 
 # --- Шаг 1: context file ---
 echo ""
-echo "1/5 context file..."
+echo "1/6 context file..."
 
 # state_transition goes into frontmatter only when provided (gate off on
 # installs without the axes registry); hypothesis always present, "—" = no bet.
@@ -282,8 +298,27 @@ WPEOF
 
 echo "   ✅ $WP_FILE"
 
-# --- Шаг 2: WP-REGISTRY.md ---
-echo "2/5 WP-REGISTRY.md..."
+# --- Шаг 2: archive stub ---
+echo "2/6 archive stub..."
+
+ARCHIVE_DIR="$STRATEGY/archive/wp-contexts"
+ARCHIVE_STUB="$ARCHIVE_DIR/WP-${WP_NUM}-${SLUG}.md"
+cat > "$ARCHIVE_STUB" <<ARCHEOF
+---
+wp: ${WP_NUM}
+title: "${TITLE}"
+created: ${TODAY}
+status: pending
+---
+
+# WP-${WP_NUM}: ${TITLE} — §Закрытие
+
+*(заполняется при закрытии РП)*
+ARCHEOF
+echo "   ✅ $ARCHIVE_STUB"
+
+# --- Шаг 3: WP-REGISTRY.md ---
+echo "3/6 WP-REGISTRY.md..."
 
 if ! python3 - "$REGISTRY" "$WP_NUM" "$PRIORITY" "$TITLE" "$REPO" "$BUDGET" "$GOV_REPO" "$STAKE_CELL" <<'PYEOF'
 import sys
@@ -391,8 +426,8 @@ if ! grep -qE "\| \*?\*?(WP-)?${WP_NUM}\*?\*? \|" "$REGISTRY"; then
   exit 1
 fi
 
-# --- Шаг 3: WeekPlan ---
-echo "3/5 WeekPlan..."
+# --- Шаг 4: WeekPlan ---
+echo "4/6 WeekPlan..."
 
 WEEKPLAN=$(find "$STRATEGY/current" -maxdepth 1 -name "WeekPlan W*.md" 2>/dev/null | sort -r | head -1)
 
@@ -430,8 +465,8 @@ else
   echo "   ⚠️  WeekPlan не найден в current/ — добавить вручную" >&2
 fi
 
-# --- Шаг 4: Strategy.md (только если --result задан и бюджет ≥3h) ---
-echo "4/5 Strategy.md..."
+# --- Шаг 5: Strategy.md (только если --result задан и бюджет ≥3h) ---
+echo "5/6 Strategy.md..."
 
 BUDGET_H=$(echo "$BUDGET" | sed 's/[^0-9]//g')
 if [[ -n "$RESULT" && "${BUDGET_H:-0}" -ge 3 ]]; then
@@ -477,8 +512,8 @@ else
   echo "   ℹ️  РП <3h — маппинг в Strategy.md не требуется"
 fi
 
-# --- Шаг 5: active-wp.md ---
-echo "5/5 active-wp.md..."
+# --- Шаг 6: active-wp.md ---
+echo "6/6 active-wp.md..."
 
 if [[ -f "$STRATEGY/scripts/build-active-wp.py" ]]; then
   python3 "$STRATEGY/scripts/build-active-wp.py" \
@@ -504,5 +539,6 @@ fi
 echo ""
 echo "✅ WP-${WP_NUM} создан: $TITLE"
 echo "   context: inbox/WP-${WP_NUM}/WP-${WP_NUM}.md"
+echo "   archive: archive/wp-contexts/WP-${WP_NUM}-${SLUG}.md"
 echo "   Следующий шаг: заполнить «Проблема», «Артефакт», «Фазы» в context file"
 echo "   Не забыть: Linear issue"
