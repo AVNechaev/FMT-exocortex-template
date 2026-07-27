@@ -2,7 +2,7 @@
 # routing: helper  called-by=wp-gate  deterministic=true
 # see DP.SC.159, DP.ROLE.059
 # create-wp.sh — атомарное создание РП в 4 местах (inbox, REGISTRY, WeekPlan, Linear)
-# see WP-297 Ф6.2 (DS-my-strategy/inbox/WP-297-wp-lifecycle-architecture.md)
+# see WP-297 Ф6.2 (<governance-repo>/inbox/WP-297-wp-lifecycle-architecture.md)
 # see DP.M.010, DP.ROLE.037
 #
 # Использование:
@@ -26,18 +26,13 @@ set -uo pipefail
 IWE="${IWE_ROOT:-$HOME/IWE}"
 
 # --- Определить governance-репо ---
-# Приоритет: (1) явная переменная IWE_GOVERNANCE_REPO → (2) DS-my-strategy → (3) DS-strategy
+# Приоритет: (1) явная переменная IWE_GOVERNANCE_REPO → (2) DS-strategy (конвенция по умолчанию)
 GOV_REPO="${IWE_GOVERNANCE_REPO:-}"
-if [[ -z "$GOV_REPO" ]]; then
-  for candidate in DS-my-strategy DS-strategy; do
-    if [[ -d "$IWE/$candidate" ]]; then
-      GOV_REPO="$candidate"
-      break
-    fi
-  done
+if [[ -z "$GOV_REPO" ]] && [[ -d "$IWE/DS-strategy" ]]; then
+  GOV_REPO="DS-strategy"
 fi
 if [[ -z "$GOV_REPO" ]]; then
-  echo "ERROR: IWE_GOVERNANCE_REPO not set and neither DS-my-strategy nor DS-strategy found in $IWE" >&2
+  echo "ERROR: IWE_GOVERNANCE_REPO not set and DS-strategy not found in $IWE" >&2
   exit 1
 fi
 
