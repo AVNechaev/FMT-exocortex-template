@@ -94,6 +94,8 @@ Whitelist read-only helpers (issue #264) — разрешены под dry-run, 
 ```
 .claude/scripts/load-extensions.sh                    # относительный, от workspace-root
 $HOME/IWE/.claude/scripts/load-extensions.sh          # абсолютный, захардкожен
+scripts/day-close-prepare.sh                          # относительный, от workspace-root (issue #315)
+$HOME/IWE/scripts/day-close-prepare.sh                # абсолютный, захардкожен (issue #315)
 ```
 
 Абсолютный паттерн захардкожен в `$HOME/IWE`, не glob `*/.claude/...` и не
@@ -101,6 +103,14 @@ $HOME/IWE/.claude/scripts/load-extensions.sh          # абсолютный, з
 env-инъекция `IWE_ROOT=/tmp/evil` прошли бы gate (review-01 High, review-02 H1).
 Пользователи с нестандартным расположением workspace вызывают helper
 относительным путём из корня workspace.
+
+`day-close-prepare.sh` (issue #315) — read-only дайджест-оркестратор шага 0б
+Day Close (см. код: только `git log`/`grep`/`ls`/`wc`/`python3 <script>`/
+`wakatime-cli --today`, ни одного write-пути — redirect в файл, `tee`, `sed -i`,
+`git add|commit|push`, `rm`/`mv` в коде отсутствуют). До фикса узкий whitelist
+(только `load-extensions.sh`) блокировал его как «indirect execution», хотя
+сам гейт срабатывает по факту записи — smoke-тест ритуала терял точность,
+падая на безобидном чтении раньше первого реального write.
 
 Правило whitelist: добавление только через (1) строку здесь + (2) ветку в case
 `bash|sh|zsh` в dry-run-gate.sh + (3) code review на отсутствие write-путей

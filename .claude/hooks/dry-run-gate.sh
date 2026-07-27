@@ -236,8 +236,10 @@ if [ "$TOOL_NAME" = "Bash" ]; then
                 # ${IWE_ROOT:-...} открывал тот же обход через env-инъекцию.
                 shift
                 WL_ABS="$HOME/IWE/.claude/scripts/load-extensions.sh"
+                WL_ABS2="$HOME/IWE/scripts/day-close-prepare.sh"
                 case "${1:-}" in
                     .claude/scripts/load-extensions.sh|"$WL_ABS") ;;
+                    scripts/day-close-prepare.sh|"$WL_ABS2") ;;
                     *) block "$CMD (indirect execution under dry-run)" ;;
                 esac
                 ;;

@@ -964,16 +964,19 @@ else
     DETECTED_WORKSPACE="$WORKSPACE_DIR"
     DETECTED_REPO="$(basename "$SCRIPT_DIR")"
 
+    # issue #316: значения ВСЕГДА в кавычках — тот же паттерн, что setup.sh
+    # применил для #223. Непроцитированное значение с пробелом (напр.
+    # TIMEZONE_DESC=4:00 UTC) ломает sourcing ('UTC: command not found').
     cat > "$ENV_FILE" <<ENVEOF
 # Exocortex configuration (auto-detected by update.sh — verify and fix values)
 # SECURITY: chmod 600. Listed in .gitignore. Do NOT commit this file.
-GITHUB_USER=your-username
-WORKSPACE_DIR=$DETECTED_WORKSPACE
-CLAUDE_PATH=$(command -v claude 2>/dev/null || echo 'claude')
-CLAUDE_PROJECT_SLUG=$(echo "$DETECTED_WORKSPACE" | tr '/' '-')
-TIMEZONE_HOUR=4
-TIMEZONE_DESC=4:00 UTC
-HOME_DIR=$HOME
+GITHUB_USER="your-username"
+WORKSPACE_DIR="$DETECTED_WORKSPACE"
+CLAUDE_PATH="$(command -v claude 2>/dev/null || echo 'claude')"
+CLAUDE_PROJECT_SLUG="$(echo "$DETECTED_WORKSPACE" | tr '/' '-')"
+TIMEZONE_HOUR="4"
+TIMEZONE_DESC="4:00 UTC"
+HOME_DIR="$HOME"
 
 # === Knowledge Gateway (T3+) — fill in if using personal Pack index ===
 L4_BACKEND=
