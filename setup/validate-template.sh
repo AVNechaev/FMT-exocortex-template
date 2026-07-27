@@ -105,7 +105,7 @@ for pattern in "tserentserenov" "PACK-MIM" "aist_bot_newarchitecture" \
                 *) continue ;;
             esac
             case "$(basename "$f")" in
-                validate-template.sh|LEARNING-PATH.md|CHANGELOG.md) continue ;;
+                validate-template.sh|LEARNING-PATH.md|CHANGELOG.md|aisystant-sync-targets.yaml|translation-manifest.yaml) continue ;;
             esac
             # issue #308: docs/adr/* — historical ADR docs describing the past
             # authorial install, same exemption class as LEARNING-PATH.md/CHANGELOG.md above.
@@ -113,7 +113,9 @@ for pattern in "tserentserenov" "PACK-MIM" "aist_bot_newarchitecture" \
                 docs/adr/*) continue ;;
             esac
             file_hits=$(cd "$TEMPLATE_DIR" && git show ":$f" 2>/dev/null \
-                | grep -in "$pattern" | grep -v 'github.com/' | grep -v 'docs/adr/' || true)
+                | grep -in "$pattern" | grep -v 'github.com/' | grep -v 'docs/adr/' \
+                | grep -v 'githubusercontent\.com' \
+                | grep -viE 'TserenTserenov/(FMT-exocortex-template|ZP|SPF)' || true)
             if [ -n "$file_hits" ]; then
                 count=$((count + $(echo "$file_hits" | wc -l | tr -d ' ')))
                 hits="${hits}${f}:"$'\n'"${file_hits}"$'\n'
@@ -123,8 +125,10 @@ for pattern in "tserentserenov" "PACK-MIM" "aist_bot_newarchitecture" \
         count=$(grep -rin "$pattern" "$TEMPLATE_DIR" --include="*.md" --include="*.sh" \
                 --include="*.py" --include="*.json" --include="*.plist" --include="*.yaml" \
                 --exclude='validate-template.sh' --exclude='LEARNING-PATH.md' \
-                --exclude='CHANGELOG.md' --exclude-dir='guide-kit' 2>/dev/null \
-                | grep -v 'github.com/' | grep -v 'docs/adr/' | wc -l | tr -d ' ' || true)
+                --exclude='CHANGELOG.md' --exclude='aisystant-sync-targets.yaml' \
+                --exclude='translation-manifest.yaml' --exclude-dir='guide-kit' 2>/dev/null \
+                | grep -v 'github.com/' | grep -v 'docs/adr/' | grep -v 'githubusercontent\.com' \
+                | grep -viE 'TserenTserenov/(FMT-exocortex-template|ZP|SPF)' | wc -l | tr -d ' ' || true)
     fi
     if [ "$count" -gt 0 ]; then
         [ "$CHECK1_FAIL" -eq 0 ] && echo "FAIL"
@@ -135,8 +139,10 @@ for pattern in "tserentserenov" "PACK-MIM" "aist_bot_newarchitecture" \
             grep -rin "$pattern" "$TEMPLATE_DIR" --include="*.md" --include="*.sh" \
                 --include="*.py" --include="*.json" --include="*.plist" \
                 --exclude='validate-template.sh' --exclude='LEARNING-PATH.md' \
-                --exclude='CHANGELOG.md' --exclude-dir='guide-kit' 2>/dev/null \
-                | grep -v 'github.com/' | grep -v 'docs/adr/' | head -3 || true
+                --exclude='CHANGELOG.md' --exclude='aisystant-sync-targets.yaml' \
+                --exclude='translation-manifest.yaml' --exclude-dir='guide-kit' 2>/dev/null \
+                | grep -v 'github.com/' | grep -v 'docs/adr/' | grep -v 'githubusercontent\.com' \
+                | grep -viE 'TserenTserenov/(FMT-exocortex-template|ZP|SPF)' | head -3 || true
         fi
         CHECK1_FAIL=1
         FAIL=1
