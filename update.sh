@@ -114,6 +114,13 @@ substitute_claude_placeholders() {
         case "$line" in \#*|"") continue ;; esac
         key="${line%%=*}"; value="${line#*=}"
         key=$(echo "$key" | tr -d '[:space:]')
+        # issue #316-fix2: значения в .exocortex.env процитированы с #223 —
+        # этот парсер читает файл строкой, не через `source`, поэтому кавычки
+        # остаются частью значения буквально (не синтаксис, а данные) и
+        # подставились бы в CLAUDE.md как есть, напр. {{TIMEZONE_DESC}} → "4:00 UTC".
+        # Тот же паттерн снятия кавычек, что уже применён к этому файлу в другом
+        # non-source парсере (см. ENV_WS/ENV_GOV ниже по файлу).
+        value=$(echo "$value" | tr -d '"' | tr -d "'")
         [ -z "$key" ] && continue
         declare "SUBST_$key=$value"
     done < "$env_file"
@@ -870,6 +877,10 @@ if [ -f "$ENV_FILE" ]; then
             value="${line#*=}"
             # Trim whitespace from key
             key=$(echo "$key" | tr -d '[:space:]')
+            # issue #316-fix2: см. тот же комментарий в substitute_claude_placeholders() —
+            # non-source парсер, кавычки из процитированных (#223) значений остаются
+            # буквально в строке и ломают DETECT_WS/[ -d ... ] ниже без снятия.
+            value=$(echo "$value" | tr -d '"' | tr -d "'")
             [ -z "$key" ] && continue
             # Export for use below (secrets: L4_DATABASE_URL etc. are loaded but not substituted into files)
             declare "ENV_$key=$value"
