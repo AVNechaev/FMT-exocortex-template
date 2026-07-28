@@ -597,6 +597,9 @@
       "path": "extensions/agent-inbox/SPEC.md"
     },
     {
+      "path": "extensions/agent-inbox/scripts/config/pipeline-security-whitelist.yaml"
+    },
+    {
       "path": "extensions/agent-inbox/scripts/iwe-agent-dispatcher.py"
     },
     {
@@ -1309,6 +1312,9 @@
     },
     {
       "path": "scripts/codex-peer-adapter.sh"
+    },
+    {
+      "path": "scripts/config/pipeline-security-whitelist.yaml"
     },
     {
       "path": "scripts/content-filter-apply.py"
