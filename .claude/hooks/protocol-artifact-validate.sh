@@ -149,13 +149,15 @@ if [ -n "$WEEKPLAN" ] && [ -f "$WEEKPLAN" ]; then
     WP_ERRORS+=("WeekPlan >80 строк ($WP_LINES) но секций (## или <summary>) < 3 ($WP_HEADINGS_COUNT). Используй ## заголовки или <details><summary> для структурирования.")
   fi
 
-  # Детектор (в): обязательные секции WeekPlan (по templates-dayplan.md)
-  # ОПТ-5 (WP-297, 8 май): «Итоги» переехали в WeekReport — больше не required в WeekPlan
+  # Детектор (в): обязательные секции WeekPlan (по strategy-session-weekly/steps/*.md)
+  # issue #318: список отстал от WP-393 Ф7.1 (8 июня) — strategy-session переключился
+  # на пошаговый процесс (steps/00-08.md) с другим набором секций; список ниже сверен
+  # с ## Формат итогового WeekPlan в 08-confirm.md (единый источник — не дублировать).
   WP_REQUIRED=(
-    "Повестка|Agenda"
-    "Inbox Triage"
-    "План на неделю|Week Plan"
-    "Контент-план|Content Plan"
+    "^## План на неделю W[0-9]+|^## Week Plan W[0-9]+"
+    "^## Итоги W[0-9]+"
+    "^## Предложения \(Note-Review"
+    "^## Carry-over"
   )
   for wp_section in "${WP_REQUIRED[@]}"; do
     if ! grep -qE "$wp_section" "$WEEKPLAN"; then
