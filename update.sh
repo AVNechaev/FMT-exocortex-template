@@ -1543,6 +1543,19 @@ if [ -f "$ENV_FILE" ]; then
     fi
 fi
 
+# === Step 7.6: Re-run install-iwe-paths.sh auto-enable (issue #317) ===
+# CHANGELOG 0.28.5 promised this ("update.sh может тоже его вызывать при
+# следующих апгрейдах"), but the call was never added — so a DS-strategy
+# repo that shipped with .githooks/ after this update had no way to get
+# core.hooksPath enabled without a fresh setup.sh run.
+if ! $CHECK_ONLY; then
+    bash "$SCRIPT_DIR/setup/install-iwe-paths.sh" \
+        --workspace "$WORKSPACE_DIR" --governance "${IWE_GOVERNANCE_REPO:-DS-strategy}" --quiet 2>&1 | sed 's/^/  /'
+    INSTALL_PATHS_STATUS="${PIPESTATUS[0]}"
+    [ "$INSTALL_PATHS_STATUS" -eq 0 ] || \
+        echo "  ⚠ install-iwe-paths.sh завершился с ошибкой (exit $INSTALL_PATHS_STATUS). Запустите вручную: bash $SCRIPT_DIR/setup/install-iwe-paths.sh --workspace $WORKSPACE_DIR --governance ${IWE_GOVERNANCE_REPO:-DS-strategy}"
+fi
+
 # === Done ===
 echo ""
 echo "=========================================="
