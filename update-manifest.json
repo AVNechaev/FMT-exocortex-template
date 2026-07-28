@@ -510,6 +510,9 @@
       "path": "docs/SETUP-GUIDE.md"
     },
     {
+      "path": "docs/VERIFY-KNOWLEDGE-MCP.md"
+    },
+    {
       "path": "docs/adr/ADR-001-setup-in-template.md"
     },
     {
