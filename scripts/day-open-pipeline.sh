@@ -364,7 +364,12 @@ fi
 echo "=== 2. LLM Proxy healthcheck ==="
 PROXY_HEALTH=$(curl -s "${LLM_PROXY_URL}/v1/health" 2>/dev/null | grep -q "ok" && echo "ok" || echo "fail")
 if [ "$PROXY_HEALTH" != "ok" ]; then
-  if lsof -ti :"$PROXY_PORT" >/dev/null 2>&1; then
+  # lsof (Mac) with ss fallback (NixOS server lacks lsof) — verified live: this
+  # machine has lsof but not ss, so a bare ss-only version (as copied without
+  # testing into month-open-night-run.sh:78) would silently break the Mac side
+  # of the exact dual-machine pair this pipeline is designed to run on. Only
+  # checking port occupancy either way, PID unused below.
+  if lsof -ti :"$PROXY_PORT" >/dev/null 2>&1 || ss -tln 2>/dev/null | grep -q ":$PROXY_PORT "; then
     # Port already held by another process — likely a live proxy the check above
     # missed on a transient blip. Spawning here would just crash into "Address
     # already in use" and spam the error log without helping (found 2026-07-11).

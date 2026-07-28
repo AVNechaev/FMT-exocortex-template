@@ -111,6 +111,7 @@ Versioning: [Semantic Versioning](https://semver.org/).
 
 
 
+
 ## [Unreleased] — обновлено 2026-07-28
 
 ### Added
@@ -128,6 +129,7 @@ Versioning: [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- `0873dde` fix: promote day-open-pipeline.sh — facts_digest guard fix (WP-484)
 - `cef6352` fix(hooks): revert WeekPlan section-list gate — broke 23/24 real WeekPlans (issue #318 hotfix)
 - `fe0b908` fix(setup): githooks provisioning for DS-strategy + WeekPlan validator drift (#317, #318)
 - `022d290` fix(apply-captures): привести гейт 4а.1 к дословному эталону из bug-файла
