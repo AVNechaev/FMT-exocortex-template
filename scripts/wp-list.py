@@ -31,7 +31,7 @@ import sys
 from pathlib import Path
 
 DEFAULT_FIELDS = ["wp", "title", "status", "card"]
-ALL_FIELDS = ["wp", "title", "status", "status_raw", "registry_done", "created", "closed", "deferred", "budget", "card", "pool", "decision_pending"]
+ALL_FIELDS = ["wp", "title", "status", "status_raw", "registry_done", "created", "closed", "deferred", "budget", "card", "pool", "decision_pending", "verification_class", "priority"]
 
 FRONTMATTER_RE = re.compile(r"^---\n(.*?)\n---\n", re.DOTALL)
 FIELD_RE = re.compile(r"^(\w+):\s*(.*)$")
@@ -147,6 +147,8 @@ def build_row(num, card_path, registry_done):
         "card": str(card_path),
         "pool": fm.get("pool", "false"),
         "decision_pending": fm.get("decision_pending", "false"),
+        "verification_class": fm.get("verification_class", ""),
+        "priority": fm.get("priority", ""),
     }
 
 
