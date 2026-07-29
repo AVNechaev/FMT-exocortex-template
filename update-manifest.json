@@ -1632,6 +1632,9 @@
       "path": "setup/optional/setup-cloud-scheduler.sh"
     },
     {
+      "path": "setup/optional/setup-local-gateway.sh"
+    },
+    {
       "path": "setup/validate-template.sh"
     },
     {

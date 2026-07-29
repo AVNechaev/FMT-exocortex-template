@@ -107,6 +107,7 @@ GITHUB_EXPLICIT_INCLUDE=(
 SETUP_EXPLICIT_INCLUDE=(
     "setup/validate-template.sh"
     "setup/optional/setup-cloud-scheduler.sh"   # install-time, but requires one-time delivery — issue #325
+    "setup/optional/setup-local-gateway.sh"     # referenced by delivered docs/AGENT-VENDOR-SETUP.md (WP-499 Ф16), same class as #325
 )
 
 is_explicit_include() {
