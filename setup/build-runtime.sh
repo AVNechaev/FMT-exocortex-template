@@ -144,8 +144,18 @@ fi
 # === Load .exocortex.env ===
 # Safe parse: только KEY=VALUE, никакого eval/source.
 # Bash 3.2-compatible: используем функцию env_get вместо associative array.
+# issue #319: значения в .exocortex.env конвенционально в кавычках
+# (WORKSPACE_DIR="/home/iwe/IWE") — без strip кавычки попадали буквально в
+# каждую substituted-подстановку. Снимаем только ПАРНЫЕ внешние кавычки
+# (один и тот же символ в начале и в конце), внутренние не трогаем.
 env_get() {
-    grep "^$1=" "$ENV_FILE" 2>/dev/null | head -1 | cut -d'=' -f2-
+    local raw
+    raw=$(grep "^$1=" "$ENV_FILE" 2>/dev/null | head -1 | cut -d'=' -f2-)
+    case "$raw" in
+        \"*\") [ ${#raw} -ge 2 ] && raw="${raw#\"}" && raw="${raw%\"}" ;;
+        \'*\') [ ${#raw} -ge 2 ] && raw="${raw#\'}" && raw="${raw%\'}" ;;
+    esac
+    printf '%s' "$raw"
 }
 
 # === Parse overlay-реестр ===
