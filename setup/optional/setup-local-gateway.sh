@@ -174,6 +174,8 @@ if daemon_alive; then
     if $NEEDS_BUILD; then
         echo ""
         echo "  ⚠ Шлюз обновлён до $GATEWAY_REF, но демон ещё старой версии."
+        echo "    Проверить версию живого демона: вызовите gateway_status — поле gateway_version"
+        echo "    должно быть \"${GATEWAY_REF#v}\", если меньше — демон точно старый."
         echo "    Убедившись, что агенты не держат блокировок (gateway_status пуст), перезапустите:"
         echo "    kill \"\$(cat \"$PID_FILE\")\" && bash \"$0\""
         echo "    Затем перезапустите всех подключённых агентов — их прокси тоже старой версии."

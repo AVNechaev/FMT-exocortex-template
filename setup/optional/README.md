@@ -74,6 +74,16 @@ bash setup/optional/setup-local-gateway.sh
 
 Скрипт клонирует шлюз на закреплённую версию, собирает его, запускает демон и выводит блок для ручной вставки в `.mcp.json` (существующий файл не переписывается автоматически — только показывается точная запись для копирования). Повторный запуск безопасен: уже установленный шлюз не переустанавливается.
 
+### Uninstall
+
+```bash
+kill "$(cat ~/.iwe/gateway.pid)"          # остановить демон
+rm -rf ~/IWE/DS-MCP/local-gateway         # удалить код шлюза
+rm -f ~/.iwe/gateway.sock ~/.iwe/gateway-daemon.log ~/.iwe/gateway.pid
+```
+
+Затем вручную удалите запись `iwe-local-gateway` из `.mcp.json`.
+
 ### Files
 
 | File | Purpose |
