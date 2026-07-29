@@ -62,6 +62,26 @@ rm ~/Library/LaunchAgents/com.exocortex.pomodoro-alert.plist
 
 ---
 
+## Локальный шлюз координации агентов (iwe-local-gateway)
+
+Если в одной рабочей директории работает несколько ИИ-агентов одновременно (Claude Code, Kimi, Hermes) — нужен общий менеджер файловых блокировок, чтобы они не перезаписывали правки друг друга. Полное описание сценария — [docs/AGENT-VENDOR-SETUP.md](../../docs/AGENT-VENDOR-SETUP.md).
+
+### Установка
+
+```bash
+bash setup/optional/setup-local-gateway.sh
+```
+
+Скрипт клонирует шлюз на закреплённую версию, собирает его, запускает демон и выводит блок для ручной вставки в `.mcp.json` (существующий файл не переписывается автоматически — только показывается точная запись для копирования). Повторный запуск безопасен: уже установленный шлюз не переустанавливается.
+
+### Files
+
+| File | Purpose |
+|------|---------|
+| `setup-local-gateway.sh` | клон + сборка + запуск демона + инструкция для `.mcp.json` |
+
+---
+
 ## Day Rhythm Config
 
 The file `memory/day-rhythm-config.yaml` controls several Day Open features:
