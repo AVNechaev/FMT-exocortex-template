@@ -97,11 +97,36 @@ FILES_EXCLUDE_EXACT=(
     "extensions/mcp-user.json"
 )
 
+# issue #325: .github/ и setup/ are blanket-excluded below (CI-only / install-time),
+# but cloud-scheduler is a documented, maintained feature living in both namespaces —
+# its workflow and install script never reached users despite fix #188. Explicit
+# per-file include, same technique as setup/validate-template.sh below.
+GITHUB_EXPLICIT_INCLUDE=(
+    ".github/workflows/cloud-scheduler.yml"
+)
+SETUP_EXPLICIT_INCLUDE=(
+    "setup/validate-template.sh"
+    "setup/optional/setup-cloud-scheduler.sh"   # install-time, but requires one-time delivery — issue #325
+)
+
+is_explicit_include() {
+    local rel="$1"; shift
+    local item
+    for item in "$@"; do
+        [ "$rel" = "$item" ] && return 0
+    done
+    return 1
+}
+
 # Собираем файлы.
 FILES=()
 EXCLUDED_PATHS=()
 while IFS= read -r rel; do
     # Пропускаем мусор/инструментарий
+    if is_explicit_include "$rel" "${GITHUB_EXPLICIT_INCLUDE[@]}"; then
+        FILES+=("$rel")
+        continue
+    fi
     skip=false
     for pattern in "${SKIP_PATTERNS[@]}"; do
         case "$rel" in
@@ -111,9 +136,10 @@ while IFS= read -r rel; do
     [[ "$(basename "$rel")" == ".gitkeep" ]] && skip=true
     $skip && continue
 
-    # setup/ contains install-time scripts; skip all except validate-template.sh,
-    # which is referenced by .githooks/pre-commit and update.sh after delivery.
-    if [[ "$rel" == setup/* && "$rel" != "setup/validate-template.sh" ]]; then
+    # setup/ contains install-time scripts; skip all except explicit includes
+    # (validate-template.sh referenced by .githooks/pre-commit and update.sh
+    # after delivery; setup-cloud-scheduler.sh — see SETUP_EXPLICIT_INCLUDE above).
+    if [[ "$rel" == setup/* ]] && ! is_explicit_include "$rel" "${SETUP_EXPLICIT_INCLUDE[@]}"; then
         continue
     fi
 
