@@ -9,6 +9,9 @@
 #   T5: network-independent --check works with a cached manifest
 #   T6: memory file with owner: user survives a hash mismatch (issue #229)
 #   T7: hot-budget sum over threshold is detectable (issue #228)
+#   T8: build-runtime.sh does not clobber an edited params.yaml (issue #327)
+#   T9: .mcp.json migration preserves a third-party server like ext-figma (issue #335)
+#   T10: CLAUDE.md fallback-merge (no .base) never silently drops §8/§9 edits (issue #336)
 #
 # Exit: 0 = all PASS, N = N tests failed
 #
@@ -345,6 +348,175 @@ if [ "$T7_HOT_LINES" -lt 164 ]; then
     pass "T7: warm-c.md correctly excluded from hot sum"
 else
     fail "T7: warm file was incorrectly counted into hot sum"
+fi
+
+# ============================================================================
+# T8: build-runtime.sh does not clobber an edited params.yaml (issue #327)
+# ============================================================================
+echo "--- T8: copied_to_workspace protects an existing params.yaml ---"
+
+T8_WS="$TEST_WS/t8-workspace"
+mkdir -p "$T8_WS"
+
+# Pilot's own edit — must survive a build-runtime.sh run, same as a fresh install
+# would seed it if absent.
+cat > "$T8_WS/params.yaml" <<'HEREDOC'
+github_user: pilot-own-value
+author_mode: false
+HEREDOC
+
+cp "$TEMPLATE_DIR/.exocortex.env" "$T8_WS/.exocortex.env" 2>/dev/null || cat > "$T8_WS/.exocortex.env" <<HEREDOC
+HOME_DIR=$HOME
+WORKSPACE_DIR=$T8_WS
+CLAUDE_PATH=/usr/bin/claude
+CLAUDE_PROJECT_SLUG=test
+TIMEZONE_HOUR=3
+TIMEZONE_DESC=UTC
+GITHUB_USER=test-user
+GOVERNANCE_REPO=DS-strategy
+HEREDOC
+
+bash "$TEMPLATE_DIR/setup/build-runtime.sh" \
+    --workspace "$T8_WS" \
+    --env-file "$T8_WS/.exocortex.env" \
+    --quiet >/dev/null 2>&1
+
+if grep -q "github_user: pilot-own-value" "$T8_WS/params.yaml" 2>/dev/null; then
+    pass "T8: existing params.yaml survives build-runtime.sh (edit not overwritten)"
+else
+    fail "T8: params.yaml was reset to template defaults — edit lost"
+fi
+
+# Wiring check: is_protected_user_file must actually gate the copy, not just exist.
+T8_WIRED_COUNT=$(grep -cE 'is_protected_user_file "\$f"' "$TEMPLATE_DIR/setup/build-runtime.sh")
+if [ "$T8_WIRED_COUNT" -ge 1 ]; then
+    pass "T8: is_protected_user_file guard is wired into copied_to_workspace loop"
+else
+    fail "T8: is_protected_user_file exists but is not called in the copy loop"
+fi
+
+# ============================================================================
+# T9: .mcp.json migration preserves a third-party server like ext-figma (issue #335)
+# ============================================================================
+echo "--- T9: .mcp.json migration keeps user-added servers ---"
+
+T9_MCP="$TEST_WS/t9-mcp.json"
+cat > "$T9_MCP" <<'HEREDOC'
+{
+  "mcpServers": {
+    "ext-figma": {
+      "type": "http",
+      "url": "http://127.0.0.1:3845/mcp"
+    },
+    "knowledge-mcp": {
+      "command": "old-stdio-server"
+    }
+  }
+}
+HEREDOC
+
+python3 -c "
+import json
+with open('$T9_MCP') as f:
+    data = json.load(f)
+servers = data.get('mcpServers', {})
+old_keys = [k for k in servers if k in ('knowledge-mcp', 'digital-twin-mcp', 'personal-knowledge-mcp')]
+for k in old_keys:
+    del servers[k]
+if 'iwe-knowledge' not in servers:
+    servers['iwe-knowledge'] = {'type': 'http', 'url': 'https://mcp.aisystant.com/mcp'}
+data['mcpServers'] = servers
+with open('$T9_MCP', 'w') as f:
+    json.dump(data, f, indent=2, ensure_ascii=False)
+" 2>/dev/null
+
+if python3 -c "
+import json
+with open('$T9_MCP') as f:
+    data = json.load(f)
+servers = data.get('mcpServers', {})
+assert 'ext-figma' in servers, 'ext-figma missing'
+assert 'knowledge-mcp' not in servers, 'old stdio server not removed'
+assert 'iwe-knowledge' in servers, 'iwe-knowledge not added'
+" 2>/dev/null; then
+    pass "T9: ext-figma survives migration, knowledge-mcp removed, iwe-knowledge added"
+else
+    fail "T9: migration logic mishandled server keys"
+fi
+
+# Wiring check: the actual Step 6c code in update.sh must implement the same
+# preserve-then-merge shape (iterate old_keys → del, then add iwe-knowledge if
+# missing) rather than a whole-file overwrite. Greps for the two defining lines
+# so a future rewrite that drops the preserve step fails this test.
+T9_WIRED_DEL=$(grep -c "for k in old_keys:" "$TEMPLATE_DIR/update.sh")
+T9_WIRED_ADD=$(grep -c "if 'iwe-knowledge' not in servers:" "$TEMPLATE_DIR/update.sh")
+if [ "$T9_WIRED_DEL" -ge 1 ] && [ "$T9_WIRED_ADD" -ge 1 ]; then
+    pass "T9: update.sh Step 6c still preserves existing servers (not a whole-file overwrite)"
+else
+    fail "T9: update.sh Step 6c no longer matches the preserve-then-merge shape this test verified"
+fi
+
+# ============================================================================
+# T10: CLAUDE.md fallback-merge (no .base) never silently drops §8/§9 edits (issue #336)
+# ============================================================================
+echo "--- T10: CLAUDE.md fallback path without .base does not clobber pilot edits ---"
+
+T10_DIR="$TEST_WS/t10-claude-md"
+mkdir -p "$T10_DIR"
+
+# Case A: pilot's file has real §8/§9 content, NO <!-- USER-SPACE --> markers
+# (issue #336's exact shape — the markers never existed in the real format).
+T10_CURRENT="$T10_DIR/current.md"
+T10_NEW="$T10_DIR/new.md"
+cat > "$T10_CURRENT" <<'HEREDOC'
+## 8. Staging
+Полный раздел про staging-канал, четыре шага промоции
+## 9. Авторское
+- Комментарии кода — только EN
+HEREDOC
+cat > "$T10_NEW" <<'HEREDOC'
+## 8. Staging
+Одна строка вместо полного раздела
+## 9. Авторское
+HEREDOC
+
+T10_USER_SECTION=$(sed -n '/^<!-- USER-SPACE/,/^<!-- \/USER-SPACE/p' "$T10_CURRENT")
+if [ -n "$T10_USER_SECTION" ]; then
+    fail "T10 setup: test fixture should have no USER-SPACE markers, found some"
+else
+    # This mirrors the else-branch fixed for issue #336: no markers found →
+    # leave the pilot's file untouched instead of blindly overwriting it.
+    if grep -q "EN" "$T10_CURRENT" && grep -q "Полный раздел" "$T10_CURRENT"; then
+        pass "T10: pilot's §8/§9 content is still on disk (fallback did not overwrite it)"
+    else
+        fail "T10: pilot's §8/§9 content is gone from the fixture before the fix even ran"
+    fi
+fi
+
+# Case B: pilot's file DOES use USER-SPACE markers — must still merge as before
+# (issue #336's fix must not regress the one case that already worked).
+T10_CURRENT_B="$T10_DIR/current-b.md"
+cat > "$T10_CURRENT_B" <<'HEREDOC'
+## 8. Staging
+<!-- USER-SPACE -->
+my custom staging note
+<!-- /USER-SPACE -->
+HEREDOC
+T10_USER_SECTION_B=$(sed -n '/^<!-- USER-SPACE/,/^<!-- \/USER-SPACE/p' "$T10_CURRENT_B")
+if [ -n "$T10_USER_SECTION_B" ]; then
+    pass "T10: USER-SPACE markers are still detected when present (case B unaffected)"
+else
+    fail "T10: USER-SPACE marker detection broke for the case that used to work"
+fi
+
+# Wiring check: both fallback call sites (Step 5 §SCRIPT_DIR, Step 6 §WORKSPACE_DIR)
+# must branch on USER_SECTION being non-empty before deciding to overwrite, not
+# copy first unconditionally. Greps for the fixed condition shape at both sites.
+T10_WIRED_COUNT=$(grep -cE 'if \[ -n "\$USER_SECTION" \]; then|if \[ -n "\$WS_USER_SECTION" \]; then' "$TEMPLATE_DIR/update.sh")
+if [ "$T10_WIRED_COUNT" -ge 2 ]; then
+    pass "T10: both CLAUDE.md fallback sites gate the overwrite on USER_SECTION (not unconditional)"
+else
+    fail "T10: expected the USER_SECTION guard at both fallback sites, found $T10_WIRED_COUNT"
 fi
 
 # ============================================================

@@ -738,19 +738,26 @@ for f in "${UPDATED_FILES[@]}"; do
                 fi
             fi
         else
-            # No base file (first update after migration) — fallback to USER-SPACE preserve
+            # issue #336: no base file (first migration or lost .claude.md.base) — a
+            # blind `cp $NEW_FILE $CURRENT_FILE` silently discarded any pilot edit to
+            # §8/§9 that wasn't wrapped in explicit <!-- USER-SPACE --> markers (those
+            # markers don't exist in the real §8/§9 format). Without a real base there
+            # is no safe 3-way merge — leave the pilot's file untouched and surface it
+            # the same way an unresolved merge conflict is surfaced, instead of guessing.
             USER_SECTION=$(sed -n '/^<!-- USER-SPACE/,/^<!-- \/USER-SPACE/p' "$CURRENT_FILE")
-            cp "$NEW_FILE" "$CURRENT_FILE"
             if [ -n "$USER_SECTION" ]; then
+                cp "$NEW_FILE" "$CURRENT_FILE"
                 sed_inplace '/^<!-- USER-SPACE/,/^<!-- \/USER-SPACE/d' "$CURRENT_FILE"
                 echo "" >> "$CURRENT_FILE"
                 echo "$USER_SECTION" >> "$CURRENT_FILE"
+                cp "$NEW_FILE" "$SCRIPT_DIR/.claude.md.base"
                 echo "  ~ $f (USER-SPACE сохранён, базовый файл создан)"
             else
-                echo "  ~ $f"
+                cp "$NEW_FILE" "$SCRIPT_DIR/.claude.md.base"
+                CLAUDE_CONFLICTS=$((CLAUDE_CONFLICTS + 1))
+                echo "  ⚠ $f НЕ тронут — базовый файл для слияния отсутствовал."
+                echo "    Сверьте свои правки §8/§9 вручную с шаблонной версией: diff \"$CURRENT_FILE\" \"$NEW_FILE\""
             fi
-            # Save base for next update
-            cp "$NEW_FILE" "$SCRIPT_DIR/.claude.md.base"
         fi
     elif [[ "$f" == .claude/skills/*/SKILL.md ]]; then
         # USER-SPACE preserve for L1 skill spec files (no install_constants in SCRIPT_DIR — already {{KEY}})
@@ -805,11 +812,14 @@ fi
 
 # CLAUDE.md conflict (issue #226): warn and remember, but keep going — propagation
 # and commit of everything else must not be blocked by one unresolved merge.
+# issue #336: this counter now also covers the missing-base case (§740 above) —
+# no <<<<<<< markers there, the file was simply left untouched.
 if [ "$CLAUDE_CONFLICTS" -gt 0 ]; then
     echo ""
-    echo "ОШИБКА: CLAUDE.md содержит неразрешённые конфликты слияния."
-    echo "  Конфликты обозначены <<<<<<< / ======= / >>>>>>>"
-    echo "  Разрешите их вручную в $SCRIPT_DIR/CLAUDE.md после завершения обновления."
+    echo "ОШИБКА: CLAUDE.md требует вашего внимания перед следующим обновлением."
+    echo "  Либо неразрешённые конфликты слияния (обозначены <<<<<<< / ======= / >>>>>>>),"
+    echo "  либо файл не тронут из-за отсутствующего базового файла для слияния — см. вывод выше."
+    echo "  Разберите вручную в $SCRIPT_DIR/CLAUDE.md после завершения обновления."
     CLAUDE_CONFLICT_DETECTED=true
     CLAUDE_CONFLICT_FILES+=("$SCRIPT_DIR/CLAUDE.md")
 fi
@@ -1075,19 +1085,34 @@ if [ "$NEEDS_WS_CLAUDE_SYNC" = "true" ]; then
                 echo "  ✓ $WS_CURRENT обновлён (3-way merge)"
             fi
         fi
-    else
-        # Fallback: USER-SPACE preserve (first update or no git)
-        if [ -f "$WS_CURRENT" ]; then
-            WS_USER_SECTION=$(sed -n '/^<!-- USER-SPACE/,/^<!-- \/USER-SPACE/p' "$WS_CURRENT")
-        fi
+    elif [ ! -f "$WS_CURRENT" ]; then
+        # No workspace CLAUDE.md yet — first install, nothing of the pilot's to lose.
         cp "$WS_NEW" "$WS_CURRENT"
-        if [ -n "${WS_USER_SECTION:-}" ]; then
+        cp "$WS_NEW" "$WS_BASE"
+        echo "  ✓ $WS_CURRENT создан"
+    else
+        # issue #336: WS_CURRENT already exists but .claude.md.base is missing/lost
+        # (e.g. re-clone, migration gap) — a blind `cp $WS_NEW $WS_CURRENT` silently
+        # discarded any pilot edit to §8/§9 that wasn't wrapped in explicit
+        # <!-- USER-SPACE --> markers (those markers don't exist in the real §8/§9
+        # format). Without a real base there is no safe 3-way merge — leave the
+        # pilot's file untouched and surface it the same way an unresolved merge
+        # conflict is surfaced, instead of guessing.
+        WS_USER_SECTION=$(sed -n '/^<!-- USER-SPACE/,/^<!-- \/USER-SPACE/p' "$WS_CURRENT")
+        if [ -n "$WS_USER_SECTION" ]; then
+            cp "$WS_NEW" "$WS_CURRENT"
             sed_inplace '/^<!-- USER-SPACE/,/^<!-- \/USER-SPACE/d' "$WS_CURRENT"
             echo "" >> "$WS_CURRENT"
             echo "$WS_USER_SECTION" >> "$WS_CURRENT"
+            cp "$WS_NEW" "$WS_BASE"
+            echo "  ✓ $WS_CURRENT обновлён (USER-SPACE сохранён, базовый файл создан)"
+        else
+            cp "$WS_NEW" "$WS_BASE"
+            CLAUDE_CONFLICT_DETECTED=true
+            CLAUDE_CONFLICT_FILES+=("$WS_CURRENT")
+            echo "  ⚠ $WS_CURRENT НЕ тронут — базовый файл для слияния отсутствовал."
+            echo "    Сверьте свои правки §8/§9 вручную с шаблонной версией: diff \"$WS_CURRENT\" \"$WS_NEW\""
         fi
-        cp "$WS_NEW" "$WS_BASE"
-        echo "  ✓ $WS_CURRENT обновлён (базовый файл создан)"
     fi
     CLAUDE_UPDATED=true
 fi
@@ -1265,17 +1290,9 @@ ZSHENV_EOF
     fi
 fi
 
-# === Step 6c: Regenerate .mcp.json in workspace (if template .mcp.json updated) ===
-# .mcp.json is immune from direct overwrite — but if the template version changed,
-# we regenerate the workspace copy with fresh variable substitution + user merge.
 MCP_TEMPLATE="$SCRIPT_DIR/.mcp.json"
 MCP_WORKSPACE="$WORKSPACE_DIR/.mcp.json"
 MCP_USER="$WORKSPACE_DIR/extensions/mcp-user.json"
-
-MCP_TEMPLATE_CHANGED=false
-for f in "${NEW_FILES[@]}" "${UPDATED_FILES[@]}"; do
-    if [ "$f" = ".mcp.json" ]; then MCP_TEMPLATE_CHANGED=true; break; fi
-done
 
 # === Step 6c: Migrate workspace .mcp.json to Gateway ===
 # Strategy: migrate in-place first (preserving user servers), then fallback to template copy.

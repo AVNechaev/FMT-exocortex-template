@@ -54,6 +54,15 @@ hash_dir() {
     fi
 }
 
+# Copy of update.sh:is_protected_user_file() — build-runtime.sh runs as a separate
+# subprocess (not sourced), so the two lists must be kept in sync manually (issue #327).
+is_protected_user_file() {
+    case "$1" in
+        params.yaml|memory/MEMORY.md|.claude/settings.local.json|sessions/00-index.md) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
 # === Detect directories ===
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 TEMPLATE_DIR="$(dirname "$SCRIPT_DIR")"  # FMT-exocortex-template/
@@ -377,7 +386,9 @@ for f in "${COPIED_FILES[@]}"; do
     src="$BUILD_DIR/workspace/$f"
     dst="$WORKSPACE_DIR/$f"
     mkdir -p "$(dirname "$dst")"
-    if [ -f "$dst" ] && cmp -s "$src" "$dst"; then
+    if [ -f "$dst" ] && is_protected_user_file "$f"; then
+        : # skip — protected file already exists, seed-on-first-install only (issue #327)
+    elif [ -f "$dst" ] && cmp -s "$src" "$dst"; then
         : # skip — identical
     else
         cp "$src" "$dst"
