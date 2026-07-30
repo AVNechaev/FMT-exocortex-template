@@ -465,93 +465,113 @@ echo "--- T10: CLAUDE.md fallback path without .base does not clobber pilot edit
 
 # Copy of update.sh's cross-platform sed_inplace() (defined locally there,
 # not in a sourceable lib — update.sh itself can't be sourced without running
-# its whole network-dependent body).
+# its whole network-dependent body). The extracted blocks below call this.
 if sed --version >/dev/null 2>&1; then
     sed_inplace() { sed -i "$@"; }
 else
     sed_inplace() { sed -i '' "$@"; }
 fi
 
-# Replicates update.sh's fallback branch (§746-765) byte-for-byte so the test
-# actually exercises the fixed logic, not just its own fixtures. A previous
-# version of this test wrote a fixture and grepped the same fixture without
-# running any code in between — guaranteed PASS regardless of whether the fix
-# in update.sh was correct or even present. Runs the exact if/else shape,
-# including the same sed_inplace call, against a live CURRENT_FILE.
-t10_run_fallback_branch() {
-    local CURRENT_FILE="$1" NEW_FILE="$2"
-    local USER_SECTION
-    USER_SECTION=$(sed -n '/^<!-- USER-SPACE/,/^<!-- \/USER-SPACE/p' "$CURRENT_FILE")
-    if [ -n "$USER_SECTION" ]; then
-        cp "$NEW_FILE" "$CURRENT_FILE"
-        sed_inplace '/^<!-- USER-SPACE/,/^<!-- \/USER-SPACE/d' "$CURRENT_FILE"
-        echo "" >> "$CURRENT_FILE"
-        echo "$USER_SECTION" >> "$CURRENT_FILE"
-    fi
-    # else: file intentionally left untouched (issue #336 fix) — no cp here.
+# Extracts the real Step 5 ($SCRIPT_DIR copy) and Step 6 ($WORKSPACE_DIR copy)
+# fallback blocks from update.sh via unique line-content markers, and sources
+# each as bash against live fixture files — not a re-typed copy of the logic.
+# A prior version of this test hand-wrote a byte-for-byte copy of the if/else
+# shape; a second review round proved experimentally that copy silently
+# diverges from update.sh (it kept passing after the real code was reverted
+# to the pre-fix unconditional-copy bug). Extraction removes that gap: if
+# update.sh's fallback branch is edited without updating this test, the
+# extracted block picks up the edit automatically.
+t10_extract_step5_block() {
+    awk '
+        /^            USER_SECTION=\$\(sed -n/{found=1}
+        found{print}
+        found && /^            fi$/{exit}
+    ' "$TEMPLATE_DIR/update.sh"
+}
+t10_extract_step6_block() {
+    awk '
+        /^        WS_USER_SECTION=\$\(sed -n/{found=1}
+        found{print}
+        found && /^        fi$/{exit}
+    ' "$TEMPLATE_DIR/update.sh"
 }
 
 T10_DIR="$TEST_WS/t10-claude-md"
 mkdir -p "$T10_DIR"
 
-# Case A: pilot's file has real §8/§9 content, NO <!-- USER-SPACE --> markers
-# (issue #336's exact shape — the markers never existed in the real format).
-T10_CURRENT="$T10_DIR/current.md"
-T10_NEW="$T10_DIR/new.md"
-cat > "$T10_CURRENT" <<'HEREDOC'
+T10_STEP5_BLOCK=$(t10_extract_step5_block)
+T10_STEP6_BLOCK=$(t10_extract_step6_block)
+
+if [ -z "$T10_STEP5_BLOCK" ] || [ -z "$T10_STEP6_BLOCK" ]; then
+    fail "T10: could not extract fallback block(s) from update.sh — line markers moved? Step5 empty: $([ -z "$T10_STEP5_BLOCK" ] && echo yes || echo no), Step6 empty: $([ -z "$T10_STEP6_BLOCK" ] && echo yes || echo no)"
+else
+    T10_STEP5_FILE="$T10_DIR/step5-block.sh"
+    T10_STEP6_FILE="$T10_DIR/step6-block.sh"
+    printf '%s\n' "$T10_STEP5_BLOCK" > "$T10_STEP5_FILE"
+    printf '%s\n' "$T10_STEP6_BLOCK" > "$T10_STEP6_FILE"
+
+    # Case A (Step 5 shape): pilot's file has real §8/§9 content, NO
+    # <!-- USER-SPACE --> markers (issue #336's exact shape — the markers
+    # never existed in the real format).
+    T10_CURRENT="$T10_DIR/current.md"
+    T10_NEW="$T10_DIR/new.md"
+    cat > "$T10_CURRENT" <<'HEREDOC'
 ## 8. Staging
 Полный раздел про staging-канал, четыре шага промоции
 ## 9. Авторское
 - Комментарии кода — только EN
 HEREDOC
-cat > "$T10_NEW" <<'HEREDOC'
+    cat > "$T10_NEW" <<'HEREDOC'
 ## 8. Staging
 Одна строка вместо полного раздела
 ## 9. Авторское
 HEREDOC
 
-t10_run_fallback_branch "$T10_CURRENT" "$T10_NEW"
+    CURRENT_FILE="$T10_CURRENT" NEW_FILE="$T10_NEW" SCRIPT_DIR="$T10_DIR" f="CLAUDE.md" \
+        CLAUDE_BASE_MISSING_FILES=()
+    source "$T10_STEP5_FILE"
 
-if grep -q "EN" "$T10_CURRENT" && grep -q "Полный раздел" "$T10_CURRENT"; then
-    pass "T10: pilot's §8/§9 content survives the fallback branch (fixture actually ran)"
-else
-    fail "T10: pilot's §8/§9 content was overwritten — fallback branch regressed"
-fi
-if grep -q "Одна строка" "$T10_CURRENT"; then
-    fail "T10: fallback branch copied upstream over the pilot's file — no-USER-SPACE case should leave it untouched"
-fi
+    if grep -q "EN" "$T10_CURRENT" && grep -q "Полный раздел" "$T10_CURRENT"; then
+        pass "T10: Step 5 — pilot's §8/§9 content survives the real fallback branch"
+    else
+        fail "T10: Step 5 — pilot's §8/§9 content was overwritten (extracted from update.sh)"
+    fi
+    if grep -q "Одна строка" "$T10_CURRENT"; then
+        fail "T10: Step 5 — fallback branch copied upstream over the pilot's file — no-USER-SPACE case should leave it untouched"
+    fi
+    if [ "${#CLAUDE_BASE_MISSING_FILES[@]}" -eq 1 ]; then
+        pass "T10: Step 5 — CLAUDE_BASE_MISSING_FILES tracked (feeds the disambiguated final summary, issue #336 follow-up)"
+    else
+        fail "T10: Step 5 — expected CLAUDE_BASE_MISSING_FILES to have 1 entry, got ${#CLAUDE_BASE_MISSING_FILES[@]}"
+    fi
 
-# Case B: pilot's file DOES use USER-SPACE markers — must still merge as before
-# (issue #336's fix must not regress the one case that already worked).
-T10_CURRENT_B="$T10_DIR/current-b.md"
-T10_NEW_B="$T10_DIR/new-b.md"
-cat > "$T10_CURRENT_B" <<'HEREDOC'
+    # Case B (Step 6 shape): pilot's file DOES use USER-SPACE markers — must
+    # still merge as before (issue #336's fix must not regress the one case
+    # that already worked). Exercises the $WORKSPACE_DIR copy's own block
+    # (different variable names: WS_CURRENT/WS_NEW/WS_USER_SECTION) so a
+    # divergence between the two nearly-identical fallback sites is caught.
+    T10_CURRENT_B="$T10_DIR/current-b.md"
+    T10_NEW_B="$T10_DIR/new-b.md"
+    cat > "$T10_CURRENT_B" <<'HEREDOC'
 ## 8. Staging
 <!-- USER-SPACE -->
 my custom staging note
 <!-- /USER-SPACE -->
 HEREDOC
-cat > "$T10_NEW_B" <<'HEREDOC'
+    cat > "$T10_NEW_B" <<'HEREDOC'
 ## 8. Staging
 Upstream replaced this section entirely.
 HEREDOC
 
-t10_run_fallback_branch "$T10_CURRENT_B" "$T10_NEW_B"
+    WS_CURRENT="$T10_CURRENT_B" WS_NEW="$T10_NEW_B" WS_BASE="$T10_DIR/ws-base.md" \
+        CLAUDE_BASE_MISSING_FILES=()
+    source "$T10_STEP6_FILE"
 
-if grep -q "Upstream replaced" "$T10_CURRENT_B" && grep -q "my custom staging note" "$T10_CURRENT_B"; then
-    pass "T10: USER-SPACE case still merges upstream + preserves the marked section (case B unaffected)"
-else
-    fail "T10: USER-SPACE merge path regressed — expected both upstream content and preserved marker section"
-fi
-
-# Wiring check: both fallback call sites (Step 5 §SCRIPT_DIR, Step 6 §WORKSPACE_DIR)
-# must branch on USER_SECTION being non-empty before deciding to overwrite, not
-# copy first unconditionally. Greps for the fixed condition shape at both sites.
-T10_WIRED_COUNT=$(grep -cE 'if \[ -n "\$USER_SECTION" \]; then|if \[ -n "\$WS_USER_SECTION" \]; then' "$TEMPLATE_DIR/update.sh")
-if [ "$T10_WIRED_COUNT" -ge 2 ]; then
-    pass "T10: both CLAUDE.md fallback sites gate the overwrite on USER_SECTION (not unconditional)"
-else
-    fail "T10: expected the USER_SECTION guard at both fallback sites, found $T10_WIRED_COUNT"
+    if grep -q "Upstream replaced" "$T10_CURRENT_B" && grep -q "my custom staging note" "$T10_CURRENT_B"; then
+        pass "T10: Step 6 — USER-SPACE case still merges upstream + preserves the marked section"
+    else
+        fail "T10: Step 6 — USER-SPACE merge path regressed (extracted from update.sh)"
+    fi
 fi
 
 # ============================================================================
