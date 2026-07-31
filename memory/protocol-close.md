@@ -52,7 +52,7 @@ schema_version: 1
 
 1. **Pre-commit checks → Commit + Push** (шаги раннера `precommit-checks` → `commit-push` → `commit-push-check`)
 
-   **1a. Pre-commit checks (БЛОКИРУЮЩЕЕ, шаг `precommit-checks`).** `bash .claude/scripts/load-extensions.sh protocol-close checks` — exit 0 → `Read` каждый файл из вывода (alphabetic) → выполнить. Exit 1 → пропустить. Поддерживает `extensions/protocol-close.checks.md` И `extensions/protocol-close.checks.<suffix>.md`. **При ❌ commit запрещён** — исправить, повторить checks, только потом 1b. Семантика идентична Day/Week Close (см. `run-protocol/SKILL.md` Шаг 1b). [[gate]]
+   **1a. Pre-commit checks (БЛОКИРУЮЩЕЕ, шаг `precommit-checks`).** `bash "$IWE_ROOT/.claude/scripts/load-extensions.sh" protocol-close checks` — exit 0 → `Read` каждый файл из вывода (alphabetic) → выполнить. Exit 1 → пропустить. Поддерживает `extensions/protocol-close.checks.md` И `extensions/protocol-close.checks.<suffix>.md`. **При ❌ commit запрещён** — исправить, повторить checks, только потом 1b. Семантика идентична Day/Week Close (см. `run-protocol/SKILL.md` Шаг 1b). [[gate]]
 
    **1b. Commit + Push (БЛОКИРУЮЩЕЕ, шаг `commit-push`, вход `{"commits":[{"repo","paths","message"}, ...]}`).** `git status --short` по ВСЕМ репо, которых касалась сессия (не только governance). Незафиксированные изменения → `git add <specific paths>` → commit → push (раннер делает это через хендлер, не руками в обход). Затем убедиться что `git status` чист. Провал push → раннер сам стоит на `blocked-push-failed`, не идти дальше в обход. [[gate:AR.005]]
 
@@ -92,7 +92,7 @@ schema_version: 1
 
 3. **MEMORY.md (часть шага `memory-update` — ai-контракт: вход `[wp_status]`, выход `[memory_line]`)** — обновить статус РП (одна строка: `in_progress` / `done`) [[gate]]
 
-4. **EXTENSION POINT (protocol-close after).** `bash .claude/scripts/load-extensions.sh protocol-close after` — exit 0 → `Read` каждый файл из вывода (alphabetic) → выполнить. Exit 1 → пропустить. Поддерживает `extensions/protocol-close.after.md` И `extensions/protocol-close.after.<suffix>.md`. [[gate]]
+4. **EXTENSION POINT (protocol-close after).** `bash "$IWE_ROOT/.claude/scripts/load-extensions.sh" protocol-close after` — exit 0 → `Read` каждый файл из вывода (alphabetic) → выполнить. Exit 1 → пропустить. Поддерживает `extensions/protocol-close.after.md` И `extensions/protocol-close.after.<suffix>.md`. [[gate]]
 
 ### Формат «Осталось»
 
@@ -117,7 +117,7 @@ schema_version: 1
 **РП:** #N — [название]
 **Статус:** done / in_progress
 **Git:** закоммичено + запушено ✅
-**EXTENSION POINT (protocol-close after):** `bash .claude/scripts/load-extensions.sh protocol-close after` — exit 0 → `Read` каждый файл из вывода (alphabetic) → выполнить. Exit 1 → пропустить. Поддерживает `extensions/protocol-close.after.md` И `extensions/protocol-close.after.<suffix>.md`.
+**EXTENSION POINT (protocol-close after):** `bash "$IWE_ROOT/.claude/scripts/load-extensions.sh" protocol-close after` — exit 0 → `Read` каждый файл из вывода (alphabetic) → выполнить. Exit 1 → пропустить. Поддерживает `extensions/protocol-close.after.md` И `extensions/protocol-close.after.<suffix>.md`.
 **Handoff:** → WP context «Осталось» обновлён / done
 ```
 

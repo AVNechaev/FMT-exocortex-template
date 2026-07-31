@@ -282,7 +282,7 @@ else
     # the "guard exists but isn't wired up" gap stayed invisible until an incident.
     HOOKS_PATH=$(git -C "$DS_DIR" config --get core.hooksPath 2>/dev/null || echo "")
     if [ "$HOOKS_PATH" != ".githooks" ]; then
-        echo "⚠️ \`core.hooksPath\` = \`${HOOKS_PATH:-<не задан>}\`, ожидается \`.githooks\` — pre-push force-push guard (WP-436) может быть отключён. Почини: \`bash scripts/install-hooks.sh\` внутри \`$GOV_REPO\`."
+        echo "⚠️ \`core.hooksPath\` = \`${HOOKS_PATH:-<не задан>}\`, ожидается \`.githooks\` — pre-push force-push guard (WP-436) может быть отключён. Почини: \`git -C \"$DS_DIR\" config core.hooksPath .githooks\`."
     elif [ ! -x "$DS_DIR/.githooks/pre-push" ]; then
         echo "⚠️ \`core.hooksPath\` верный, но \`.githooks/pre-push\` отсутствует или не исполняемый."
     else
@@ -347,7 +347,7 @@ if [ ! -d "$EXT_DIR" ]; then
     echo "_extensions/ директория отсутствует — расширения не настроены_"
 else
     set +e
-    EXT_FILES=$(find "$EXT_DIR" -maxdepth 1 -type f -name "*.md" ! -name "README.md" 2>/dev/null | sort)
+    EXT_FILES=$(find -L "$EXT_DIR" -maxdepth 1 -type f -name "*.md" ! -name "README.md" 2>/dev/null | sort)
     set -e
     if [ -z "$EXT_FILES" ]; then
         echo "_В extensions/ только README — пользовательских хуков нет_"

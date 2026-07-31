@@ -442,7 +442,7 @@ with open(weekplan_path, "r", encoding="utf-8") as f:
 # issue (2026-07-27, WP-507 registration): the old writer matched a text anchor
 # ("**Бюджет недели:**"/"**Бюджет итого:**") and a fixed 7-field column order —
 # neither exists in the current WeekPlan format (summary line is now "**Бюджет:**",
-# table header is "🚦 | # | РП | P | h | Статус | Результат"). Locate the table by
+# table header is "🚦 | # | РП | h | Источник | P | Статус | Результат"). Locate the table by
 # its actual header instead, same name-based technique as the REGISTRY writer, so
 # column order/extra columns don't silently corrupt the row.
 header_line = None
@@ -461,8 +461,9 @@ else:
         "🚦": flag,
         "#": wp_num,
         "РП": "**{}** — [описание]".format(title),
-        "P": priority,
         "h": h_val,
+        "Источник": "—",
+        "P": priority,
         "Статус": "pending",
         "Результат": "[заполнить]",
     }
@@ -487,17 +488,11 @@ BUDGET_H=$(echo "$BUDGET" | sed 's/[^0-9]//g')
 if [[ -n "$RESULT" && "${BUDGET_H:-0}" -ge 3 ]]; then
   STRATEGY_FILE="$STRATEGY/docs/Strategy.md"
   python3 - "$STRATEGY_FILE" "$WP_NUM" "$REPO" "$RESULT" <<'PYEOF'
-import sys, datetime
+import sys
 
 strategy_path, wp_num, repo, result = sys.argv[1:5]
 
-RU_MONTHS = {
-    1: "январь", 2: "февраль", 3: "март", 4: "апрель",
-    5: "май", 6: "июнь", 7: "июль", 8: "август",
-    9: "сентябрь", 10: "октябрь", 11: "ноябрь", 12: "декабрь"
-}
-today = datetime.date.today()
-section_anchor = "### РП → Результаты ({} {})".format(RU_MONTHS[today.month], today.year)
+section_anchor = "### РП → Результаты"
 
 with open(strategy_path, "r", encoding="utf-8") as f:
     content = f.read()
@@ -530,12 +525,19 @@ fi
 # --- Шаг 6: active-wp.md ---
 echo "6/6 active-wp.md..."
 
+BUILD_ACTIVE_WP=""
 if [[ -f "$STRATEGY/scripts/build-active-wp.py" ]]; then
-  python3 "$STRATEGY/scripts/build-active-wp.py" \
+  BUILD_ACTIVE_WP="$STRATEGY/scripts/build-active-wp.py"
+elif [[ -f "$IWE/FMT-exocortex-template/scripts/build-active-wp.py" ]]; then
+  BUILD_ACTIVE_WP="$IWE/FMT-exocortex-template/scripts/build-active-wp.py"
+fi
+
+if [[ -n "$BUILD_ACTIVE_WP" ]]; then
+  python3 "$BUILD_ACTIVE_WP" \
     && echo "   ✅ active-wp.md пересобран" \
     || echo "   ⚠️  build-active-wp.py завершился с ошибкой — пересобрать вручную" >&2
 else
-  echo "   ⚠️  scripts/build-active-wp.py не найден — пересобрать вручную" >&2
+  echo "   ⚠️  scripts/build-active-wp.py не найден (искали в \`$STRATEGY/scripts/\` и \`$IWE/FMT-exocortex-template/scripts/\`) — пересобрать вручную" >&2
 fi
 
 # --- Linear (ручной шаг) ---

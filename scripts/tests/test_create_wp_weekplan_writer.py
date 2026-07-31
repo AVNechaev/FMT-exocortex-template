@@ -52,9 +52,9 @@ def test_standard_schema_inserts_row(tmp_path):
     weekplan.write_text(
         "# WeekPlan W31\n\n"
         "**Бюджет:** 40h\n\n"
-        "🚦 | # | РП | P | h | Статус | Результат\n"
-        "|---|---|---|---|---|---|---|\n"
-        "🟢 | 10 | **Существующий РП** | P3 | 5h | done | готово\n",
+        "🚦 | # | РП | h | Источник | P | Статус | Результат\n"
+        "|---|---|---|---|----------|---|---|--------|-----------|\n"
+        "🟢 | 10 | **Существующий РП** | 5h | R1 | P3 | done | готово\n",
         encoding="utf-8",
     )
 
@@ -65,9 +65,9 @@ def test_standard_schema_inserts_row(tmp_path):
     content = weekplan.read_text(encoding="utf-8")
     # h_val = re.sub(r"[^0-9\-]", "", budget) — единица измерения обрезается,
     # колонка "h" содержит только число (единица уже в заголовке колонки).
-    assert "🟡 | 16 | **Новый РП** — [описание] | P2 | 3 | pending | [заполнить] |" in content
+    assert "🟡 | 16 | **Новый РП** — [описание] | 3 | — | P2 | pending | [заполнить] |" in content
     # исходная строка не тронута
-    assert "🟢 | 10 | **Существующий РП** | P3 | 5h | done | готово" in content
+    assert "🟢 | 10 | **Существующий РП** | 5h | R1 | P3 | done | готово" in content
 
 
 def test_unrecognized_schema_does_not_corrupt_file(tmp_path):
