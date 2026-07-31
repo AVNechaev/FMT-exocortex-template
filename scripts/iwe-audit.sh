@@ -282,7 +282,11 @@ else
     # the "guard exists but isn't wired up" gap stayed invisible until an incident.
     HOOKS_PATH=$(git -C "$DS_DIR" config --get core.hooksPath 2>/dev/null || echo "")
     if [ "$HOOKS_PATH" != ".githooks" ]; then
-        echo "⚠️ \`core.hooksPath\` = \`${HOOKS_PATH:-<не задан>}\`, ожидается \`.githooks\` — pre-push force-push guard (WP-436) может быть отключён. Почини: \`git -C \"$DS_DIR\" config core.hooksPath .githooks\`."
+        if [ -x "$DS_DIR/scripts/install-hooks.sh" ]; then
+            echo "⚠️ \`core.hooksPath\` = \`${HOOKS_PATH:-<не задан>}\`, ожидается \`.githooks\` — pre-push force-push guard (WP-436) может быть отключён. Почини: \`bash \"$DS_DIR/scripts/install-hooks.sh\"\`."
+        else
+            echo "⚠️ \`core.hooksPath\` = \`${HOOKS_PATH:-<не задан>}\`, ожидается \`.githooks\` — pre-push force-push guard (WP-436) может быть отключён. Почини: \`git -C \"$DS_DIR\" config core.hooksPath .githooks\`."
+        fi
     elif [ ! -x "$DS_DIR/.githooks/pre-push" ]; then
         echo "⚠️ \`core.hooksPath\` верный, но \`.githooks/pre-push\` отсутствует или не исполняемый."
     else
