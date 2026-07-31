@@ -55,7 +55,16 @@ if command -v gtimeout >/dev/null 2>&1; then
 elif command -v timeout >/dev/null 2>&1; then
   TIMEOUT_CMD="timeout"
 fi
-DETECTOR_TIMEOUT_SECONDS="${CAPTURE_DETECTOR_TIMEOUT_SECONDS:-30}"
+# Default lives in capture-detectors.sh (CAPTURE_DETECTOR_TIMEOUT_SECONDS), next to CAPTURE_COST_LEVEL.
+DETECTOR_TIMEOUT_SECONDS="$CAPTURE_DETECTOR_TIMEOUT_SECONDS"
+
+# Warn once per run (not per detector) if no timeout binary is available.
+if [ -z "$TIMEOUT_CMD" ]; then
+  log_jsonl "$LOG_FILE" \
+    detector="capture-bus" \
+    status=detector_warn \
+    reason="timeout command unavailable (CAPTURE_DETECTOR_TIMEOUT_SECONDS=${DETECTOR_TIMEOUT_SECONDS}s)"
+fi
 
 for entry in "${DETECTORS[@]}"; do
   IFS='|' read -r name path event_type cost_class enabled triggers <<< "$entry"
@@ -79,14 +88,6 @@ for entry in "${DETECTORS[@]}"; do
       status=detector_error \
       reason="not_executable: $path"
     continue
-  fi
-
-  # Warn once per run if no timeout binary is available; still execute detector.
-  if [ -z "$TIMEOUT_CMD" ]; then
-    log_jsonl "$LOG_FILE" \
-      detector="$name" \
-      status=detector_warn \
-      reason="timeout command unavailable (CAPTURE_DETECTOR_TIMEOUT_SECONDS=${DETECTOR_TIMEOUT_SECONDS}s)"
   fi
 
   # Запускаем детектор с таймаутом

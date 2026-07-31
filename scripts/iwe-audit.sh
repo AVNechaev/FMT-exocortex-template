@@ -355,12 +355,20 @@ else
         EXT_COUNT=$(printf '%s\n' "$EXT_FILES" | wc -l | tr -d ' ')
         echo "**Найдено хуков:** $EXT_COUNT"
         echo ""
-        echo "| Hook | Размер |"
-        echo "|---|---|"
+        echo "| Hook | Размер | Источник |"
+        echo "|---|---|---|"
         printf '%s\n' "$EXT_FILES" | while read -r ext_file; do
             ext_name=$(basename "$ext_file")
             ext_size=$(wc -l < "$ext_file" | tr -d ' ')
-            printf "| \`%s\` | %s строк |\n" "$ext_name" "$ext_size"
+            # issue #341 п.1: расширения часто держат в governance-репо и линкуют
+            # сюда — молча показывать их как обычный файл скрывает, где на самом
+            # деле живёт кастомизация (важно при разборе после restore/update).
+            if [ -L "$ext_file" ]; then
+                ext_target=$(readlink "$ext_file")
+                printf "| \`%s\` | %s строк | симлинк → \`%s\` |\n" "$ext_name" "$ext_size" "$ext_target"
+            else
+                printf "| \`%s\` | %s строк | файл |\n" "$ext_name" "$ext_size"
+            fi
         done
     fi
 fi

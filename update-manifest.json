@@ -1676,6 +1676,7 @@
     "scripts/tests/conftest.py",
     "scripts/tests/test_agent_dashboard.py",
     "scripts/tests/test_copy_to_aisystant.py",
+    "scripts/tests/test_create_wp_number_padding.py",
     "scripts/tests/test_create_wp_weekplan_writer.py",
     "scripts/tests/test_day_close_prepare.py",
     "scripts/tests/test_delivery_content.py",
