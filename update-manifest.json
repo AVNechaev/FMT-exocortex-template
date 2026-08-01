@@ -1654,6 +1654,18 @@
     },
     {
       "path": "update.sh"
+    },
+    {
+      "path": "scripts/tests/test_create_wp_registry_coherence.sh"
+    },
+    {
+      "path": "scripts/tests/test_capture_bus_detector_timeout.sh"
+    },
+    {
+      "path": "scripts/tests/test_critical_alert_disabled_tracker.sh"
+    },
+    {
+      "path": "scripts/run-regression-tests.sh"
     }
   ],
   "excluded_paths": [
