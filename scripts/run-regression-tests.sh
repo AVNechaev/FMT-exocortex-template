@@ -11,12 +11,11 @@ echo "Running regression tests..."
 echo ""
 
 for test_script in "$TEST_DIR"/test_*.sh; do
-  # Skip non-regression tests
-  [[ $(basename "$test_script") == test_create_wp_registry_coherence.sh ]] || \
-  [[ $(basename "$test_script") == test_capture_bus_detector_timeout.sh ]] || \
-  [[ $(basename "$test_script") == test_critical_alert_disabled_tracker.sh ]] || continue
+  # Include regression tests + contract tests; skip validator (runs separately)
+  test_base=$(basename "$test_script" .sh)
+  [[ "$test_base" == "validate_manifest_coverage" ]] && continue
 
-  test_name=$(basename "$test_script" .sh)
+  test_name=$test_base
   echo "Running: $test_name"
 
   if bash "$test_script"; then
@@ -27,6 +26,16 @@ for test_script in "$TEST_DIR"/test_*.sh; do
   fi
   echo ""
 done
+
+# Run validator separately (ensures manifest completeness)
+echo "Running: validate_manifest_coverage"
+if bash "$TEST_DIR/validate_manifest_coverage.sh"; then
+  echo "✓ validate_manifest_coverage PASSED"
+else
+  echo "✗ validate_manifest_coverage FAILED"
+  FAILED=$((FAILED + 1))
+fi
+echo ""
 
 if [ $FAILED -eq 0 ]; then
   echo "✓ All regression tests passed"

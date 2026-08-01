@@ -1666,6 +1666,18 @@
     },
     {
       "path": "scripts/run-regression-tests.sh"
+    },
+    {
+      "path": "scripts/tests/test_create_wp_contract.sh"
+    },
+    {
+      "path": "scripts/tests/test_capture_bus_contract.sh"
+    },
+    {
+      "path": "scripts/tests/test_critical_alert_contract.sh"
+    },
+    {
+      "path": "scripts/tests/validate_manifest_coverage.sh"
     }
   ],
   "excluded_paths": [
