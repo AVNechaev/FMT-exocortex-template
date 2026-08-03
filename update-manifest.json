@@ -1551,6 +1551,9 @@
       "path": "scripts/route-task.sh"
     },
     {
+      "path": "scripts/run-regression-tests.sh"
+    },
+    {
       "path": "scripts/script-promote.sh"
     },
     {
@@ -1603,6 +1606,48 @@
     },
     {
       "path": "scripts/test-route-task.sh"
+    },
+    {
+      "path": "scripts/tests/lib/capture_fixture.sh"
+    },
+    {
+      "path": "scripts/tests/test_capture_bus_contract.sh"
+    },
+    {
+      "path": "scripts/tests/test_capture_bus_detector_timeout.sh"
+    },
+    {
+      "path": "scripts/tests/test_create_wp_contract.sh"
+    },
+    {
+      "path": "scripts/tests/test_create_wp_registry_coherence.sh"
+    },
+    {
+      "path": "scripts/tests/test_create_wp_repeat_and_cwd.sh"
+    },
+    {
+      "path": "scripts/tests/test_critical_alert_contract.sh"
+    },
+    {
+      "path": "scripts/tests/test_critical_alert_disabled_tracker.sh"
+    },
+    {
+      "path": "scripts/tests/test_critical_alert_failure_matrix.sh"
+    },
+    {
+      "path": "scripts/tests/test_day_close_lock_timezone.sh"
+    },
+    {
+      "path": "scripts/tests/test_fresh_seed_reproduction.sh"
+    },
+    {
+      "path": "scripts/tests/test_hook_classification.sh"
+    },
+    {
+      "path": "scripts/tests/test_upgrade_worktree_cleanup.sh"
+    },
+    {
+      "path": "scripts/tests/validate_manifest_coverage.sh"
     },
     {
       "path": "scripts/update-derived-snapshot.py"
@@ -1660,42 +1705,6 @@
     },
     {
       "path": "update.sh"
-    },
-    {
-      "path": "scripts/tests/test_create_wp_registry_coherence.sh"
-    },
-    {
-      "path": "scripts/tests/test_capture_bus_detector_timeout.sh"
-    },
-    {
-      "path": "scripts/tests/test_critical_alert_disabled_tracker.sh"
-    },
-    {
-      "path": "scripts/run-regression-tests.sh"
-    },
-    {
-      "path": "scripts/tests/test_create_wp_contract.sh"
-    },
-    {
-      "path": "scripts/tests/test_capture_bus_contract.sh"
-    },
-    {
-      "path": "scripts/tests/test_critical_alert_contract.sh"
-    },
-    {
-      "path": "scripts/tests/validate_manifest_coverage.sh"
-    },
-    {
-      "path": "scripts/tests/lib/capture_fixture.sh"
-    },
-    {
-      "path": "scripts/tests/test_critical_alert_failure_matrix.sh"
-    },
-    {
-      "path": "scripts/tests/test_create_wp_repeat_and_cwd.sh"
-    },
-    {
-      "path": "scripts/tests/test_fresh_seed_reproduction.sh"
     }
   ],
   "excluded_paths": [

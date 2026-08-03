@@ -109,6 +109,32 @@ SETUP_EXPLICIT_INCLUDE=(
     "setup/optional/setup-cloud-scheduler.sh"   # install-time, but requires one-time delivery — issue #325
     "setup/optional/setup-local-gateway.sh"     # referenced by delivered docs/AGENT-VENDOR-SETUP.md (WP-499 Ф16), same class as #325
 )
+# WP-7 Ф-script-contract-gate: EXCLUDED_PATTERNS below still blanket-excludes
+# scripts/tests/ (correct default — it's mostly the author's own pytest suite,
+# dev-only, same reasoning as issue #246/#247 above but scoped to this one
+# directory instead of removed entirely). These paths are the exception —
+# the verification gate itself, meant to ship so a user's own template copy
+# can run it. Found live 03.08: without this list, generate-manifest.sh
+# silently dropped all 11 back into excluded_paths on every real run, even
+# though they'd been hand-added to files[] in an earlier commit — the next
+# real release would have shipped a template without its own test gate and
+# nobody would have noticed until a user hit the bug the gate exists to catch.
+SCRIPT_CONTRACT_EXPLICIT_INCLUDE=(
+    "scripts/tests/test_create_wp_registry_coherence.sh"
+    "scripts/tests/test_capture_bus_detector_timeout.sh"
+    "scripts/tests/test_critical_alert_disabled_tracker.sh"
+    "scripts/tests/test_create_wp_contract.sh"
+    "scripts/tests/test_capture_bus_contract.sh"
+    "scripts/tests/test_critical_alert_contract.sh"
+    "scripts/tests/validate_manifest_coverage.sh"
+    "scripts/tests/lib/capture_fixture.sh"
+    "scripts/tests/test_critical_alert_failure_matrix.sh"
+    "scripts/tests/test_create_wp_repeat_and_cwd.sh"
+    "scripts/tests/test_day_close_lock_timezone.sh"
+    "scripts/tests/test_fresh_seed_reproduction.sh"
+    "scripts/tests/test_hook_classification.sh"
+    "scripts/tests/test_upgrade_worktree_cleanup.sh"
+)
 
 is_explicit_include() {
     local rel="$1"; shift
@@ -124,7 +150,9 @@ FILES=()
 EXCLUDED_PATHS=()
 while IFS= read -r rel; do
     # Пропускаем мусор/инструментарий
-    if is_explicit_include "$rel" "${GITHUB_EXPLICIT_INCLUDE[@]}"; then
+    if is_explicit_include "$rel" \
+        "${GITHUB_EXPLICIT_INCLUDE[@]}" \
+        "${SCRIPT_CONTRACT_EXPLICIT_INCLUDE[@]}"; then
         FILES+=("$rel")
         continue
     fi
