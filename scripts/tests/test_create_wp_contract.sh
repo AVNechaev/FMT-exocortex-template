@@ -19,6 +19,15 @@ trap 'rm -rf "$TMPDIR"' EXIT
 
 cp -R "$TEMPLATE_ROOT/seed/strategy" "$TMPDIR/strategy"
 
+# seed/ is a one-time bootstrap template, correctly excluded from update.sh's
+# ongoing-sync manifest — a copy of this repo obtained any way other than a
+# fresh git clone of the exact commit that added current/WeekPlan*.md won't
+# have it (found by cold review 03.08). No-op when the real seed one is
+# already present.
+# shellcheck source=lib/seed_strategy_fixture.sh
+source "$TEMPLATE_ROOT/scripts/tests/lib/seed_strategy_fixture.sh"
+ensure_weekplan_fixture "$TMPDIR/strategy"
+
 export IWE_TEMPLATE="$TEMPLATE_ROOT"
 export IWE_ROOT="$TMPDIR"
 export IWE_GOVERNANCE_REPO="strategy"
@@ -39,10 +48,6 @@ case "$PWD" in
 esac
 
 WEEKPLAN=$(find current -maxdepth 1 -name "WeekPlan*.md" | head -1)
-if [ -z "$WEEKPLAN" ]; then
-  echo "FAIL: fresh seed/strategy has no current/WeekPlan*.md fixture" >&2
-  exit 1
-fi
 
 # Fault injection: a python3 shim that fails ONLY when invoked with the
 # WeekPlan path as an argument (create-wp.sh step 4), passes through to the
@@ -70,8 +75,19 @@ exec "$REAL_PYTHON3" "\$@"
 EOF
 chmod +x "$FAKE_BIN/python3"
 
-INITIAL_REGISTRY=$(cat docs/WP-REGISTRY.md)
-INITIAL_WEEKPLAN=$(cat "$WEEKPLAN")
+# File copies + `cmp`, not `$(cat file)` + string `=`: command substitution
+# strips every trailing newline, so a snapshot/restore bug that drops the
+# final \n (the exact class create-wp.sh's own rollback was fixed for — see
+# its comment on SNAPSHOT_DIR) would be invisible to a `$(cat A)` = `$(cat B)`
+# comparison, since both sides get stripped the same way (found by cold
+# review 03.08: reverted the rollback fix to its pre-`cp`-based form and this
+# test still passed clean, despite the restored files being missing their
+# final newline — a regression test that couldn't catch the regression it
+# was written for).
+INITIAL_REGISTRY_SNAPSHOT="$TMPDIR/registry.before"
+INITIAL_WEEKPLAN_SNAPSHOT="$TMPDIR/weekplan.before"
+cp docs/WP-REGISTRY.md "$INITIAL_REGISTRY_SNAPSHOT"
+cp "$WEEKPLAN" "$INITIAL_WEEKPLAN_SNAPSHOT"
 INITIAL_INBOX=$(find inbox -mindepth 1 | sort)
 INITIAL_ARCHIVE=$(find archive/wp-contexts -mindepth 1 | sort)
 
@@ -93,15 +109,13 @@ if [ "$EXIT_CODE" -eq 0 ]; then
   exit 1
 fi
 
-FINAL_REGISTRY=$(cat docs/WP-REGISTRY.md)
-FINAL_WEEKPLAN=$(cat "$WEEKPLAN")
 FINAL_INBOX=$(find inbox -mindepth 1 | sort)
 FINAL_ARCHIVE=$(find archive/wp-contexts -mindepth 1 | sort)
 
-[ "$FINAL_REGISTRY" = "$INITIAL_REGISTRY" ] ||
-  { echo "FAIL: WP-REGISTRY.md was not rolled back" >&2; exit 1; }
-[ "$FINAL_WEEKPLAN" = "$INITIAL_WEEKPLAN" ] ||
-  { echo "FAIL: WeekPlan was not rolled back" >&2; exit 1; }
+cmp -s docs/WP-REGISTRY.md "$INITIAL_REGISTRY_SNAPSHOT" ||
+  { echo "FAIL: WP-REGISTRY.md was not rolled back (byte-exact compare, incl. trailing newline)" >&2; exit 1; }
+cmp -s "$WEEKPLAN" "$INITIAL_WEEKPLAN_SNAPSHOT" ||
+  { echo "FAIL: WeekPlan was not rolled back (byte-exact compare, incl. trailing newline)" >&2; exit 1; }
 [ "$FINAL_INBOX" = "$INITIAL_INBOX" ] ||
   { echo "FAIL: inbox/ was not rolled back" >&2; exit 1; }
 [ "$FINAL_ARCHIVE" = "$INITIAL_ARCHIVE" ] ||

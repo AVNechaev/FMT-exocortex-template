@@ -11,6 +11,15 @@ trap 'rm -rf "$TMPDIR"' EXIT
 TEMPLATE_ROOT="${IWE_TEMPLATE:-$HOME/IWE/FMT-exocortex-template}"
 cp -R "$TEMPLATE_ROOT/seed/strategy" "$TMPDIR/strategy"
 
+# seed/ is a one-time bootstrap template, correctly excluded from update.sh's
+# ongoing-sync manifest — a copy of this repo obtained any way other than a
+# fresh git clone of the exact commit that added current/WeekPlan*.md won't
+# have it (found by cold review 03.08). ensure_weekplan_fixture is a no-op
+# when the real seed one is already present.
+# shellcheck source=lib/seed_strategy_fixture.sh
+source "$TEMPLATE_ROOT/scripts/tests/lib/seed_strategy_fixture.sh"
+ensure_weekplan_fixture "$TMPDIR/strategy"
+
 # IWE_GOVERNANCE_REPO — имя подпапки ПОД IWE_ROOT (create-wp.sh:26-30), а не
 # произвольный относительный путь. "." без выставленного IWE_ROOT резолвился
 # в $HOME/IWE/. — реальный домашний каталог, а не эту песочницу (найдено 03.08,

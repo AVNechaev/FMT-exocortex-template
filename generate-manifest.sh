@@ -128,6 +128,7 @@ SCRIPT_CONTRACT_EXPLICIT_INCLUDE=(
     "scripts/tests/test_critical_alert_contract.sh"
     "scripts/tests/validate_manifest_coverage.sh"
     "scripts/tests/lib/capture_fixture.sh"
+    "scripts/tests/lib/seed_strategy_fixture.sh"
     "scripts/tests/test_critical_alert_failure_matrix.sh"
     "scripts/tests/test_create_wp_repeat_and_cwd.sh"
     "scripts/tests/test_day_close_lock_timezone.sh"

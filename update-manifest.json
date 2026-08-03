@@ -1611,6 +1611,9 @@
       "path": "scripts/tests/lib/capture_fixture.sh"
     },
     {
+      "path": "scripts/tests/lib/seed_strategy_fixture.sh"
+    },
+    {
       "path": "scripts/tests/test_capture_bus_contract.sh"
     },
     {
