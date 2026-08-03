@@ -1684,6 +1684,18 @@
     },
     {
       "path": "scripts/tests/validate_manifest_coverage.sh"
+    },
+    {
+      "path": "scripts/tests/lib/capture_fixture.sh"
+    },
+    {
+      "path": "scripts/tests/test_critical_alert_failure_matrix.sh"
+    },
+    {
+      "path": "scripts/tests/test_create_wp_repeat_and_cwd.sh"
+    },
+    {
+      "path": "scripts/tests/test_fresh_seed_reproduction.sh"
     }
   ],
   "excluded_paths": [
