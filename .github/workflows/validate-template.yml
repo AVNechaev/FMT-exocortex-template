@@ -118,6 +118,8 @@ jobs:
       - name: Upgrade simulation — checkout prev → smoke → checkout HEAD → validate
         if: steps.prev.outputs.skip != 'true'
         run: |
+          CURRENT_SHA=$(git rev-parse HEAD)
+          CURRENT_REF=$(git symbolic-ref --quiet --short HEAD || true)
           # Шаг 1: build-runtime на предыдущей версии (имитация уже-установленного пилота).
           git checkout ${{ steps.prev.outputs.sha }}
           bash setup/smoke-test-fresh-install.sh > /tmp/prev_smoke.log 2>&1 || {
@@ -125,8 +127,17 @@ jobs:
             tail -20 /tmp/prev_smoke.log
           }
           # Шаг 2: возврат на HEAD, прогон ТЕКУЩЕГО validator + smoke.
+          # Старый smoke может менять tracked-файлы и оставлять untracked-мусор.
+          # Runner одноразовый: это состояние предыдущей версии нужно отбросить,
+          # а не переносить в проверку текущей.
+          git reset --hard
+          git clean -fd
           # Если HEAD-validator прошёл fresh + после prev-smoke build-runtime — upgrade OK.
-          git checkout -
+          if [ -n "$CURRENT_REF" ]; then
+            git checkout "$CURRENT_REF"
+          else
+            git checkout "$CURRENT_SHA"
+          fi
           bash setup/integration-contract-validator.sh
           bash setup/smoke-test-fresh-install.sh
           echo "PASS: upgrade ${{ steps.prev.outputs.ver }} → HEAD не ломает контракт"
