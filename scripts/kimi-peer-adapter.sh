@@ -408,7 +408,6 @@ else
 fi
 
 KIMI_STDERR="$TMP_ROOT/kimi.stderr"
-KIMI_RUN_STARTED_AT=$(date +%s)
 
 if [ "$KIMI_CLI_STYLE" = "prompt-arg" ]; then
   # Single-argv limit: Linux MAX_ARG_STRLEN is 128KiB per argument; macOS ARG_MAX ~1MiB total.
@@ -522,23 +521,21 @@ else
 fi
 
 # lockf and Kimi can both return EX_TEMPFAIL (75). Distinguish the child's
-# connection failure by its captured stderr; otherwise a sandbox/network denial
-# is falsely reported as OAuth contention and sends operators to the wrong fix.
+# connection failure by its captured stderr — the only source reliably scoped
+# to this invocation. A shared-logfile mtime/tail heuristic was tried and
+# dropped (peer-session 2026-08-04-08-wp7-f44-sandbox-review): concurrent Kimi
+# calls on this machine can write a matching pattern into the same global
+# ~/.kimi/logs/kimi.log within the same second, misattributing one
+# invocation's OAuth-lock timeout to another's unrelated network failure.
 if [ "$PERL_EXIT" -eq 75 ]; then
-  KIMI_LOG="$HOME/.kimi/logs/kimi.log"
-  KIMI_LOG_MTIME=0
-  if [ -f "$KIMI_LOG" ]; then
-    KIMI_LOG_MTIME=$(stat -f %m "$KIMI_LOG" 2>/dev/null || stat -c %Y "$KIMI_LOG" 2>/dev/null || echo 0)
-  fi
-  if grep -qE 'APIConnectionError|Connection error|Network is unreachable|Operation not permitted' "$KIMI_STDERR" 2>/dev/null || \
-     { [ "${KIMI_LOG_MTIME:-0}" -ge "$KIMI_RUN_STARTED_AT" ] && tail -100 "$KIMI_LOG" 2>/dev/null | grep -qE 'APIConnectionError|Connection error|Network is unreachable|Operation not permitted'; }; then
+  if grep -qE 'APIConnectionError|Connection error|Network is unreachable|Operation not permitted' "$KIMI_STDERR" 2>/dev/null; then
     echo "ERROR: Kimi network connection failed. Check sandbox network access and the api.kimi.com/api.moonshot.cn allowlist." >&2
-    if [ -s "$KIMI_STDERR" ]; then
-      echo "--- kimi stderr (tail) ---" >&2
-      tail -20 "$KIMI_STDERR" >&2
-    fi
   else
-    echo "ERROR: OAuth refresh lock busy after 90s — another Kimi process is mid-refresh on $OAUTH_LOCK_FILE." >&2
+    echo "ERROR: Kimi peer call failed (exit 75) — cause not determined (network denial vs OAuth refresh lock on $OAUTH_LOCK_FILE); child stderr had no clear signal." >&2
+  fi
+  if [ -s "$KIMI_STDERR" ]; then
+    echo "--- kimi stderr (tail) ---" >&2
+    tail -20 "$KIMI_STDERR" >&2
   fi
   exit 1
 fi
