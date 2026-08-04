@@ -1023,25 +1023,28 @@ T16_TRANSCRIPT="$TEST_WS/t16-transcript.jsonl"
 } > "$T16_TRANSCRIPT"
 T16_CLAR_PAYLOAD="{\"session_id\":\"t16-clar\",\"stop_hook_active\":false,\"transcript_path\":\"$T16_TRANSCRIPT\"}"
 
-t16_clarity() {  # $1 = STYLE_ENFORCE_BLOCK value, $2 = payload; stdout -> T16_OUT
+t16_clarity() {  # $1 = STYLE_ENFORCE_BLOCK value, $2 = payload; sets T16_OUT/T16_RC/T16_ERR
+    T16_ERR_FILE="$TEST_WS/t16-clarity-stderr.txt"
     T16_OUT=$(printf '%s' "$2" | HOME="$T16_HOME" CLAUDE_PROJECT_DIR="$T16_PROJ" \
-        STYLE_ENFORCE_BLOCK="$1" bash "$TEMPLATE_DIR/.claude/hooks/response-clarity-hook.sh" 2>/dev/null)
+        STYLE_ENFORCE_BLOCK="$1" bash "$TEMPLATE_DIR/.claude/hooks/response-clarity-hook.sh" 2>"$T16_ERR_FILE")
+    T16_RC=$?
+    T16_ERR=$(head -c 300 "$T16_ERR_FILE" 2>/dev/null | tr '\n' ' ')
 }
 
 # Recursion guard: stop_hook_active must short-circuit to silence in any mode.
 t16_clarity 0 '{"session_id":"t16-clar","stop_hook_active":true}'
-if [ $? -eq 0 ] && [ -z "$T16_OUT" ]; then
+if [ "$T16_RC" -eq 0 ] && [ -z "$T16_OUT" ]; then
     pass "T16: response-clarity-hook honors the stop_hook_active recursion guard"
 else
-    fail "T16: recursion guard broken (rc=$?, out='$T16_OUT')"
+    fail "T16: recursion guard broken (rc=$T16_RC, out='$T16_OUT', err='$T16_ERR')"
 fi
 
 # Warning mode (=0): the A10 marker in the transcript must produce a visible warning.
 t16_clarity 0 "$T16_CLAR_PAYLOAD"
-if [ $? -eq 0 ] && printf '%s' "$T16_OUT" | grep -q 'A10'; then
+if [ "$T16_RC" -eq 0 ] && printf '%s' "$T16_OUT" | grep -q 'A10'; then
     pass "T16: response-clarity-hook flags the A10 marker in warning mode"
 else
-    fail "T16: warning mode gave no A10 warning (rc=$?, out='$T16_OUT')"
+    fail "T16: warning mode gave no A10 warning (rc=$T16_RC, out='$T16_OUT', err='$T16_ERR')"
 fi
 
 # Block mode (=1): same transcript must yield decision=block with a reason.
@@ -1051,7 +1054,7 @@ T16_RLEN=$(t16_json "len(d['reason'])")
 if [ "$T16_DEC" = "block" ] && [ "${T16_RLEN:-0}" -gt 0 ]; then
     pass "T16: response-clarity-hook blocks with a reason in enforce mode"
 else
-    fail "T16: enforce mode expected decision=block with reason, got decision='$T16_DEC' reason_len='${T16_RLEN:-none}'"
+    fail "T16: enforce mode expected decision=block, got decision='$T16_DEC' reason_len='${T16_RLEN:-none}' (rc=$T16_RC, err='$T16_ERR')"
 fi
 
 # ============================================================
