@@ -408,6 +408,7 @@ else
 fi
 
 KIMI_STDERR="$TMP_ROOT/kimi.stderr"
+KIMI_RUN_STARTED_AT=$(date +%s)
 
 if [ "$KIMI_CLI_STYLE" = "prompt-arg" ]; then
   # Single-argv limit: Linux MAX_ARG_STRLEN is 128KiB per argument; macOS ARG_MAX ~1MiB total.
@@ -520,9 +521,25 @@ else
   KIMI_OUTPUT=$(printf '%s\n' "$KIMI_RAW" | grep -v "^To resume this session:")
 fi
 
-# lockf timeout (EX_TEMPFAIL) — another Kimi process held the OAuth-refresh lock past 90s
+# lockf and Kimi can both return EX_TEMPFAIL (75). Distinguish the child's
+# connection failure by its captured stderr; otherwise a sandbox/network denial
+# is falsely reported as OAuth contention and sends operators to the wrong fix.
 if [ "$PERL_EXIT" -eq 75 ]; then
-  echo "ERROR: OAuth refresh lock busy after 90s — another Kimi process is mid-refresh on $OAUTH_LOCK_FILE." >&2
+  KIMI_LOG="$HOME/.kimi/logs/kimi.log"
+  KIMI_LOG_MTIME=0
+  if [ -f "$KIMI_LOG" ]; then
+    KIMI_LOG_MTIME=$(stat -f %m "$KIMI_LOG" 2>/dev/null || stat -c %Y "$KIMI_LOG" 2>/dev/null || echo 0)
+  fi
+  if grep -qE 'APIConnectionError|Connection error|Network is unreachable|Operation not permitted' "$KIMI_STDERR" 2>/dev/null || \
+     { [ "${KIMI_LOG_MTIME:-0}" -ge "$KIMI_RUN_STARTED_AT" ] && tail -100 "$KIMI_LOG" 2>/dev/null | grep -qE 'APIConnectionError|Connection error|Network is unreachable|Operation not permitted'; }; then
+    echo "ERROR: Kimi network connection failed. Check sandbox network access and the api.kimi.com/api.moonshot.cn allowlist." >&2
+    if [ -s "$KIMI_STDERR" ]; then
+      echo "--- kimi stderr (tail) ---" >&2
+      tail -20 "$KIMI_STDERR" >&2
+    fi
+  else
+    echo "ERROR: OAuth refresh lock busy after 90s — another Kimi process is mid-refresh on $OAUTH_LOCK_FILE." >&2
+  fi
   exit 1
 fi
 
