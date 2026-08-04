@@ -384,13 +384,18 @@ jobs:
 
       # issue #343/#347: 14 регрессионных тестов лежали в репо и не запускались нигде —
       # ни один из них не сторожил ни один прогон. Полный набор идёт ~2 минуты.
-      - name: Run update.sh edge-case regression tests (T1-T14)
+      - name: Run update.sh edge-case regression tests (T1-T17)
         run: bash setup/test-update-edge-cases.sh
 
       # issue #310/#323: хук-страж, не зарегистрированный ни в одном событии, не
       # срабатывает никогда — и «не сработал» неотличимо от «нарушений не было».
       - name: Check every hook is actually wired (orphan-hook guard)
         run: bash scripts/check-orphan-hooks.sh
+
+      # Сам сторож тоже под тестом: оба пути распознавания (маркер claude-hook: false
+      # и .orphan-allowlist) плюс гарантия, что настоящая сирота всё ещё валит проверку.
+      - name: Test the orphan-hook guard itself (marker + allowlist + real orphan)
+        run: bash scripts/tests/test_check_orphan_hooks.sh
 
       # 7. Только допустимые placeholders
       - name: Check placeholders are valid

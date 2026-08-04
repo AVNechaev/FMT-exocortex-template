@@ -332,6 +332,47 @@ fi
 
 echo ""
 
+# ---------- Раздел 3b: Promoted-copy drift (issue #347) ----------
+#
+# CI's check-seed-drift.sh holds scripts/ ↔ seed/strategy/scripts/ INSIDE the
+# template, but the installed governance copy (created once by setup.sh from
+# seed/strategy/) lives on the user machine where CI cannot see it. The audit
+# runs exactly where both sides physically exist — compare them here.
+# All three files must be checked, absence included: a missing lib/common.sh
+# breaks the scaffold just as silently as a stale one.
+
+echo "## 3b. Промотированные копии Day Open (seed шаблона ↔ установленный governance)"
+echo ""
+SEED_SCRIPTS="$IWE_ROOT/FMT-exocortex-template/seed/strategy/scripts"
+if [ ! -d "$SEED_SCRIPTS" ]; then
+    echo "_N/A — шаблон с seed/strategy/scripts/ не найден._"
+elif [ -z "${DS_DIR:-}" ] || [ ! -d "$DS_DIR/scripts" ]; then
+    echo "_N/A — governance-репо без scripts/ (конвейер Day Open не разворачивался)._"
+else
+    PROMOTED_DRIFT=0
+    for rel in day-open-scaffold.sh day-open-pipeline.sh lib/common.sh; do
+        seed_f="$SEED_SCRIPTS/$rel"
+        inst_f="$DS_DIR/scripts/$rel"
+        if [ ! -f "$seed_f" ]; then
+            echo "- ⚠️ \`seed/strategy/scripts/$rel\` отсутствует в шаблоне — регрессия доставки seed"
+            PROMOTED_DRIFT=$((PROMOTED_DRIFT + 1))
+        elif [ ! -f "$inst_f" ]; then
+            echo "- ⚠️ \`scripts/$rel\` не установлен в governance-репо — конвейер Day Open неполный"
+            PROMOTED_DRIFT=$((PROMOTED_DRIFT + 1))
+        elif ! cmp -s "$seed_f" "$inst_f"; then
+            echo "- ⚠️ \`scripts/$rel\` разошёлся с seed шаблона — обновить: \`cp \"$seed_f\" \"$inst_f\"\` (свои правки в копии сначала сохранить)"
+            PROMOTED_DRIFT=$((PROMOTED_DRIFT + 1))
+        else
+            echo "- ✅ \`scripts/$rel\` совпадает с seed"
+        fi
+    done
+    if [ "$PROMOTED_DRIFT" -gt 0 ]; then
+        OPTIONAL_MISSING=$((OPTIONAL_MISSING + PROMOTED_DRIFT))
+    fi
+fi
+
+echo ""
+
 # ---------- Раздел 4: User customizations (L3) ----------
 #
 # L3 живёт в 3-х местах: extensions/, params.yaml (отличия от skeleton),

@@ -224,7 +224,7 @@ CLAUDE_MEMORY_DIR="$HOME/.claude/projects/$CLAUDE_PROJECT_SLUG/memory"
 # users found out by losing an edit. Called from every branch that shows a preview,
 # including the "no changes" one — there a repair-pass still writes to all of these.
 print_extra_write_targets() {
-    echo "Кроме перечисленного, обычный запуск (без --check) также пишет:"
+    echo "Кроме перечисленного, обычный запуск (без --check) также пишет — это зоны возможной перезаписи, пофайлового прогноза для них превью не строит (issue #350):"
     echo "  • $WORKSPACE_DIR/.claude/ — рабочие копии скиллов, хуков, правил"
     echo "  • $CLAUDE_MEMORY_DIR — рабочие копии memory-файлов"
     echo "  • $WORKSPACE_DIR/.iwe-runtime/ — пересобирается целиком из шаблона"

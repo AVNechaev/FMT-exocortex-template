@@ -16,6 +16,9 @@
 #   T12: day-close.sh memory backup descends into memory/ subfolders (issue #343)
 #   T13: iwe_scheduler_state separates "never deployed" from "deployed and dead" (issue #347)
 #   T14: a fresh workspace is seeded with params.yaml from params.yaml.example (issue #348)
+#   T15: residency-gate scripts resolve residency-gate.py from any cwd (issue #323)
+#   T16: hooks newly registered in settings.json exist and honor the event protocol on a clean install (issues #310/#321/#323 batch)
+#   T17: seed ships scripts/lib/ so a fresh governance install gets the scaffold dependency (issue #347)
 #
 # Exit: 0 = all PASS, N = N tests failed
 #
@@ -854,6 +857,218 @@ if git -C "$TEMPLATE_DIR" ls-files --error-unmatch params.yaml >/dev/null 2>&1; 
     fail "T14: params.yaml is still tracked in the template repo (issue #348 not closed)"
 else
     pass "T14: template repo does not track a working params.yaml"
+fi
+
+# ============================================================
+# T15: residency-gate path resolves from any cwd (issue #323)
+# ============================================================
+echo "--- T15: residency-gate scripts resolve residency-gate.py correctly ---"
+
+T15_ROOT="$TEST_WS/t15-root"
+mkdir -p "$T15_ROOT/.claude/skills/residency-gate"
+touch "$T15_ROOT/.claude/skills/residency-gate/residency-gate.py"
+
+for t15_script in residency-gate-init.sh residency-gate-lazy.sh; do
+    T15_FILE="$TEMPLATE_DIR/.claude/hooks/$t15_script"
+    # Regression guard for the original defect: the old default ".claude"
+    # expanded to ".claude/.claude/skills/..." — a path that never exists.
+    if grep -q ':-\.claude}' "$T15_FILE"; then
+        fail "T15: $t15_script still uses the .claude default that doubles the path"
+        continue
+    fi
+    T15_LINE=$(grep -m1 '^RESIDENCY_GATE_PY=' "$T15_FILE")
+    if [ -z "$T15_LINE" ]; then
+        fail "T15: $t15_script has no RESIDENCY_GATE_PY assignment"
+        continue
+    fi
+    # Explicit CLAUDE_ROOT from a foreign cwd must land inside that root.
+    T15_EXPLICIT=$(cd "$TEST_WS" && CLAUDE_ROOT="$T15_ROOT" bash -c "$T15_LINE; echo \"\$RESIDENCY_GATE_PY\"")
+    if [ "$T15_EXPLICIT" = "$T15_ROOT/.claude/skills/residency-gate/residency-gate.py" ] && [ -f "$T15_EXPLICIT" ]; then
+        pass "T15: $t15_script honors an explicit CLAUDE_ROOT from a foreign cwd"
+    else
+        fail "T15: $t15_script with explicit CLAUDE_ROOT resolved to '$T15_EXPLICIT'"
+    fi
+    # Unset CLAUDE_ROOT with cwd = project root must find the file via ./.claude/.
+    T15_DEFAULT=$(cd "$T15_ROOT" && env -u CLAUDE_ROOT bash -c "$T15_LINE; [ -f \"\$RESIDENCY_GATE_PY\" ] && echo exists || echo missing:\$RESIDENCY_GATE_PY")
+    if [ "$T15_DEFAULT" = "exists" ]; then
+        pass "T15: $t15_script default resolves from the project root"
+    else
+        fail "T15: $t15_script default resolution broken ($T15_DEFAULT)"
+    fi
+done
+
+# ============================================================
+# T16: newly wired hooks honor their real event protocols
+#      (issues #310/#321/#323 batch — delivery-gap hooks wired up)
+#      Scope note: this is a template-run probe with a clean HOME and
+#      CLAUDE_PROJECT_DIR, NOT a full setup.sh install — it proves the shipped
+#      hook copies are self-sufficient (FMT-fallback snapshots), which is the
+#      property a fresh user relies on.
+# ============================================================
+echo "--- T16: newly wired hooks honor their event protocols (template-run, clean env) ---"
+
+T16_HOME="$TEST_WS/t16-home"
+T16_PROJ="$TEST_WS/t16-proj"
+mkdir -p "$T16_HOME" "$T16_PROJ/.claude/state"
+
+for t16_hook in inject-code-style.sh inject-communication-style.sh inject-fault-profile.sh response-clarity-hook.sh; do
+    [ -f "$TEMPLATE_DIR/.claude/hooks/$t16_hook" ] || { fail "T16: $t16_hook is registered but missing from hooks/"; continue; }
+    grep -q "$t16_hook" "$TEMPLATE_DIR/.claude/settings.json" \
+        && pass "T16: $t16_hook is registered in settings.json" \
+        || fail "T16: $t16_hook is not registered in settings.json"
+done
+
+# inject-code-style must be PreToolUse-only: it reads .tool_input.file_path and
+# hard-codes hookEventName PreToolUse, so a UserPromptSubmit registration would
+# fire on every prompt and always return {} — dead weight, not a teaser.
+T16_UPS=$(python3 -c "
+import json
+d = json.load(open('$TEMPLATE_DIR/.claude/settings.json'))
+cmds = [h['command'] for m in d['hooks']['UserPromptSubmit'] for h in m['hooks']]
+print('yes' if any('inject-code-style' in c for c in cmds) else 'no')
+")
+[ "$T16_UPS" = "no" ] \
+    && pass "T16: inject-code-style is not wired to UserPromptSubmit (PreToolUse-only)" \
+    || fail "T16: inject-code-style is wired to UserPromptSubmit where it always returns {}"
+
+t16_run() {  # $1 = hook, $2 = payload; stdout -> T16_OUT, returns non-zero on hook failure
+    T16_OUT=$(printf '%s' "$2" | HOME="$T16_HOME" CLAUDE_PROJECT_DIR="$T16_PROJ" \
+        IWE_GOVERNANCE_REPO="DS-strategy" bash "$TEMPLATE_DIR/.claude/hooks/$1" 2>/dev/null)
+    local rc=$?
+    [ "$rc" -eq 0 ] && return 0
+    fail "T16: $1 exited $rc"
+    return 1
+}
+
+t16_json() {  # $1 = python expr over parsed stdin d; empty output = extraction failed
+    printf '%s' "$T16_OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); print($1)" 2>/dev/null
+}
+
+# inject-communication-style: real UserPromptSubmit payload must yield the
+# shipped style snapshot as additionalContext with the correct event name.
+if t16_run inject-communication-style.sh '{"session_id":"t16-comm","prompt":"привет"}'; then
+    T16_EV=$(t16_json "d['hookSpecificOutput']['hookEventName']")
+    T16_LEN=$(t16_json "len(d['hookSpecificOutput']['additionalContext'])")
+    if [ "$T16_EV" = "UserPromptSubmit" ] && [ "${T16_LEN:-0}" -gt 1000 ]; then
+        pass "T16: inject-communication-style serves the snapshot on a real UserPromptSubmit"
+    else
+        fail "T16: inject-communication-style event='$T16_EV' ctx_len='${T16_LEN:-none}'"
+    fi
+fi
+
+# inject-code-style: real PreToolUse payload on a code file must yield the
+# engineering-style core with hookEventName PreToolUse.
+printf 'x = 1\n' > "$T16_PROJ/t16-fixture.py"
+if t16_run inject-code-style.sh "{\"session_id\":\"t16-code\",\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"$T16_PROJ/t16-fixture.py\"}}"; then
+    T16_EV=$(t16_json "d['hookSpecificOutput']['hookEventName']")
+    T16_LEN=$(t16_json "len(d['hookSpecificOutput']['additionalContext'])")
+    if [ "$T16_EV" = "PreToolUse" ] && [ "${T16_LEN:-0}" -gt 1000 ]; then
+        pass "T16: inject-code-style serves the style core on a real PreToolUse"
+    else
+        fail "T16: inject-code-style event='$T16_EV' ctx_len='${T16_LEN:-none}'"
+    fi
+fi
+
+# inject-fault-profile: with a reminder fixture in the governance path, a real
+# payload must yield the reminder AND the traversal-shaped session_id must be
+# sanitized before landing in the state-file name.
+mkdir -p "$T16_PROJ/DS-strategy/scripts"
+printf '#!/usr/bin/env python3\nprint("\\U0001F534 [CRITICAL | n=5] test-reminder-fixture")\n' \
+    > "$T16_PROJ/DS-strategy/scripts/agent_fault_remind.py"
+if t16_run inject-fault-profile.sh '{"session_id":"t16-../../evil","prompt":"x"}'; then
+    T16_EV=$(t16_json "d['hookSpecificOutput']['hookEventName']")
+    T16_HAS=$(t16_json "'test-reminder-fixture' in d['hookSpecificOutput']['additionalContext']")
+    if [ "$T16_EV" = "UserPromptSubmit" ] && [ "$T16_HAS" = "True" ]; then
+        pass "T16: inject-fault-profile serves reminders from the governance fixture"
+    else
+        fail "T16: inject-fault-profile event='$T16_EV' reminder='$T16_HAS'"
+    fi
+    if [ -f "$T16_PROJ/.claude/state/fault-profile-injected-t16-evil" ]; then
+        pass "T16: traversal-shaped session_id is sanitized in the state-file name"
+    else
+        fail "T16: sanitized state file not found ($(ls "$T16_PROJ/.claude/state/" 2>/dev/null | tr '\n' ' '))"
+    fi
+    if [ -e "$T16_PROJ/.claude/evil" ] || [ -e "$T16_PROJ/evil" ] || [ -e "$TEST_WS/evil" ]; then
+        fail "T16: session_id traversal escaped the state directory"
+    else
+        pass "T16: no path-traversal artifact outside the state directory"
+    fi
+fi
+
+# inject-fault-profile without jq must be a silent no-op ({}). jq cannot be
+# hidden via the caller's PATH (the hook prepends system dirs itself), so patch
+# ONLY the `export PATH=` line in a copy — the guard logic under test is intact.
+T16_NOJQ="$TEST_WS/t16-nojq"
+mkdir -p "$T16_NOJQ/bin"
+for t16_bin in bash cat tr cut mkdir touch find python3 grep head; do
+    t16_src=$(command -v "$t16_bin") && ln -s "$t16_src" "$T16_NOJQ/bin/$t16_bin"
+done
+sed "s|^export PATH=.*|export PATH=\"$T16_NOJQ/bin\"|" \
+    "$TEMPLATE_DIR/.claude/hooks/inject-fault-profile.sh" > "$T16_NOJQ/hook.sh"
+T16_OUT=$(printf '%s' '{"session_id":"t16-nojq"}' | HOME="$T16_HOME" CLAUDE_PROJECT_DIR="$T16_PROJ" \
+    bash "$T16_NOJQ/hook.sh" 2>/dev/null)
+if [ $? -eq 0 ] && [ "$T16_OUT" = "{}" ]; then
+    pass "T16: inject-fault-profile degrades to a silent no-op without jq"
+else
+    fail "T16: without jq expected '{}' rc=0, got rc=$? out='$T16_OUT'"
+fi
+
+# response-clarity-hook has TWO modes selected by STYLE_ENFORCE_BLOCK — the test
+# must pin the mode explicitly, or its expectations silently depend on the
+# caller's environment (found by peer review: the author's env had it set).
+T16_TRANSCRIPT="$TEST_WS/t16-transcript.jsonl"
+{
+    printf '%s\n' '{"type":"user","message":{"role":"user","content":[{"type":"text","text":"сделай"}]}}'
+    printf '%s\n' '{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Готово: тесты прошли, exit 0."}]}}'
+} > "$T16_TRANSCRIPT"
+T16_CLAR_PAYLOAD="{\"session_id\":\"t16-clar\",\"stop_hook_active\":false,\"transcript_path\":\"$T16_TRANSCRIPT\"}"
+
+t16_clarity() {  # $1 = STYLE_ENFORCE_BLOCK value, $2 = payload; stdout -> T16_OUT
+    T16_OUT=$(printf '%s' "$2" | HOME="$T16_HOME" CLAUDE_PROJECT_DIR="$T16_PROJ" \
+        STYLE_ENFORCE_BLOCK="$1" bash "$TEMPLATE_DIR/.claude/hooks/response-clarity-hook.sh" 2>/dev/null)
+}
+
+# Recursion guard: stop_hook_active must short-circuit to silence in any mode.
+t16_clarity 0 '{"session_id":"t16-clar","stop_hook_active":true}'
+if [ $? -eq 0 ] && [ -z "$T16_OUT" ]; then
+    pass "T16: response-clarity-hook honors the stop_hook_active recursion guard"
+else
+    fail "T16: recursion guard broken (rc=$?, out='$T16_OUT')"
+fi
+
+# Warning mode (=0): the A10 marker in the transcript must produce a visible warning.
+t16_clarity 0 "$T16_CLAR_PAYLOAD"
+if [ $? -eq 0 ] && printf '%s' "$T16_OUT" | grep -q 'A10'; then
+    pass "T16: response-clarity-hook flags the A10 marker in warning mode"
+else
+    fail "T16: warning mode gave no A10 warning (rc=$?, out='$T16_OUT')"
+fi
+
+# Block mode (=1): same transcript must yield decision=block with a reason.
+t16_clarity 1 "$T16_CLAR_PAYLOAD"
+T16_DEC=$(t16_json "d['decision']")
+T16_RLEN=$(t16_json "len(d['reason'])")
+if [ "$T16_DEC" = "block" ] && [ "${T16_RLEN:-0}" -gt 0 ]; then
+    pass "T16: response-clarity-hook blocks with a reason in enforce mode"
+else
+    fail "T16: enforce mode expected decision=block with reason, got decision='$T16_DEC' reason_len='${T16_RLEN:-none}'"
+fi
+
+# ============================================================
+# T17: seed ships the scaffold dependency lib/ (issue #347)
+# ============================================================
+echo "--- T17: seed delivers scripts/lib/ to a fresh governance install ---"
+
+if [ -f "$TEMPLATE_DIR/seed/strategy/scripts/lib/common.sh" ]; then
+    pass "T17: seed/strategy/scripts/lib/common.sh is present"
+else
+    fail "T17: seed/strategy/scripts/lib/common.sh is missing — fresh installs lose the scaffold dependency"
+fi
+# setup.sh must copy seed contents recursively (cp -r src/. dst/), or lib/ stays behind.
+if grep -qE 'cp -r "\$STRATEGY_TEMPLATE"/\. ' "$TEMPLATE_DIR/setup.sh"; then
+    pass "T17: setup.sh copies the whole seed tree recursively"
+else
+    fail "T17: setup.sh no longer copies seed recursively — lib/ delivery is broken"
 fi
 
 # ============================================================

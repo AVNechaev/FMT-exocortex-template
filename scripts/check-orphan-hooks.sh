@@ -68,10 +68,19 @@ fi
 
 orphans=0
 allowed=0
+libraries=0
 for path in "$HOOKS_DIR"/*.sh; do
     [ -f "$path" ] || continue
     name=$(basename "$path")
     case " $reachable " in *" $name "*) continue ;; esac
+    # `claude-hook: false` in the header = library/CLI shipped alongside hooks,
+    # not registerable in settings.json by contract (issues #310, #323).
+    # Same marker setup/validate-template.sh honors — keep recognizers in sync.
+    if head -3 "$path" | grep -q '^# claude-hook: false — '; then
+        echo "LIBRARY: $name — не хук по контракту (claude-hook: false), подключение в settings.json не требуется"
+        libraries=$((libraries + 1))
+        continue
+    fi
     case " $allow " in
         *" $name "*)
             echo "ALLOWED: $name — не подключён осознанно (см. .claude/hooks/.orphan-allowlist)"
@@ -85,7 +94,7 @@ for path in "$HOOKS_DIR"/*.sh; do
 done
 
 if [ "$orphans" -eq 0 ]; then
-    echo "PASS: все хуки подключены ($allowed осознанно не подключены)"
+    echo "PASS: все хуки подключены ($allowed осознанно не подключены, $libraries библиотек вне контракта хуков)"
     exit 0
 fi
 
