@@ -13,6 +13,8 @@
 #   T9: .mcp.json migration preserves a third-party server like ext-figma (issue #335)
 #   T10: CLAUDE.md fallback-merge (no .base) never silently drops §8/§9 edits (issue #336)
 #   T11: protocol-artifact-validate.sh DayPlan checks (multiplier/mandatory/budget, issue #328)
+#   T12: day-close.sh memory backup descends into memory/ subfolders (issue #343)
+#   T13: iwe_scheduler_state separates "never deployed" from "deployed and dead" (issue #347)
 #
 # Exit: 0 = all PASS, N = N tests failed
 #
@@ -641,6 +643,167 @@ HEREDOC
         pass "T11: DayPlan with mandatory_daily_wps configured still requires the mandatory section"
     else
         fail "T11: expected exactly 1 mandatory-check error, got ${#ERRORS[@]}: ${ERRORS[*]:-none}"
+    fi
+fi
+
+# ============================================================
+# T12: day-close.sh memory backup descends into memory/ subfolders (issue #343)
+# ============================================================
+echo "--- T12: memory backup keeps nested files ---"
+
+# The rsync flag list is READ OUT OF day-close.sh, not retyped here: a hand-copied
+# flag list would keep passing after someone drops --include='*/' from the real script,
+# which is exactly the failure this test exists to catch.
+T12_SCRIPT="$TEMPLATE_DIR/scripts/day-close.sh"
+if [ ! -f "$T12_SCRIPT" ]; then
+    fail "T12: scripts/day-close.sh not found"
+else
+    # Slice the rsync invocation: from the `rsync -aL --delete \` line up to (not
+    # including) the line carrying the source/destination pair.
+    # while-read, not mapfile: macOS ships bash 3.2, where mapfile does not exist.
+    # T12_FLAG_COUNT is tracked separately because this harness runs under `set -u`,
+    # and bash 3.2 treats ${#EMPTY_ARRAY[@]} as an unbound variable — the crash would
+    # land on exactly the branch meant to report "extraction produced nothing".
+    T12_FLAGS=()
+    T12_FLAG_COUNT=0
+    while IFS= read -r t12_flag; do
+        T12_FLAGS+=("$t12_flag")
+        T12_FLAG_COUNT=$((T12_FLAG_COUNT + 1))
+    done < <(
+        # Anchored on the `rsync` keyword and the MEMORY_SRC line, NOT on a specific
+        # short-flag set: pinning `rsync -aL --delete` made the extraction return
+        # nothing the moment -m was added, turning correct code into a red test.
+        # The short flags on the rsync line itself are captured too (everything after
+        # the command name) — otherwise the test would run its own -aL and never
+        # exercise the -m the real script relies on. One token per line, since a
+        # source line may carry several flags.
+        awk '/^[[:space:]]*rsync[[:space:]]/{grab=1; for (i = 2; i <= NF; i++) if ($i != "\\") print $i; next}
+             grab && /MEMORY_SRC/{exit}
+             grab {for (i = 1; i <= NF; i++) if ($i != "\\") print $i}' "$T12_SCRIPT" \
+        | tr -d "'"
+    )
+
+    if [ "$T12_FLAG_COUNT" -eq 0 ]; then
+        fail "T12: could not extract rsync flags from day-close.sh — test cannot verify anything"
+    else
+        T12_SRC="$TEST_WS/t12/memory"
+        T12_DST="$TEST_WS/t12/exocortex"
+        # .git/objects/ab mirrors what the live memory source actually contains: its
+        # files are dropped by the trailing --exclude, so the directory must not survive.
+        mkdir -p "$T12_SRC/reference" "$T12_SRC/.git/objects/ab" "$T12_DST"
+        echo "top-level" > "$T12_SRC/navigation.md"
+        echo "nested" > "$T12_SRC/reference/agent-core.md"
+        echo "blob" > "$T12_SRC/.git/objects/ab/deadbeef"
+
+        rsync "${T12_FLAGS[@]}" "$T12_SRC/" "$T12_DST/" >/dev/null 2>&1
+
+        if [ -f "$T12_DST/reference/agent-core.md" ] && [ -f "$T12_DST/navigation.md" ]; then
+            pass "T12: nested memory/reference/agent-core.md reaches the backup"
+        elif [ -f "$T12_DST/navigation.md" ]; then
+            fail "T12: top-level file copied but memory/reference/agent-core.md was dropped (missing --include='*/')"
+        else
+            fail "T12: backup produced nothing — flags extracted: ${T12_FLAGS[*]}"
+        fi
+
+        if [ -d "$T12_DST/.git" ]; then
+            fail "T12: empty .git skeleton was mirrored into the backup (missing -m / --prune-empty-dirs)"
+        else
+            pass "T12: directory skeletons with no matching files are not mirrored"
+        fi
+    fi
+fi
+
+# ============================================================
+# T13: iwe_scheduler_state distinguishes "never deployed" from a real outage (issue #347)
+# ============================================================
+echo "--- T13: scheduler state is four-valued, not boolean ---"
+
+T13_LIB="$TEMPLATE_DIR/scripts/lib/common.sh"
+if [ ! -f "$T13_LIB" ]; then
+    fail "T13: scripts/lib/common.sh not found"
+else
+    # Launcher queries must be stubbed, not just HOME-scoped: launchctl answers for the
+    # whole login session regardless of $HOME, so on the author's own Mac an unstubbed
+    # probe reports the real scheduler as active and the test would prove nothing.
+    T13_BIN="$TEST_WS/t13-bin"
+    mkdir -p "$T13_BIN"
+    printf '#!/bin/sh\nexit 0\n' > "$T13_BIN/launchctl"          # no units registered
+    printf '#!/bin/sh\nexit 0\n' > "$T13_BIN/systemctl"          # no timers loaded
+    printf '#!/bin/sh\nexit 1\n' > "$T13_BIN/crontab"            # "no crontab for user"
+    chmod +x "$T13_BIN/launchctl" "$T13_BIN/systemctl" "$T13_BIN/crontab"
+
+    # Same stubs, except the service manager itself errors out (WSL/container: no user
+    # session bus) — the case that must read "unknown", not "not deployed".
+    T13_BIN_ERR="$TEST_WS/t13-bin-err"
+    mkdir -p "$T13_BIN_ERR"
+    cp "$T13_BIN/launchctl" "$T13_BIN/crontab" "$T13_BIN_ERR/"
+    printf '#!/bin/sh\necho "Failed to connect to bus" >&2\nexit 1\n' > "$T13_BIN_ERR/systemctl"
+    chmod +x "$T13_BIN_ERR/systemctl"
+
+    t13_state() {  # $1 = fake HOME, $2 = stub bin dir
+        HOME="$1" PATH="$2:$PATH" bash -c 'source "$1"; iwe_scheduler_state' _ "$T13_LIB" 2>/dev/null
+    }
+
+    T13_EMPTY="$TEST_WS/t13-empty-home"
+    mkdir -p "$T13_EMPTY"
+    T13_CLEAN=$(t13_state "$T13_EMPTY" "$T13_BIN")
+
+    T13_STALE="$TEST_WS/t13-stale-home"
+    mkdir -p "$T13_STALE/logs/synchronizer"
+    touch -t 202001010000 "$T13_STALE/logs/synchronizer/scheduler-old.log"
+    T13_DEPLOYED=$(t13_state "$T13_STALE" "$T13_BIN")
+
+    T13_UNKNOWN=$(t13_state "$T13_EMPTY" "$T13_BIN_ERR")
+
+    # Only ONE role's plist — roles install independently, so a partial deployment is
+    # the ordinary case, not an exotic one. A check that needs all three families at
+    # once reads this as "never installed" and stops reporting real outages.
+    T13_PARTIAL="$TEST_WS/t13-partial-home"
+    mkdir -p "$T13_PARTIAL/Library/LaunchAgents"
+    touch "$T13_PARTIAL/Library/LaunchAgents/com.exocortex.scheduler.plist"
+    T13_PARTIAL_STATE=$(t13_state "$T13_PARTIAL" "$T13_BIN")
+
+    # WSL/container: the timer files are on disk but the service manager cannot answer.
+    # Artefacts must not outrank a failed probe, or this host gets a daily false Mode A.
+    T13_WSL="$TEST_WS/t13-wsl-home"
+    mkdir -p "$T13_WSL/.config/systemd/user"
+    touch "$T13_WSL/.config/systemd/user/iwe-exocortex-scheduler.timer"
+    T13_WSL_STATE=$(t13_state "$T13_WSL" "$T13_BIN_ERR")
+
+    if [ "$T13_CLEAN" = "not_deployed" ]; then
+        pass "T13: host with no launcher artefacts reports not_deployed (no red, no incident)"
+    else
+        fail "T13: expected not_deployed on a clean HOME, got '${T13_CLEAN:-<empty>}'"
+    fi
+
+    if [ "$T13_DEPLOYED" = "deployed_inactive" ]; then
+        pass "T13: stale scheduler log alone proves past deployment → deployed_inactive"
+    else
+        fail "T13: expected deployed_inactive with an old scheduler log, got '${T13_DEPLOYED:-<empty>}'"
+    fi
+
+    if [ "$T13_UNKNOWN" = "unknown" ]; then
+        pass "T13: a failing service-manager query reports unknown, not not_deployed"
+    else
+        fail "T13: expected unknown when systemctl errors out, got '${T13_UNKNOWN:-<empty>}'"
+    fi
+
+    if [ "$T13_PARTIAL_STATE" = "deployed_inactive" ]; then
+        pass "T13: a single role's plist still counts as deployed (partial install is normal)"
+    else
+        fail "T13: expected deployed_inactive with one plist present, got '${T13_PARTIAL_STATE:-<empty>}'"
+    fi
+
+    if [ "$T13_WSL_STATE" = "unknown" ]; then
+        pass "T13: a failed probe outranks on-disk artefacts (no daily false Mode A on WSL)"
+    else
+        fail "T13: expected unknown with timers present but systemctl failing, got '${T13_WSL_STATE:-<empty>}'"
+    fi
+
+    if [ "$T13_CLEAN" != "$T13_DEPLOYED" ] && [ "$T13_CLEAN" != "$T13_UNKNOWN" ]; then
+        pass "T13: the three situations the old boolean merged now differ"
+    else
+        fail "T13: states collapsed — clean='$T13_CLEAN' deployed='$T13_DEPLOYED' unknown='$T13_UNKNOWN'"
     fi
 fi
 

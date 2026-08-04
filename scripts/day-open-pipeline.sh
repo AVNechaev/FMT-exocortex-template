@@ -13,7 +13,18 @@
 
 set -uo pipefail
 
-IWE="${IWE_ROOT:-$HOME/IWE}"
+# The seed snapshot already resolved the root via iwe_resolve_root(); promoting this
+# file from the author's live copy silently reverted it to the IWE_ROOT-only fallback,
+# which ignores IWE_WORKSPACE (set by ~/.iwe-paths). Restored here so both copies agree.
+# Fail loudly if the library is missing: without `set -e` a failed source would let the
+# script continue, iwe_resolve_root would not exist, IWE would end up empty, and every
+# path would silently become /DS-strategy/… instead of stopping here.
+# shellcheck source=lib/common.sh
+_PIPELINE_LIB="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/common.sh"
+[ -f "$_PIPELINE_LIB" ] || { echo "ОШИБКА: не найден $_PIPELINE_LIB" >&2; exit 1; }
+source "$_PIPELINE_LIB"
+
+IWE="$(iwe_resolve_root)"
 CONFIG="$IWE/${IWE_GOVERNANCE_REPO:-DS-strategy}/exocortex/day-rhythm-config.yaml"
 # shellcheck source=lib/ledger-path.sh
 . "$IWE/${IWE_GOVERNANCE_REPO:-DS-strategy}/scripts/lib/ledger-path.sh"

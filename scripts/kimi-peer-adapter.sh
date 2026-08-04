@@ -102,7 +102,10 @@ done
 # === Фильтрация --add-dir через .agentigore + PII sanity-check ===
 
 FILTERED_DIRS=()
-TMP_ROOT=$(mktemp -d -t kimi-peer-XXXXXX)
+# `mktemp -d -t PREFIX` means different things on GNU and BSD (docs/PLATFORM-COMPAT.md).
+# Passing an explicit template keeps the readable prefix and behaves the same on both —
+# identical form to codex-peer-adapter.sh.
+TMP_ROOT=$(mktemp -d "${TMPDIR:-/tmp}/kimi-peer-XXXXXX")
 
 # Merged .agentigore (union: ~/.iwe → git-root → session_dir)
 MERGED_AGENTIGORE="$TMP_ROOT/.agentigore"

@@ -391,6 +391,13 @@ for f in "${COPIED_FILES[@]}"; do
     elif [ -f "$dst" ] && cmp -s "$src" "$dst"; then
         : # skip — identical
     else
+        # issue #348: seeding a protected user file used to be silent, so a workspace
+        # that had lost its params.yaml (layout migration, interrupted setup) got the
+        # template default back with no trace — indistinguishable from "update.sh
+        # overwrote my settings". Say it out loud when it happens.
+        if is_protected_user_file "$f" && [ ! -f "$dst" ]; then
+            $QUIET || echo "  ⚠ $f отсутствовал в $WORKSPACE_DIR — засеян значениями шаблона. Ваши прежние настройки в нём НЕ восстановлены."
+        fi
         cp "$src" "$dst"
         COPIED_COUNT=$((COPIED_COUNT + 1))
     fi

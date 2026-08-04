@@ -98,13 +98,13 @@ if [[ "$VALIDATE" == true ]]; then
     local file="$2"
     if ! grep -qE "^${field}:" "$file"; then
       echo "  ✗ Поле '${field}' отсутствует"
-      ((ERRORS++))
+      ERRORS=$((ERRORS + 1))
     else
       local val
       val="$(grep -E "^${field}:" "$file" | head -1 | sed 's/^[^:]*:[[:space:]]*//' | sed 's/"//g' | sed "s/'//g" | tr -d ' ')"
       if [[ -z "$val" || "$val" == "~" || "$val" == "null" ]]; then
         echo "  ✗ Поле '${field}' пустое"
-        ((ERRORS++))
+        ERRORS=$((ERRORS + 1))
       else
         echo "  ✓ ${field}: ${val}"
       fi
@@ -127,7 +127,7 @@ if [[ "$VALIDATE" == true ]]; then
     val="$(grep -E "^${field}:" "$META" | head -1)"
     if [[ "$val" == *'$('* ]]; then
       echo "  ✗ Поле '${field}' содержит неразвёрнутый shell-плейсхолдер: ${val}"
-      ((ERRORS++))
+      ERRORS=$((ERRORS + 1))
     fi
   done
 
@@ -140,7 +140,7 @@ if [[ "$VALIDATE" == true ]]; then
   if [[ -n "$start_val" && -n "$end_val" && "$start_val" != *'$('* && "$end_val" != *'$('* ]]; then
     if [[ "$end_val" < "$start_val" ]]; then
       echo "  ✗ end_time ($end_val) раньше start_time ($start_val)"
-      ((ERRORS++))
+      ERRORS=$((ERRORS + 1))
     fi
   fi
 

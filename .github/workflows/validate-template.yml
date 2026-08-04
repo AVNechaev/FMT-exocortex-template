@@ -382,6 +382,11 @@ jobs:
       - name: Check seed snapshots match scripts/ (drift guard)
         run: bash scripts/check-seed-drift.sh
 
+      # issue #343/#347: 13 регрессионных тестов лежали в репо и не запускались нигде —
+      # ни один из них не сторожил ни один прогон. Полный набор идёт ~2 минуты.
+      - name: Run update.sh edge-case regression tests (T1-T13)
+        run: bash setup/test-update-edge-cases.sh
+
       # 7. Только допустимые placeholders
       - name: Check placeholders are valid
         run: |
