@@ -93,6 +93,7 @@ FILES_EXCLUDE_EXACT=(
     "CODEOWNERS"
     "CITATION.cff"
     "params.yaml"
+    "params.yaml.example"
     "extensions/day-close.after.md"
     "extensions/mcp-user.json"
 )

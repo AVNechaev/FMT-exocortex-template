@@ -382,11 +382,15 @@ echo ""
 echo "### params.yaml — отличия от шаблона"
 echo ""
 PARAMS_USER="$IWE_ROOT/params.yaml"
-PARAMS_TEMPLATE="$IWE_ROOT/FMT-exocortex-template/params.yaml"
+# issue #348: эталон переехал в params.yaml.example — рабочий params.yaml внутри
+# шаблона больше не трекается. Старое имя остаётся запасным вариантом: на установке,
+# обновлённой не полностью, рядом может лежать прежний файл.
+PARAMS_TEMPLATE="$IWE_ROOT/FMT-exocortex-template/params.yaml.example"
+[ -f "$PARAMS_TEMPLATE" ] || PARAMS_TEMPLATE="$IWE_ROOT/FMT-exocortex-template/params.yaml"
 if [ ! -f "$PARAMS_USER" ]; then
     echo "_params.yaml не найден — конфигурация не инициализирована_"
 elif [ ! -f "$PARAMS_TEMPLATE" ]; then
-    echo "_FMT-exocortex-template/params.yaml не найден — сравнение невозможно_"
+    echo "_FMT-exocortex-template/params.yaml.example не найден — сравнение невозможно_"
 else
     set +e
     # Игнорируем комментарии и пустые строки при сравнении

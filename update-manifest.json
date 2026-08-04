@@ -24,6 +24,9 @@
       "path": ".claude/detectors/detector_pattern_awareness.sh"
     },
     {
+      "path": ".claude/hooks/.orphan-allowlist"
+    },
+    {
       "path": ".claude/hooks/agent-trace-recorder.sh"
     },
     {
@@ -1303,6 +1306,9 @@
     },
     {
       "path": "scripts/check-open-sessions.sh"
+    },
+    {
+      "path": "scripts/check-orphan-hooks.sh"
     },
     {
       "path": "scripts/check-platform-compat.sh"

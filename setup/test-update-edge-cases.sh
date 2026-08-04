@@ -15,6 +15,7 @@
 #   T11: protocol-artifact-validate.sh DayPlan checks (multiplier/mandatory/budget, issue #328)
 #   T12: day-close.sh memory backup descends into memory/ subfolders (issue #343)
 #   T13: iwe_scheduler_state separates "never deployed" from "deployed and dead" (issue #347)
+#   T14: a fresh workspace is seeded with params.yaml from params.yaml.example (issue #348)
 #
 # Exit: 0 = all PASS, N = N tests failed
 #
@@ -805,6 +806,54 @@ else
     else
         fail "T13: states collapsed — clean='$T13_CLEAN' deployed='$T13_DEPLOYED' unknown='$T13_UNKNOWN'"
     fi
+fi
+
+# ============================================================
+# T14: fresh workspace gets params.yaml seeded from params.yaml.example (issue #348)
+# ============================================================
+echo "--- T14: params.yaml is seeded from the example, not tracked by the template ---"
+
+T14_WS="$TEST_WS/t14-workspace"
+mkdir -p "$T14_WS"
+cat > "$T14_WS/.exocortex.env" <<HEREDOC
+HOME_DIR=$HOME
+WORKSPACE_DIR=$T14_WS
+CLAUDE_PATH=/usr/bin/claude
+CLAUDE_PROJECT_SLUG=test
+TIMEZONE_HOUR=3
+TIMEZONE_DESC=UTC
+GITHUB_USER=test-user
+GOVERNANCE_REPO=DS-strategy
+HEREDOC
+
+T14_OUT=$(bash "$TEMPLATE_DIR/setup/build-runtime.sh" \
+    --workspace "$T14_WS" --env-file "$T14_WS/.exocortex.env" 2>&1)
+
+if [ -f "$T14_WS/params.yaml" ]; then
+    pass "T14: absent params.yaml is seeded into the workspace"
+else
+    fail "T14: workspace has no params.yaml after build-runtime.sh — seeding from the example broke"
+fi
+
+# The seeding must be announced. Silence here is what made #348 read as "update.sh
+# overwrote my settings" — the user had no way to tell a reseed from a clobber.
+case "$T14_OUT" in
+    *params.yaml*засеян*) pass "T14: seeding a protected user file is announced, not silent" ;;
+    *) fail "T14: build-runtime.sh seeded params.yaml without saying so" ;;
+esac
+
+# The template must ship the example and must NOT track a working params.yaml —
+# a tracked one is exactly what a fork's pull puts back over the user's edits.
+if [ -f "$TEMPLATE_DIR/params.yaml.example" ]; then
+    pass "T14: template ships params.yaml.example"
+else
+    fail "T14: params.yaml.example is missing from the template"
+fi
+
+if git -C "$TEMPLATE_DIR" ls-files --error-unmatch params.yaml >/dev/null 2>&1; then
+    fail "T14: params.yaml is still tracked in the template repo (issue #348 not closed)"
+else
+    pass "T14: template repo does not track a working params.yaml"
 fi
 
 # ============================================================

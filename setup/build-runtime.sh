@@ -200,7 +200,10 @@ fi
 # === Verify source files exist in FMT ===
 MISSING=()
 for f in "${SUBSTITUTED_FILES[@]}" "${COPIED_FILES[@]}"; do
-    [ -f "$TEMPLATE_DIR/$f" ] || MISSING+=("$f")
+    # issue #348: a user-owned workspace file ships as <name>.example (see
+    # copy_to_workspace_file below) — accept either name here, or this pre-flight
+    # rejects the very layout the fix introduces.
+    [ -f "$TEMPLATE_DIR/$f" ] || [ -f "$TEMPLATE_DIR/$f.example" ] || MISSING+=("$f")
 done
 
 if [ "${#MISSING[@]}" -gt 0 ]; then
@@ -277,6 +280,16 @@ copy_to_workspace_file() {
     local rel="$1"
     local src="$TEMPLATE_DIR/$rel"
     local dst="$BUILD_DIR/workspace/$rel"
+    # issue #348: a workspace file that belongs to the user (params.yaml) ships as
+    # <name>.example and is git-ignored under its working name — otherwise the
+    # template repo owns a file it has declared to be the user's, and a fork's pull
+    # puts the upstream defaults back over the user's edits. Destination name is
+    # unchanged; only the source in the template carries the .example suffix.
+    [ -f "$src" ] || src="$TEMPLATE_DIR/$rel.example"
+    if [ ! -f "$src" ]; then
+        echo "ERROR: copied_to_workspace: не найден ни $TEMPLATE_DIR/$rel, ни $TEMPLATE_DIR/$rel.example" >&2
+        return 1
+    fi
     mkdir -p "$(dirname "$dst")"
     cp "$src" "$dst"
     case "$dst" in *.sh) chmod +x "$dst" ;; esac
