@@ -114,16 +114,22 @@ Versioning: [Semantic Versioning](https://semver.org/).
 
 
 
-## [Unreleased] — обновлено 2026-08-04
+
+## [Unreleased] — обновлено 2026-08-05
 
 ### Added
 
+- `6d1e1e2` feat(wp481): extend verifier acceptance contracts
+- `7a8db41` feat(wp509): promote peer-conversation v1.5.5 to L1
+- `adc5dd8` feat(WP-7/SP1): promote skill kimi-peer-writer to platform (L1)
 - `041bd11` feat: promote day-open-pipeline.sh to platform (WP-7 orphan-semaphore quarantine)
 - `e680497` feat(WP-7 Этап 2): контрактные тесты доведены до реально проходящих + rollback create-wp.sh
 - `7291b9f` feat(WP-7 Этап 2): контрактные тесты с failure injection
+- `d13cb3f` feat(WP-453): post-commit — блок Т1 (скан blobs на [guide-impact])
 
 ### Changed
 
+- `c529c98` test(T16): диагностика clarity-падения в CI — rc и stderr хука в FAIL-сообщениях
 - `3d96d00` chore: перегенерация каталогов generate-catalogs.py
 - `867aa5d` docs(wp-452): Ф4 — связь с разделом 7 универсального руководства
 - `8cca208` chore(release): weekly auto-bump to v0.36.3
@@ -131,6 +137,7 @@ Versioning: [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- `15a38b9` fix(hooks): A10-детектор слеп в C.UTF-8 — кириллический диапазон в grep невалиден
 - `720d30f` fix(#310,#321,#323,#347,#350): честный enforcement гейтов, доставка хуков, аудит промотированных копий
 - `80c4a25` fix(#348): образец params.yaml.example признан пользовательским пространством
 - `21d82ad` fix(#348,#310,#323): params.yaml перестал быть файлом шаблона; сторож неподключённых хуков
