@@ -19,6 +19,7 @@
 #   T15: residency-gate scripts resolve residency-gate.py from any cwd (issue #323)
 #   T16: hooks newly registered in settings.json exist and honor the event protocol on a clean install (issues #310/#321/#323 batch)
 #   T17: seed ships scripts/lib/ so a fresh governance install gets the scaffold dependency (issue #347)
+#   T18: decision-log consumers share one canonical path and define cold-start/migration behavior (issue #351)
 #
 # Exit: 0 = all PASS, N = N tests failed
 #
@@ -694,10 +695,22 @@ else
         T12_DST="$TEST_WS/t12/exocortex"
         # .git/objects/ab mirrors what the live memory source actually contains: its
         # files are dropped by the trailing --exclude, so the directory must not survive.
-        mkdir -p "$T12_SRC/reference" "$T12_SRC/.git/objects/ab" "$T12_DST"
+        mkdir -p \
+            "$T12_SRC/reference" \
+            "$T12_SRC/.git/objects/ab" \
+            "$T12_DST/reference" \
+            "$T12_DST/extensions" \
+            "$T12_DST/agent-fault-profile/audit" \
+            "$T12_DST/hindsight" \
+            "$T12_DST/decisions"
         echo "top-level" > "$T12_SRC/navigation.md"
         echo "nested" > "$T12_SRC/reference/agent-core.md"
         echo "blob" > "$T12_SRC/.git/objects/ab/deadbeef"
+        echo "stale memory" > "$T12_DST/reference/stale-memory.md"
+        echo "extension" > "$T12_DST/extensions/day-close.after.md"
+        echo "fault audit" > "$T12_DST/agent-fault-profile/audit/faults.md"
+        echo "hindsight" > "$T12_DST/hindsight/notes.md"
+        echo "legacy decision" > "$T12_DST/decisions/decision-log.md"
 
         rsync "${T12_FLAGS[@]}" "$T12_SRC/" "$T12_DST/" >/dev/null 2>&1
 
@@ -713,6 +726,26 @@ else
             fail "T12: empty .git skeleton was mirrored into the backup (missing -m / --prune-empty-dirs)"
         else
             pass "T12: directory skeletons with no matching files are not mirrored"
+        fi
+
+        T12_FOREIGN_MISSING=0
+        for foreign in \
+            extensions/day-close.after.md \
+            agent-fault-profile/audit/faults.md \
+            hindsight/notes.md \
+            decisions/decision-log.md; do
+            [ -f "$T12_DST/$foreign" ] || T12_FOREIGN_MISSING=$((T12_FOREIGN_MISSING + 1))
+        done
+        if [ "$T12_FOREIGN_MISSING" -eq 0 ]; then
+            pass "T12: --delete preserves all declared non-memory writer subtrees"
+        else
+            fail "T12: --delete removed $T12_FOREIGN_MISSING file(s) owned by other exocortex writers"
+        fi
+
+        if [ ! -f "$T12_DST/reference/stale-memory.md" ]; then
+            pass "T12: --delete still prunes stale files inside a memory-owned subtree"
+        else
+            fail "T12: ownership protection disabled stale-memory pruning"
         fi
     fi
 fi
@@ -1072,6 +1105,53 @@ if grep -qE 'cp -r "\$STRATEGY_TEMPLATE"/\. ' "$TEMPLATE_DIR/setup.sh"; then
     pass "T17: setup.sh copies the whole seed tree recursively"
 else
     fail "T17: setup.sh no longer copies seed recursively — lib/ delivery is broken"
+fi
+
+# ============================================================
+# T18: decision-log path and cold-start contract (issue #351)
+# ============================================================
+echo "--- T18: decision log has one canonical home ---"
+
+# shellcheck disable=SC2016 # the contract must contain the literal runtime placeholder
+T18_CANONICAL='${IWE_GOVERNANCE_REPO:-DS-strategy}/decisions/decision-log-YYYY-MM.md'
+T18_CANONICAL_MISSING=0
+for consumer in \
+    memory/protocol-close.md \
+    memory/protocol-work.md \
+    .claude/skills/month-close/SKILL.md; do
+    if ! grep -Fq "$T18_CANONICAL" "$TEMPLATE_DIR/$consumer"; then
+        T18_CANONICAL_MISSING=$((T18_CANONICAL_MISSING + 1))
+    fi
+done
+if [ "$T18_CANONICAL_MISSING" -eq 0 ]; then
+    pass "T18: all decision-log consumers name the canonical governance decisions/ path"
+else
+    fail "T18: $T18_CANONICAL_MISSING decision-log consumer(s) lost the canonical path"
+fi
+
+if grep -q 'current/.*,.*decisions/.*,.*sessions/' "$TEMPLATE_DIR/memory/repo-type-rules.md" && \
+   [ -f "$TEMPLATE_DIR/seed/strategy/decisions/.gitkeep" ]; then
+    pass "T18: repository rules and fresh-install seed both provide the decisions/ home"
+else
+    fail "T18: decisions/ is missing from repository rules or the fresh-install seed"
+fi
+
+# shellcheck disable=SC2016 # both grep needles are literal runtime placeholders
+if grep -Fq '${IWE_GOVERNANCE_REPO:-DS-strategy}/exocortex/decisions/' \
+       "$TEMPLATE_DIR/memory/protocol-work.md" && \
+   grep -q 'все.*decision-log-\*\.md' "$TEMPLATE_DIR/memory/protocol-work.md" && \
+   grep -Fq '${IWE_GOVERNANCE_REPO:-DS-strategy}/exocortex/decisions/decision-log-YYYY-MM.md' \
+       "$TEMPLATE_DIR/.claude/skills/month-close/SKILL.md" && \
+   grep -q 'не объединять и не перезаписывать молча' "$TEMPLATE_DIR/memory/protocol-work.md"; then
+    pass "T18: first write and Month Close migrate legacy logs without silent overwrite"
+else
+    fail "T18: legacy decision-log migration/collision contract is missing"
+fi
+
+if grep -q 'Решения за месяц не зарегистрированы' "$TEMPLATE_DIR/.claude/skills/month-close/SKILL.md"; then
+    pass "T18: Month Close defines a non-error outcome for a month without decisions"
+else
+    fail "T18: Month Close still has no cold-start behavior for an absent decision log"
 fi
 
 # ============================================================
