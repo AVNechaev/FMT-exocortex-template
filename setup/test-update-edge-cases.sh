@@ -24,6 +24,7 @@
 #   T20: index-health skip suppresses size checks but keeps semantic checks (issue #357)
 #   T21: legacy owner:user protocols migrate once with backup; other user files stay protected (issue #354)
 #   T22: Quick Close requires a runner card only when the runner and graph exist (issue #356)
+#   T23: wp-sync-bundle prefers folder cards and reads structured open phase statuses
 #
 # Exit: 0 = all PASS, N = N tests failed
 #
@@ -1381,6 +1382,78 @@ if grep -q 'Раннер — условный драйвер' "$TEMPLATE_DIR/mem
     pass "T22: protocol text documents strict and manual modes"
 else
     fail "T22: protocol text does not explain the capability-aware fallback"
+fi
+
+# ============================================================
+# T23: wp-sync-bundle canonical card and structured open phases
+# ============================================================
+echo "--- T23: wp-sync-bundle uses the canonical folder card and phase statuses ---"
+
+T23_ROOT="$TEST_WS/t23-root"
+T23_GOV="$T23_ROOT/governance"
+mkdir -p "$T23_GOV/docs" "$T23_GOV/inbox/WP-777"
+printf '# registry\n' > "$T23_GOV/docs/WP-REGISTRY.md"
+
+cat > "$T23_GOV/inbox/WP-777.md" <<'HEREDOC'
+---
+wp: 777
+status: done
+---
+- [ ] stale flat duplicate
+HEREDOC
+
+cat > "$T23_GOV/inbox/WP-777/WP-777.md" <<'HEREDOC'
+---
+wp: 777
+status: in_progress
+phases:
+- id: OPEN-ONE
+  status: pending
+- id: CLOSED-ONE
+  status: done
+- id: OPEN-TWO
+  status: blocked
+---
+- [ ] historical unchecked checkbox one
+- [ ] historical unchecked checkbox two
+HEREDOC
+
+T23_OUT=$(IWE_WORKSPACE="$T23_ROOT" IWE_GOVERNANCE_REPO=governance \
+    bash "$TEMPLATE_DIR/.claude/scripts/wp-sync-bundle.sh" WP-777 2>&1)
+T23_RC=$?
+if [ "$T23_RC" -eq 0 ] && \
+   [[ "$T23_OUT" == *'Файл: `inbox/WP-777/WP-777.md`'* ]] && \
+   [[ "$T23_OUT" == *'Открытых фаз: 2'* ]] && \
+   [[ "$T23_OUT" == *'OPEN-ONE (pending)'* ]] && \
+   [[ "$T23_OUT" == *'OPEN-TWO (blocked)'* ]] && \
+   [[ "$T23_OUT" != *'historical unchecked'* ]] && \
+   [[ "$T23_OUT" != *'stale flat duplicate'* ]]; then
+    pass "T23: folder card wins and only pending/in_progress/blocked phases are listed"
+else
+    fail "T23: canonical folder card or structured open phases regressed (rc=$T23_RC): $T23_OUT"
+fi
+
+mkdir -p "$T23_GOV/inbox"
+cat > "$T23_GOV/inbox/WP-778.md" <<'HEREDOC'
+---
+wp: 778
+status: in_progress
+---
+- [ ] legacy open one
+- [x] legacy closed
+- [ ] legacy open two
+HEREDOC
+
+T23_LEGACY_OUT=$(IWE_WORKSPACE="$T23_ROOT" IWE_GOVERNANCE_REPO=governance \
+    bash "$TEMPLATE_DIR/.claude/scripts/wp-sync-bundle.sh" WP-778 2>&1)
+T23_LEGACY_RC=$?
+if [ "$T23_LEGACY_RC" -eq 0 ] && \
+   [[ "$T23_LEGACY_OUT" == *'Открытых фаз: 2'* ]] && \
+   [[ "$T23_LEGACY_OUT" == *'legacy open one'* ]] && \
+   [[ "$T23_LEGACY_OUT" == *'legacy open two'* ]]; then
+    pass "T23: legacy cards without phases keep checkbox fallback"
+else
+    fail "T23: legacy checkbox fallback regressed (rc=$T23_LEGACY_RC): $T23_LEGACY_OUT"
 fi
 
 # ============================================================
