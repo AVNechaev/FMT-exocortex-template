@@ -116,6 +116,33 @@ Versioning: [Semantic Versioning](https://semver.org/).
 
 
 
+
+## [0.38.0] — 2026-08-06
+
+### Added
+
+- `1af1c2a` feat: promote add-secret.sh from staging (L3 → L1)
+- `53b6238` feat: promote napkin-illustrate.sh from staging (L3 → L1)
+
+### Changed
+
+- `9e3f8a8` chore: complete napkin-illustrate.sh removal — manifest, catalog, promotion log
+- `1e40608` revert: remove napkin-illustrate.sh — wrongly promoted, personal-only tool
+- `dad5755` chore: record napkin-illustrate.sh promotion in promotion-status.yaml
+- `6da8e63` chore: release v0.37.0
+- `e456466` sync(dispatcher): mirror fail-closed security policy
+- `d26bdc7` docs: обновить браузерный вход через стенд МИМ
+- `f2d7218` Merge pull request #358 from TserenTserenov/fix/web-connect-troubleshooting
+- `c91c1ed` docs(onboarding): раздел «Если не подключается» в web-connect-guide
+
+### Fixed
+
+- `3fd0f36` fix: report canonical WP phases in sync bundle
+- `2abb4c5` fix: restore day-open root resolution and seed parity
+- `e099b33` fix: deliver platform protocols and runner fallback (#354 #356)
+- `e28bd04` fix: resolve update and index health regressions (#353 #357)
+
+
 ## [0.37.0] — 2026-08-06
 
 ### Added
