@@ -1,5 +1,5 @@
 {
-  "version": "0.36.3",
+  "version": "0.37.0",
   "description": "Манифест платформенных файлов FMT-exocortex-template. Используется update.sh для доставки обновлений.",
   "files": [
     {
@@ -1531,6 +1531,9 @@
     },
     {
       "path": "scripts/migrate-to-runtime-target.sh"
+    },
+    {
+      "path": "scripts/napkin-illustrate.sh"
     },
     {
       "path": "scripts/pack-ci-install.sh"
