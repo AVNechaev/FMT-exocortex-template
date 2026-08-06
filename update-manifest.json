@@ -1533,9 +1533,6 @@
       "path": "scripts/migrate-to-runtime-target.sh"
     },
     {
-      "path": "scripts/napkin-illustrate.sh"
-    },
-    {
       "path": "scripts/pack-ci-install.sh"
     },
     {

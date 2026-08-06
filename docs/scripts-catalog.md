@@ -77,7 +77,6 @@
 | `migrate-initial-marker.sh` | `scripts/migrate-initial-marker.sh` | добавить skeleton-marker IWE-INITIAL-NEEDED в Strategy.md |
 | `migrate-skills-to-v2.sh` | `scripts/migrate-skills-to-v2.sh` | миграция существующих скиллов под стандарт SKILL.md v2 |
 | `migrate-to-runtime-target.sh` | `scripts/migrate-to-runtime-target.sh` | миграция с dirty FMT (≤0.28.x) на Generated runtime (≥0.29.0). |
-| `napkin-illustrate.sh` | `scripts/napkin-illustrate.sh` | текст → napkin.ai API → SVG-иллюстрация |
 | `pack-ci-install.sh` | `scripts/pack-ci-install.sh` | Устанавливает CI guard (ID collision detector) во все Pack-репо в ~/IWE/ |
 | `peer-session-finalize.sh` | `scripts/peer-session-finalize.sh` | finalize / interrupt для peer-сессий (DP.SC.154) |
 | `pending-phases-sweep.sh` | `scripts/pending-phases-sweep.sh` | обходит активные WP-context файлы и выводит pending фазы |
@@ -112,5 +111,5 @@
 | `wp-sync-bundle.sh` | `.claude/scripts/wp-sync-bundle.sh` | детерминированный bundler контекста РП для sync-фазы WP Gate |
 | `wp499-agent-coordination-test.sh` | `scripts/wp499-agent-coordination-test.sh` | Воспроизводимый координационный тест N агентов IWE (WP-499 Ф7/Ф11, расширен Ф17 п.3-4, |
 
-_Всего скриптов: 106_
+_Всего скриптов: 105_
 
