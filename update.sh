@@ -1504,10 +1504,11 @@ fi
 # These may be stale user customisations or files left over from a renamed skill.
 # Never auto-deletes; always informational only.
 if command -v python3 &>/dev/null && [ -f "$SCRIPT_DIR/update-manifest.json" ]; then
-    ORPHAN_OUTPUT=$(python3 - <<'PYEOF'
-import json, os
+    ORPHAN_OUTPUT=""
+    if ! ORPHAN_OUTPUT=$(python3 - "$SCRIPT_DIR" 2>&1 <<'PYEOF'
+import json, os, sys
 
-script_dir = os.path.dirname(os.path.abspath(__file__))
+script_dir = os.path.realpath(sys.argv[1])
 manifest_path = os.path.join(script_dir, "update-manifest.json")
 
 with open(manifest_path) as f:
@@ -1552,7 +1553,11 @@ for base in L1_DIRS:
 for tag, rel in sorted(orphans):
     print(f"  {tag} {rel}")
 PYEOF
-)
+    ); then
+        echo "  ⚠ Проверка orphan-файлов не выполнена; обновление уже применено и остаётся успешным."
+        echo "$ORPHAN_OUTPUT" | sed 's/^/    /'
+        ORPHAN_OUTPUT=""
+    fi
     if [ -n "$ORPHAN_OUTPUT" ]; then
         echo ""
         echo "⚠  Файлы в L1-директориях не найдены в манифесте (не удалять автоматически):"

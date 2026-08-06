@@ -20,6 +20,8 @@
 #   T16: hooks newly registered in settings.json exist and honor the event protocol on a clean install (issues #310/#321/#323 batch)
 #   T17: seed ships scripts/lib/ so a fresh governance install gets the scaffold dependency (issue #347)
 #   T18: decision-log consumers share one canonical path and define cold-start/migration behavior (issue #351)
+#   T19: orphan detection resolves the template independently of CWD and fails open (issue #353)
+#   T20: index-health skip suppresses size checks but keeps semantic checks (issue #357)
 #
 # Exit: 0 = all PASS, N = N tests failed
 #
@@ -1152,6 +1154,82 @@ if grep -q 'Решения за месяц не зарегистрированы
     pass "T18: Month Close defines a non-error outcome for a month without decisions"
 else
     fail "T18: Month Close still has no cold-start behavior for an absent decision log"
+fi
+
+# ============================================================
+# T19: orphan detection is CWD-independent and fail-open (issue #353)
+# ============================================================
+echo "--- T19: orphan detection is diagnostic and CWD-independent ---"
+
+T19_BLOCK="$TEST_WS/t19-orphan-block.sh"
+awk '
+    /^# === Step 6f: Orphan detection/{found=1; next}
+    /^# === Step 7: Commit changes/{found=0}
+    found{print}
+' "$TEMPLATE_DIR/update.sh" > "$T19_BLOCK"
+
+if [ ! -s "$T19_BLOCK" ]; then
+    fail "T19: could not extract the orphan-detection block"
+else
+    T19_FOREIGN_OUT=$(cd "$TEST_WS" && SCRIPT_DIR="$TEMPLATE_DIR" bash -c 'set -e; source "$1"; echo T19_CONTINUED' -- "$T19_BLOCK" 2>&1)
+    T19_FOREIGN_RC=$?
+    if [ "$T19_FOREIGN_RC" -eq 0 ] && [[ "$T19_FOREIGN_OUT" == *"T19_CONTINUED"* ]] && [[ "$T19_FOREIGN_OUT" != *"Traceback"* ]]; then
+        pass "T19: orphan detection resolves the manifest from SCRIPT_DIR outside the template CWD"
+    else
+        fail "T19: foreign-CWD orphan detection failed (rc=$T19_FOREIGN_RC): $T19_FOREIGN_OUT"
+    fi
+
+    T19_BAD_DIR="$TEST_WS/t19-invalid-manifest"
+    mkdir -p "$T19_BAD_DIR"
+    printf '{invalid json\n' > "$T19_BAD_DIR/update-manifest.json"
+    T19_FAIL_OUT=$(SCRIPT_DIR="$T19_BAD_DIR" bash -c 'set -e; source "$1"; echo T19_CONTINUED' -- "$T19_BLOCK" 2>&1)
+    T19_FAIL_RC=$?
+    if [ "$T19_FAIL_RC" -eq 0 ] && [[ "$T19_FAIL_OUT" == *"T19_CONTINUED"* ]] && [[ "$T19_FAIL_OUT" == *"обновление уже применено и остаётся успешным"* ]]; then
+        pass "T19: an orphan-check failure warns and does not fail the applied update"
+    else
+        fail "T19: orphan-check failure was not fail-open (rc=$T19_FAIL_RC): $T19_FAIL_OUT"
+    fi
+fi
+
+# ============================================================
+# T20: index-health skip covers size only, not semantics (issue #357)
+# ============================================================
+echo "--- T20: index-health skip keeps semantic checks ---"
+
+T20_DIR="$TEST_WS/t20-index-health"
+mkdir -p "$T20_DIR"
+if T20_MODULE="$TEMPLATE_DIR/.claude/scripts/check-index-health.py" T20_DIR="$T20_DIR" python3 - <<'PYEOF'
+import importlib.util
+import os
+from pathlib import Path
+
+spec = importlib.util.spec_from_file_location("check_index_health", os.environ["T20_MODULE"])
+module = importlib.util.module_from_spec(spec)
+assert spec.loader is not None
+spec.loader.exec_module(module)
+
+root = Path(os.environ["T20_DIR"])
+payload = "short line\n" * ((module.SIZE_FAIL // 11) + 100)
+
+skipped = root / "skip-index.md"
+skipped.write_text("<!-- index-health: skip -->\n" + payload, encoding="utf-8")
+assert module.classify(module.check_file(skipped)) == "OK"
+
+plain = root / "plain-index.md"
+plain.write_text(payload, encoding="utf-8")
+assert module.classify(module.check_file(plain)) == "FAIL"
+
+semantic = root / "semantic-index.md"
+semantic.write_text(
+    "<!-- index-health: skip -->\n| 123 | item | ✅ |\n" + payload,
+    encoding="utf-8",
+)
+assert module.classify(module.check_file(semantic)) == "WARN"
+PYEOF
+then
+    pass "T20: skip suppresses size FAIL while done-no-strike still produces WARN"
+else
+    fail "T20: index-health skip semantics regressed"
 fi
 
 # ============================================================
