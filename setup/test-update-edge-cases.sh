@@ -22,6 +22,8 @@
 #   T18: decision-log consumers share one canonical path and define cold-start/migration behavior (issue #351)
 #   T19: orphan detection resolves the template independently of CWD and fails open (issue #353)
 #   T20: index-health skip suppresses size checks but keeps semantic checks (issue #357)
+#   T21: legacy owner:user protocols migrate once with backup; other user files stay protected (issue #354)
+#   T22: Quick Close requires a runner card only when the runner and graph exist (issue #356)
 #
 # Exit: 0 = all PASS, N = N tests failed
 #
@@ -1230,6 +1232,155 @@ then
     pass "T20: skip suppresses size FAIL while done-no-strike still produces WARN"
 else
     fail "T20: index-health skip semantics regressed"
+fi
+
+# ============================================================
+# T21: legacy platform protocols migrate safely (issue #354)
+# ============================================================
+echo "--- T21: platform protocols migrate once with backup ---"
+
+T21_OWNER_FAILURES=0
+for protocol in protocol-open.md protocol-work.md protocol-close.md protocol-month-close.md; do
+    if [ "$(get_field "$TEMPLATE_DIR/memory/$protocol" owner)" != "platform" ]; then
+        T21_OWNER_FAILURES=$((T21_OWNER_FAILURES + 1))
+    fi
+done
+if [ "$T21_OWNER_FAILURES" -eq 0 ]; then
+    pass "T21: all four shared protocols declare owner:platform"
+else
+    fail "T21: $T21_OWNER_FAILURES shared protocol(s) still have the wrong owner"
+fi
+
+T21_WIRED_COUNT=$(grep -cE 'migrate_platform_protocol "\$(fpath|f)" "\$(mem_dst|dst)"' "$TEMPLATE_DIR/update.sh")
+if [ "$T21_WIRED_COUNT" -eq 2 ]; then
+    pass "T21: migration is wired into repair-pass and normal propagation"
+else
+    fail "T21: expected migration at both memory propagation sites, found $T21_WIRED_COUNT"
+fi
+
+if (
+    eval "$(awk '/^hash_file\(\)/{copy=1} copy{print} copy && /^}/{exit}' "$TEMPLATE_DIR/update.sh")"
+    eval "$(awk '/^is_author_mode\(\)/{copy=1} copy{print} copy && /^}/{exit}' "$TEMPLATE_DIR/update.sh")"
+    eval "$(awk '/^is_platform_protocol_path\(\)/{copy=1} copy{print} copy && /^}/{exit}' "$TEMPLATE_DIR/update.sh")"
+    eval "$(awk '/^migrate_platform_protocol\(\)/{copy=1} copy{print} copy && /^}/{exit}' "$TEMPLATE_DIR/update.sh")"
+
+    SCRIPT_DIR="$TEMPLATE_DIR"
+    WORKSPACE_DIR="$TEST_WS/t21-workspace"
+    mkdir -p "$WORKSPACE_DIR"
+
+    target="$TEST_WS/t21-protocol-open.md"
+    cat > "$target" <<'HEREDOC'
+---
+owner: user
+---
+Pilot custom protocol content.
+HEREDOC
+
+    migrate_platform_protocol memory/protocol-open.md "$target"
+    backup="$WORKSPACE_DIR/.backups/protocol-owner-migration/protocol-open.md"
+    grep -q 'Pilot custom protocol content' "$backup"
+    cmp -s "$target" "$TEMPLATE_DIR/memory/protocol-open.md"
+    backup_hash=$(hash_file "$backup")
+
+    # The deployed copy is now owner:platform, so a repeat must be a no-op and
+    # must not replace the saved user version.
+    if migrate_platform_protocol memory/protocol-open.md "$target"; then
+        exit 1
+    fi
+    [ "$backup_hash" = "$(hash_file "$backup")" ]
+
+    # A platform-owned source outside the exact migration allowlist must not
+    # weaken the general owner:user protection from issue #229.
+    unrelated="$TEST_WS/t21-unrelated.md"
+    cat > "$unrelated" <<'HEREDOC'
+---
+owner: user
+---
+Unrelated user content.
+HEREDOC
+    if migrate_platform_protocol memory/protocol-dt-integration.md "$unrelated"; then
+        exit 1
+    fi
+    grep -q 'Unrelated user content' "$unrelated"
+
+    # author_mode remains fail-closed even for an allowlisted legacy protocol.
+    printf 'author_mode: true\n' > "$WORKSPACE_DIR/params.yaml"
+    author_target="$TEST_WS/t21-author-protocol.md"
+    cat > "$author_target" <<'HEREDOC'
+---
+owner: user
+---
+Author unpublished content.
+HEREDOC
+    if migrate_platform_protocol memory/protocol-work.md "$author_target"; then
+        exit 1
+    fi
+    grep -q 'Author unpublished content' "$author_target"
+); then
+    pass "T21: migration preserves the user copy, is idempotent, allowlisted and author-safe"
+else
+    fail "T21: platform protocol migration contract failed"
+fi
+
+# ============================================================
+# T22: Quick Close runner enforcement is capability-aware (issue #356)
+# ============================================================
+echo "--- T22: Quick Close falls back only when runner capability is absent ---"
+
+T22_BLOCK="$TEST_WS/t22-runner-block.sh"
+awk '
+    /^  # issue #356:/{found=1}
+    /^  # agent status idle/{found=0}
+    found{sub(/^  /, ""); print}
+' "$TEMPLATE_DIR/scripts/session-guard.sh" > "$T22_BLOCK"
+
+T22_ROOT="$TEST_WS/t22-root"
+T22_GOV="DS-strategy"
+T22_SLUG="issue-356"
+mkdir -p "$T22_ROOT/$T22_GOV"
+
+T22_MANUAL_OUT=$(IWE_ROOT="$T22_ROOT" GOV_REPO="$T22_GOV" SLUG="$T22_SLUG" \
+    bash -c 'set -euo pipefail; fail(){ echo "$1" >&2; exit "${2:-1}"; }; source "$1"; echo T22_CONTINUED' -- "$T22_BLOCK" 2>&1)
+T22_MANUAL_RC=$?
+if [ "$T22_MANUAL_RC" -eq 0 ] && [[ "$T22_MANUAL_OUT" == *"runner_check=not_applicable"* ]] && [[ "$T22_MANUAL_OUT" == *"T22_CONTINUED"* ]]; then
+    pass "T22: missing runner capability selects a visible manual fallback"
+else
+    fail "T22: runner-less close did not continue visibly (rc=$T22_MANUAL_RC): $T22_MANUAL_OUT"
+fi
+
+mkdir -p "$T22_ROOT/$T22_GOV/scripts/processes"
+: > "$T22_ROOT/$T22_GOV/scripts/process-runner.py"
+: > "$T22_ROOT/$T22_GOV/scripts/processes/quick-close.yaml"
+T22_STRICT_OUT=$(IWE_ROOT="$T22_ROOT" GOV_REPO="$T22_GOV" SLUG="$T22_SLUG" \
+    bash -c 'set -euo pipefail; fail(){ echo "$1" >&2; exit "${2:-1}"; }; source "$1"; echo T22_CONTINUED' -- "$T22_BLOCK" 2>&1)
+T22_STRICT_RC=$?
+if [ "$T22_STRICT_RC" -eq 7 ] && [[ "$T22_STRICT_OUT" == *"нет terminal RUN-quick-close"* ]]; then
+    pass "T22: installed runner without a terminal card still blocks close"
+else
+    fail "T22: installed runner bypassed its terminal-card gate (rc=$T22_STRICT_RC): $T22_STRICT_OUT"
+fi
+
+mkdir -p "$T22_ROOT/$T22_GOV/inbox/agent/tasks"
+cat > "$T22_ROOT/$T22_GOV/inbox/agent/tasks/RUN-quick-close-${T22_SLUG}-test.md" <<'HEREDOC'
+---
+process_id: quick-close
+status: completed
+---
+HEREDOC
+T22_CARD_OUT=$(IWE_ROOT="$T22_ROOT" GOV_REPO="$T22_GOV" SLUG="$T22_SLUG" \
+    bash -c 'set -euo pipefail; fail(){ echo "$1" >&2; exit "${2:-1}"; }; source "$1"; echo T22_CONTINUED' -- "$T22_BLOCK" 2>&1)
+T22_CARD_RC=$?
+if [ "$T22_CARD_RC" -eq 0 ] && [[ "$T22_CARD_OUT" == *"T22_CONTINUED"* ]] && [[ "$T22_CARD_OUT" != *"not_applicable"* ]]; then
+    pass "T22: installed runner with a completed matching card permits close"
+else
+    fail "T22: valid terminal card did not satisfy the runner gate (rc=$T22_CARD_RC): $T22_CARD_OUT"
+fi
+
+if grep -q 'Раннер — условный драйвер' "$TEMPLATE_DIR/memory/protocol-close.md" && \
+   grep -q 'runner_check: not_applicable' "$TEMPLATE_DIR/memory/protocol-close.md"; then
+    pass "T22: protocol text documents strict and manual modes"
+else
+    fail "T22: protocol text does not explain the capability-aware fallback"
 fi
 
 # ============================================================
