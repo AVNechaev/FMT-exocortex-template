@@ -223,10 +223,18 @@ fi
 trap "rm -rf '$BUILD_DIR'" EXIT
 
 # Hash inputs (FMT files + .exocortex.env) for build-stamp
+resolve_overlay_source() {
+    local rel="$1"
+    local src="$TEMPLATE_DIR/$rel"
+    [ -f "$src" ] || src="$TEMPLATE_DIR/$rel.example"
+    [ -f "$src" ] || { echo "ERROR: overlay source missing for $rel" >&2; return 1; }
+    printf '%s\n' "$src"
+}
+
 INPUT_HASH=$(
     {
         for f in "${SUBSTITUTED_FILES[@]}" "${COPIED_FILES[@]}"; do
-            hash_file "$TEMPLATE_DIR/$f"
+            hash_file "$(resolve_overlay_source "$f")"
             echo "$f"
         done
         hash_file "$ENV_FILE"
@@ -234,7 +242,7 @@ INPUT_HASH=$(
     } | hash_file /dev/stdin 2>/dev/null || \
     {
         for f in "${SUBSTITUTED_FILES[@]}" "${COPIED_FILES[@]}"; do
-            hash_file "$TEMPLATE_DIR/$f"
+            hash_file "$(resolve_overlay_source "$f")"
             echo "$f"
         done
         hash_file "$ENV_FILE"
@@ -247,7 +255,8 @@ FMT_VERSION=$(grep -m1 '^## \[' "$TEMPLATE_DIR/CHANGELOG.md" | sed 's/.*\[\(.*\)
 # === Apply substitutions ===
 build_substituted_file() {
     local rel="$1"
-    local src="$TEMPLATE_DIR/$rel"
+    local src
+    src=$(resolve_overlay_source "$rel") || return 1
     local dst="$BUILD_DIR/runtime/$rel"
     mkdir -p "$(dirname "$dst")"
     cp "$src" "$dst"
@@ -278,18 +287,14 @@ build_substituted_file() {
 
 copy_to_workspace_file() {
     local rel="$1"
-    local src="$TEMPLATE_DIR/$rel"
+    local src
+    src=$(resolve_overlay_source "$rel") || return 1
     local dst="$BUILD_DIR/workspace/$rel"
     # issue #348: a workspace file that belongs to the user (params.yaml) ships as
     # <name>.example and is git-ignored under its working name — otherwise the
     # template repo owns a file it has declared to be the user's, and a fork's pull
     # puts the upstream defaults back over the user's edits. Destination name is
     # unchanged; only the source in the template carries the .example suffix.
-    [ -f "$src" ] || src="$TEMPLATE_DIR/$rel.example"
-    if [ ! -f "$src" ]; then
-        echo "ERROR: copied_to_workspace: не найден ни $TEMPLATE_DIR/$rel, ни $TEMPLATE_DIR/$rel.example" >&2
-        return 1
-    fi
     mkdir -p "$(dirname "$dst")"
     cp "$src" "$dst"
     case "$dst" in *.sh) chmod +x "$dst" ;; esac

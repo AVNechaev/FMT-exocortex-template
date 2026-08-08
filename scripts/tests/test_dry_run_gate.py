@@ -25,7 +25,9 @@ from pathlib import Path
 import pytest
 
 HOOK = Path(__file__).parent.parent.parent / ".claude" / "hooks" / "dry-run-gate.sh"
+STOP_HOOK = Path(__file__).parent.parent.parent / ".claude" / "hooks" / "protocol-stop-gate.sh"
 SENTINEL = Path("/tmp/iwe-dry-run.flag")
+OWNER = Path("/tmp/iwe-dry-run-owner-pytest-session.token")
 
 pytestmark = pytest.mark.skipif(
     not shutil.which("jq"), reason="dry-run-gate требует jq (setup requirement)"
@@ -47,9 +49,22 @@ def _run_hook(command: str) -> subprocess.CompletedProcess:
 def sentinel():
     if SENTINEL.exists():
         pytest.skip("живой dry-run sentinel активен — не трогаем чужой")
-    SENTINEL.write_text('{"initiator": "pytest", "created_at": "test"}', encoding="utf-8")
+    OWNER.write_text("pytest-capability", encoding="utf-8")
+    SENTINEL.write_text(
+        json.dumps(
+            {
+                "initiator": "pytest",
+                "created_at": "test",
+                "session_id": "pytest-session",
+                "owner_token": "pytest-capability",
+                "owner_file": str(OWNER),
+            }
+        ),
+        encoding="utf-8",
+    )
     yield SENTINEL
     SENTINEL.unlink(missing_ok=True)
+    OWNER.unlink(missing_ok=True)
 
 
 class TestSentinelActive:
@@ -129,3 +144,26 @@ class TestSentinelInactive:
             assert not SENTINEL.exists(), "протухший sentinel должен быть удалён хуком"
         finally:
             SENTINEL.unlink(missing_ok=True)
+
+
+class TestStopOwnership:
+    def _run_stop(self, session_id: str) -> subprocess.CompletedProcess:
+        payload = json.dumps({"session_id": session_id, "transcript_path": "/missing"})
+        return subprocess.run(
+            ["bash", str(STOP_HOOK)],
+            input=payload,
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+
+    def test_foreign_stop_cannot_remove_sentinel(self, sentinel):
+        result = self._run_stop("neighbour-session")
+        assert result.returncode == 0, result.stderr
+        assert SENTINEL.exists(), "чужой Stop не должен снимать dry-run защиту"
+
+    def test_owner_stop_removes_matching_sentinel_atomically(self, sentinel):
+        result = self._run_stop("pytest-session")
+        assert result.returncode == 0, result.stderr
+        assert not SENTINEL.exists()
+        assert not OWNER.exists()

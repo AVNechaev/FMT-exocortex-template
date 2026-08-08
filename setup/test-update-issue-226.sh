@@ -57,13 +57,21 @@ cat > "$UPSTREAM/memory/dummy-memo.md" <<'EOF'
 EOF
 
 python3 -c "
+import hashlib
 import json
+from pathlib import Path
+
+root = Path('$UPSTREAM')
+def entry(path):
+    return {'path': path, 'sha256': hashlib.sha256((root / path).read_bytes()).hexdigest()}
+
 manifest = {
+    'schema_version': 2,
     'version': '0.99.0-test-226',
     'files': [
-        {'path': 'CLAUDE.md'},
-        {'path': '.claude/hooks/dummy-hook.sh'},
-        {'path': 'memory/dummy-memo.md'},
+        entry('CLAUDE.md'),
+        entry('.claude/hooks/dummy-hook.sh'),
+        entry('memory/dummy-memo.md'),
     ],
     'deprecated_files': [],
 }
@@ -75,8 +83,10 @@ with open('$UPSTREAM/update-manifest.json', 'w') as f:
 # Fixture: SCRIPT_DIR (local FMT-exocortex-template copy) — "old" state
 # ------------------------------------------------------------------
 SCRIPT_DIR="$TEST_ROOT/repo/FMT-exocortex-template"
-mkdir -p "$SCRIPT_DIR/.claude/hooks" "$SCRIPT_DIR/memory"
+mkdir -p "$SCRIPT_DIR/.claude/hooks" "$SCRIPT_DIR/.claude/lib" "$SCRIPT_DIR/scripts/lib" "$SCRIPT_DIR/memory"
 cp "$UPDATE_SH_REAL" "$SCRIPT_DIR/update.sh"
+cp "$SELF_DIR/../.claude/lib/frontmatter.sh" "$SCRIPT_DIR/.claude/lib/frontmatter.sh"
+cp "$SELF_DIR/../scripts/lib/common.sh" "$SCRIPT_DIR/scripts/lib/common.sh"
 chmod +x "$SCRIPT_DIR/update.sh"
 
 cat > "$SCRIPT_DIR/CLAUDE.md" <<'EOF'
@@ -233,6 +243,93 @@ if [ "$RC_B" -eq 0 ]; then
     pass "B: exit code 0 (no conflicts in this scenario)"
 else
     fail "B: expected exit 0, got $RC_B"
+fi
+
+# ------------------------------------------------------------------
+# Scenario C: same version and paths, changed content hash.
+# --check --fast must detect it; full check must reject a bad payload hash.
+# ------------------------------------------------------------------
+echo "--- Scenario C: manifest content hashes (#378) ---"
+printf '#!/bin/bash\necho "dummy hook v3"\n' > "$UPSTREAM/.claude/hooks/dummy-hook.sh"
+python3 - "$UPSTREAM/update-manifest.json" "$UPSTREAM/.claude/hooks/dummy-hook.sh" <<'PY'
+import hashlib
+import json
+import sys
+
+manifest_path, content_path = sys.argv[1:]
+with open(manifest_path, encoding="utf-8") as handle:
+    manifest = json.load(handle)
+digest = hashlib.sha256(open(content_path, "rb").read()).hexdigest()
+for entry in manifest["files"]:
+    if entry["path"] == ".claude/hooks/dummy-hook.sh":
+        entry["sha256"] = digest
+with open(manifest_path, "w", encoding="utf-8") as handle:
+    json.dump(manifest, handle)
+PY
+
+PATH="$SHIM_DIR:$PATH" HOME="$FAKE_HOME" bash "$SCRIPT_DIR/update.sh" --check --fast > "$TEST_ROOT/out-c-fast.log" 2>&1
+if grep -q "Состав манифеста изменился" "$TEST_ROOT/out-c-fast.log"; then
+    pass "C: --check --fast detects a content-only change at the same version/path"
+else
+    fail "C: --check --fast missed a content-only manifest change"
+fi
+
+python3 - "$UPSTREAM/update-manifest.json" <<'PY'
+import json
+import sys
+path = sys.argv[1]
+with open(path, encoding="utf-8") as handle:
+    manifest = json.load(handle)
+for entry in manifest["files"]:
+    if entry["path"] == ".claude/hooks/dummy-hook.sh":
+        entry["sha256"] = "0" * 64
+with open(path, "w", encoding="utf-8") as handle:
+    json.dump(manifest, handle)
+PY
+
+PATH="$SHIM_DIR:$PATH" HOME="$FAKE_HOME" bash "$SCRIPT_DIR/update.sh" --check > "$TEST_ROOT/out-c-integrity.log" 2>&1 || true
+if grep -q "sha256 не совпадает" "$TEST_ROOT/out-c-integrity.log" && \
+   grep -q "Проверка неполная" "$TEST_ROOT/out-c-integrity.log"; then
+    pass "C: full check rejects a downloaded file that does not match manifest sha256"
+else
+    fail "C: payload integrity mismatch was not surfaced as an incomplete check"
+fi
+
+# ------------------------------------------------------------------
+# Scenario D: owner:user drift is reported even when no file is in the
+# current NEW_FILES/UPDATED_FILES list (#375).
+# ------------------------------------------------------------------
+echo "--- Scenario D: owner:user memory drift (#375) ---"
+# Restore a valid, unchanged remote manifest/payload first.
+cp "$UPSTREAM/.claude/hooks/dummy-hook.sh" "$SCRIPT_DIR/.claude/hooks/dummy-hook.sh"
+python3 - "$UPSTREAM/update-manifest.json" "$UPSTREAM" <<'PY'
+import hashlib
+import json
+import pathlib
+import sys
+manifest_path, root = sys.argv[1:]
+with open(manifest_path, encoding="utf-8") as handle:
+    manifest = json.load(handle)
+for entry in manifest["files"]:
+    entry["sha256"] = hashlib.sha256((pathlib.Path(root) / entry["path"]).read_bytes()).hexdigest()
+with open(manifest_path, "w", encoding="utf-8") as handle:
+    json.dump(manifest, handle)
+PY
+cp "$UPSTREAM/update-manifest.json" "$SCRIPT_DIR/update-manifest.json"
+mkdir -p "$(dirname "$MEM_DST")"
+cat > "$MEM_DST" <<'EOF'
+---
+owner: user
+---
+Pilot-owned content that intentionally differs.
+EOF
+
+PATH="$SHIM_DIR:$PATH" HOME="$FAKE_HOME" bash "$SCRIPT_DIR/update.sh" --yes > "$TEST_ROOT/out-d.log" 2>&1 || true
+if grep -q "owner: user, НЕ обновлён, но шаблонная версия отличается" "$TEST_ROOT/out-d.log" && \
+   grep -q 'Сверьте: diff' "$TEST_ROOT/out-d.log"; then
+    pass "D: owner:user drift is visible with a comparison command on an unchanged run"
+else
+    fail "D: owner:user drift remained silent outside the changed-files list"
 fi
 
 echo ""

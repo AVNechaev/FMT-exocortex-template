@@ -25,6 +25,7 @@
 #   T21: legacy owner:user protocols migrate once with backup; other user files stay protected (issue #354)
 #   T22: Quick Close requires a runner card only when the runner and graph exist (issue #356)
 #   T23: wp-sync-bundle prefers folder cards and reads structured open phase statuses
+#   T24-T26: update safety, bootstrap/path contracts, multiplier opt-out
 #
 # Exit: 0 = all PASS, N = N tests failed
 #
@@ -1454,6 +1455,180 @@ if [ "$T23_LEGACY_RC" -eq 0 ] && \
     pass "T23: legacy cards without phases keep checkbox fallback"
 else
     fail "T23: legacy checkbox fallback regressed (rc=$T23_LEGACY_RC): $T23_LEGACY_OUT"
+fi
+
+# ============================================================
+# T24: public-fork CLAUDE bases stay raw and rules survive repair
+# ============================================================
+echo "--- T24: raw CLAUDE base + transactional rules preservation (#379/#381) ---"
+
+T24_ROOT="$TEST_WS/t24-root"
+T24_TEMPLATE="$T24_ROOT/FMT-exocortex-template"
+mkdir -p "$T24_TEMPLATE" "$T24_ROOT/.claude/rules"
+cat > "$T24_ROOT/.exocortex.env" <<EOF
+WORKSPACE_DIR="$T24_ROOT"
+HOME_DIR="$T24_ROOT/home"
+CLAUDE_PATH="$T24_ROOT/bin/claude"
+IWE_TEMPLATE="$T24_TEMPLATE"
+IWE_RUNTIME="$T24_ROOT/.iwe-runtime"
+EOF
+printf 'root=%s\n<!-- user delta -->\n' "$T24_ROOT" > "$T24_TEMPLATE/CLAUDE.md"
+
+eval "$(awk '/^restore_claude_placeholders\(\)/{copy=1} copy{print} copy && /^}/{exit}' "$TEMPLATE_DIR/update.sh")"
+SCRIPT_DIR="$T24_TEMPLATE"
+WORKSPACE_DIR="$T24_ROOT"
+if sed --version >/dev/null 2>&1; then sed_inplace(){ sed -i "$@"; }; else sed_inplace(){ sed -i '' "$@"; }; fi
+restore_claude_placeholders "$T24_TEMPLATE/CLAUDE.md" "$T24_ROOT/claude-raw.md"
+if grep -q '{{WORKSPACE_DIR}}' "$T24_ROOT/claude-raw.md" && grep -q '<!-- user delta -->' "$T24_ROOT/claude-raw.md"; then
+    pass "T24: legacy absolute path migrates back to placeholder without losing delta"
+else
+    fail "T24: CLAUDE raw-base migration lost placeholder or user delta"
+fi
+if ! grep -q 'cp .*WORKSPACE_DIR/CLAUDE.md.*TEMPLATE_DIR/.claude.md.base' "$TEMPLATE_DIR/setup.sh"; then
+    pass "T24: setup no longer writes substituted base into the public template repo"
+else
+    fail "T24: setup still stores substituted CLAUDE base in the template repo"
+fi
+
+RULES_BACKUP_RUN=""
+eval "$(awk '/^backup_rule_before_overwrite\(\)/{copy=1} copy{print} copy && /^}/{exit}' "$TEMPLATE_DIR/update.sh")"
+eval "$(awk '/^copy_platform_file_preserving_user_space\(\)/{copy=1} copy{print} copy && /^}/{exit}' "$TEMPLATE_DIR/update.sh")"
+cat > "$T24_ROOT/rule-upstream.md" <<'EOF'
+# Platform rule v2
+EOF
+cat > "$T24_ROOT/.claude/rules/example.md" <<'EOF'
+# Platform rule v1
+<!-- USER-SPACE -->
+pilot distinction
+<!-- /USER-SPACE -->
+EOF
+copy_platform_file_preserving_user_space "$T24_ROOT/rule-upstream.md" "$T24_ROOT/.claude/rules/example.md" ".claude/rules/example.md"
+T24_BACKUP=$(find "$T24_ROOT/.backups/rules-pre-update" -type f -name example.md -print -quit 2>/dev/null || true)
+if grep -q 'Platform rule v2' "$T24_ROOT/.claude/rules/example.md" && \
+   grep -q 'pilot distinction' "$T24_ROOT/.claude/rules/example.md" && \
+   [ -n "$T24_BACKUP" ] && grep -q 'Platform rule v1' "$T24_BACKUP"; then
+    pass "T24: rule update preserves USER-SPACE and creates a recoverable pre-image"
+else
+    fail "T24: rule preservation or transactional backup failed"
+fi
+
+# ============================================================
+# T25: bootstrap delivery, root/memory resolution, cwd and native Claude
+# ============================================================
+echo "--- T25: bootstrap/path contracts (#300/#362/#366/#368/#371/#374/#377) ---"
+T25_REAL_TEMPLATE="$TEMPLATE_DIR"
+
+for required in setup/build-runtime.sh setup/install-iwe-paths.sh; do
+    if jq -e --arg p "$required" '.files[] | select(.path == $p)' "$TEMPLATE_DIR/update-manifest.json" >/dev/null; then
+        pass "T25: manifest delivers $required"
+    else
+        fail "T25: manifest still omits $required"
+    fi
+done
+
+T25_HOME="$TEST_WS/t25-home"
+T25_WS="$TEST_WS/t25-workspace"
+mkdir -p "$T25_HOME" "$T25_WS"
+cat > "$T25_HOME/.zshenv" <<'EOF'
+# IWE environment (WP-219, DP.FM.009): lookup-слой для путей к скриптам
+[ -f "$HOME/.iwe-paths" ] && source "$HOME/.iwe-paths"
+EOF
+HOME="$T25_HOME" bash "$TEMPLATE_DIR/setup/install-iwe-paths.sh" --workspace "$T25_WS" --governance GOV --quiet
+if grep -qF "_IWE_ROOT=\"$T25_WS\"" "$T25_HOME/.zshenv" && \
+   ! grep -qF '[ -f "$HOME/.iwe-paths" ]' "$T25_HOME/.zshenv" && \
+   [ "$(grep -c '^export IWE_' "$T25_WS/.iwe-paths")" -eq 6 ]; then
+    pass "T25: legacy HOME source is replaced by the six-variable workspace SoT"
+else
+    fail "T25: install-iwe-paths left the legacy source or incomplete workspace env"
+fi
+
+T25_STAND="$TEST_WS/t25-stand"
+mkdir -p "$T25_STAND/FMT-exocortex-template/scripts/lib"
+cp "$TEMPLATE_DIR/scripts/lib/common.sh" "$T25_STAND/FMT-exocortex-template/scripts/lib/common.sh"
+T25_ROOT=$(env -u IWE_WORKSPACE -u IWE_ROOT bash -c 'source "$1"; iwe_resolve_root' -- "$T25_STAND/FMT-exocortex-template/scripts/lib/common.sh")
+T25_STAND_PHYSICAL=$(cd "$T25_STAND" && pwd -P)
+if [ "$T25_ROOT" = "$T25_STAND_PHYSICAL" ]; then
+    pass "T25: common resolver derives a non-HOME workspace from its installed location"
+else
+    fail "T25: common resolver returned '$T25_ROOT' instead of '$T25_STAND_PHYSICAL'"
+fi
+
+mkdir -p "$T25_STAND/custom-memory" "$T25_STAND/workspace"
+ln -s "$T25_STAND/custom-memory" "$T25_STAND/workspace/memory"
+eval "$(awk '/^resolve_workspace_memory_dir\(\)/{copy=1} copy{print} copy && /^}/{exit}' "$TEMPLATE_DIR/update.sh")"
+HOME="$T25_HOME" T25_MEMORY=$(resolve_workspace_memory_dir "$T25_STAND/workspace")
+T25_CUSTOM_PHYSICAL=$(cd "$T25_STAND/custom-memory" && pwd -P)
+if [ "$T25_MEMORY" = "$T25_CUSTOM_PHYSICAL" ]; then
+    pass "T25: physical workspace/memory target wins over a guessed Claude slug"
+else
+    fail "T25: memory resolver missed the physical symlink target: $T25_MEMORY"
+fi
+
+mkdir -p "$T25_STAND/FMT-exocortex-template"
+printf 'defaults: one\n' > "$T25_STAND/FMT-exocortex-template/params.yaml.example"
+TEMPLATE_DIR="$T25_STAND/FMT-exocortex-template"
+T25_SOURCE="$TEMPLATE_DIR/params.yaml.example"
+T25_HASH1=$(shasum -a 256 "$T25_SOURCE" | cut -d' ' -f1)
+printf 'defaults: two\n' > "$T25_SOURCE"
+T25_HASH2=$(shasum -a 256 "$T25_SOURCE" | cut -d' ' -f1)
+if [ "$T25_HASH1" != "$T25_HASH2" ] && grep -q 'hash_file "$(resolve_overlay_source "$f")"' "$T25_REAL_TEMPLATE/setup/build-runtime.sh"; then
+    pass "T25: params.yaml.example is the hash input and content changes alter its digest"
+else
+    fail "T25: overlay fallback is not wired into the build hash"
+fi
+TEMPLATE_DIR="$T25_REAL_TEMPLATE"
+
+T25_GUARD="$TEMPLATE_DIR/.claude/hooks/destructive-guard.sh"
+set +e
+printf '%s' '{"tool_input":{"command":"cd repo && git status"},"cwd":"/tmp"}' | bash "$T25_GUARD" >/dev/null 2>&1; T25_CD=$?
+printf '%s' '{"tool_input":{"command":"(cd repo && git status)"},"cwd":"/tmp"}' | bash "$T25_GUARD" >/dev/null 2>&1; T25_SUB=$?
+printf '%s' '{"tool_input":{"command":"echo \"cd repo\""},"cwd":"/tmp"}' | bash "$T25_GUARD" >/dev/null 2>&1; T25_QUOTE=$?
+set -e
+if [ "$T25_CD" -eq 2 ] && [ "$T25_SUB" -eq 0 ] && [ "$T25_QUOTE" -eq 0 ]; then
+    pass "T25: cwd guard blocks sticky cd without false positives for subshell/quoted text"
+else
+    fail "T25: cwd guard rc top=$T25_CD subshell=$T25_SUB quoted=$T25_QUOTE"
+fi
+
+T25_NATIVE_RUNNERS=$(grep -l '\.local/bin/claude' "$TEMPLATE_DIR/roles/strategist/scripts/strategist.sh" "$TEMPLATE_DIR/roles/extractor/scripts/extractor.sh" | wc -l | tr -d ' ')
+T25_NATIVE_PLISTS=$(grep -l '{{HOME_DIR}}/.local/bin:' \
+  "$TEMPLATE_DIR/roles/strategist/scripts/launchd/com.strategist.morning.plist" \
+  "$TEMPLATE_DIR/roles/strategist/scripts/launchd/com.strategist.weekreview.plist" \
+  "$TEMPLATE_DIR/roles/extractor/scripts/launchd/com.extractor.inbox-check.plist" \
+  "$TEMPLATE_DIR/roles/synchronizer/scripts/launchd/com.exocortex.scheduler.plist" | wc -l | tr -d ' ')
+T25_FAILFAST=$(grep -l 'exit 127' "$TEMPLATE_DIR/roles/strategist/scripts/strategist.sh" "$TEMPLATE_DIR/roles/extractor/scripts/extractor.sh" | wc -l | tr -d ' ')
+if [ "$T25_NATIVE_RUNNERS" -eq 2 ] && [ "$T25_NATIVE_PLISTS" -eq 4 ] && [ "$T25_FAILFAST" -eq 2 ]; then
+    pass "T25: both runners and all four plists support native Claude; runners fail with 127"
+else
+    fail "T25: native Claude runners=$T25_NATIVE_RUNNERS/2 plists=$T25_NATIVE_PLISTS/4 fail-fast=$T25_FAILFAST/2"
+fi
+
+# ============================================================
+# T26: multiplier_enabled=false removes time/multiplier output contracts
+# ============================================================
+echo "--- T26: multiplier opt-out is end-to-end (#376) ---"
+T26_ROOT="$TEST_WS/t26-workspace"
+mkdir -p "$T26_ROOT/DS-strategy/exocortex" "$T26_ROOT/DS-strategy/current" \
+  "$T26_ROOT/DS-strategy/inbox" "$T26_ROOT/DS-strategy/drafts"
+ln -s "$TEMPLATE_DIR/scripts" "$T26_ROOT/scripts"
+printf 'multiplier_enabled: false\n' > "$T26_ROOT/params.yaml"
+printf '{}\n' > "$T26_ROOT/DS-strategy/exocortex/day-rhythm-config.yaml"
+IWE_WORKSPACE="$T26_ROOT" IWE_GOVERNANCE_REPO=DS-strategy \
+  bash "$TEMPLATE_DIR/scripts/day-open-scaffold.sh" 2026-08-08 > "$T26_ROOT/dayplan.md"
+if grep -A1 '^\*\*Бюджет дня:' "$T26_ROOT/dayplan.md" | \
+   grep -q 'только «~Yh РП всего», без физического времени/WakaTime/мультипликатора'; then
+    pass "T26: deterministic DayPlan scaffold selects the multiplier-off budget contract"
+else
+    fail "T26: DayPlan scaffold still requests physical time or multiplier"
+fi
+T26_TEMPLATE="$TEMPLATE_DIR/memory/templates-dayplan.md"
+if grep -q '<!-- multiplier:off -->\*\*Бюджет дня:\*\* ~Yh РП всего' "$T26_TEMPLATE" && \
+   grep -q '<!-- multiplier:off -->' "$T26_TEMPLATE" && \
+   grep -q '## Метрики W{N}' "$T26_TEMPLATE" && \
+   grep -q '### Бюджет закрытых РП' "$T26_TEMPLATE"; then
+    pass "T26: DayPlan, WeekPlan, Week Close and Day Close all provide multiplier-off branches"
+else
+    fail "T26: one or more plan/report templates lack a multiplier-off branch"
 fi
 
 # ============================================================

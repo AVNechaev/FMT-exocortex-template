@@ -104,8 +104,12 @@ FILES_EXCLUDE_EXACT=(
 # per-file include, same technique as setup/validate-template.sh below.
 GITHUB_EXPLICIT_INCLUDE=(
     ".github/workflows/cloud-scheduler.yml"
+    ".github/workflows/notify-update.yml"
+    ".github/workflows/post-release-audit.yml"
 )
 SETUP_EXPLICIT_INCLUDE=(
+    "setup/build-runtime.sh"
+    "setup/install-iwe-paths.sh"
     "setup/validate-template.sh"
     "setup/optional/setup-cloud-scheduler.sh"   # install-time, but requires one-time delivery — issue #325
     "setup/optional/setup-local-gateway.sh"     # referenced by delivered docs/AGENT-VENDOR-SETUP.md (WP-499 Ф16), same class as #325
@@ -122,6 +126,7 @@ SETUP_EXPLICIT_INCLUDE=(
 # nobody would have noticed until a user hit the bug the gate exists to catch.
 SCRIPT_CONTRACT_EXPLICIT_INCLUDE=(
     "scripts/tests/test_create_wp_registry_coherence.sh"
+    "scripts/tests/test_check_orphan_hooks.sh"
     "scripts/tests/test_capture_bus_detector_timeout.sh"
     "scripts/tests/test_critical_alert_disabled_tracker.sh"
     "scripts/tests/test_create_wp_contract.sh"
@@ -227,15 +232,23 @@ printf '%s\n' "${EXCLUDED_PATHS[@]}" > "$TMPDIR/excluded.txt"
 
 # Генерируем JSON
 python3 -c "
+import hashlib
 import json
+from pathlib import Path
 
 files = [line.strip() for line in open('$TMPDIR/files.txt') if line.strip()]
 excluded = [line.strip() for line in open('$TMPDIR/excluded.txt') if line.strip()]
+root = Path('$SCRIPT_DIR')
+
+def manifest_entry(path):
+    digest = hashlib.sha256((root / path).read_bytes()).hexdigest()
+    return {'path': path, 'sha256': digest}
 
 data = {
+    'schema_version': 2,
     'version': '$VERSION',
     'description': 'Манифест платформенных файлов FMT-exocortex-template. Используется update.sh для доставки обновлений.',
-    'files': [{'path': p} for p in files],
+    'files': [manifest_entry(p) for p in files],
     'excluded_paths': excluded,
     'deprecated_files': json.loads('''$DEPRECATED_JSON'''),
 }
