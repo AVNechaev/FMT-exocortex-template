@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "version": "0.38.1",
+  "version": "0.38.2",
   "description": "Манифест платформенных файлов FMT-exocortex-template. Используется update.sh для доставки обновлений.",
   "files": [
     {
@@ -185,7 +185,7 @@
     },
     {
       "path": ".claude/rules-lazy/blocking-rules-full.md",
-      "sha256": "eb85beaede3b07c06644b9f8356dbf102d301e5af2ebf4ae3125e2d92e865f52"
+      "sha256": "a832ce4b55d30e5c52e4dad3e7ba3695af481c223e06ea866f362bdd8de15bd0"
     },
     {
       "path": ".claude/rules-lazy/drift-guard.md",
@@ -633,7 +633,7 @@
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "295118cb899952ee0deac8b6a5522b7dcb560e86bee4c3a146fa92f47c8172df"
+      "sha256": "dbd53ddae1ac708b21402976fd3658d15ed603e27feab6695144885440364b77"
     },
     {
       "path": "CLAUDE.md",
@@ -932,8 +932,12 @@
       "sha256": "15ed85cf9b54eb982fc6e54d0177aa1e2516f839fa0de00c19387cf6f196817a"
     },
     {
+      "path": "guide-kit/FORMAT-topic.yaml.md",
+      "sha256": "ec5fbe07b496fb45c6e5cb6eecaa5fc90d19e89eb00020f3dac82b2e3e090a9d"
+    },
+    {
       "path": "guide-kit/FORMAT.md",
-      "sha256": "ae91473097cd1673889b5c6dc630f9a0e6aca2b8ed27709bf89149ab2230254b"
+      "sha256": "b2ea719172bf546c84c05e029a6c183fd286c72f1013ba6b0c5a035f4bd36abe"
     },
     {
       "path": "guide-kit/HOW-IT-WORKS.md",
@@ -965,15 +969,27 @@
     },
     {
       "path": "guide-kit/generator/adapter.py",
-      "sha256": "ed678da3bb9996eb4ddff047dfe388ba33646270edb52eca8723506ed379a742"
+      "sha256": "c85ed0369576271aa6e303bed45015ba362526795c782a083e43ab3b4f62fb91"
     },
     {
       "path": "guide-kit/generator/conftest.py",
       "sha256": "3c3ec36417f30afd960a97af67bf65e3c01825a8c8c28b529239b8a32735dc2c"
     },
     {
+      "path": "guide-kit/generator/decomposer.py",
+      "sha256": "d72884818a55a601448bdea8c6ac31336cd6bf842f589f7ea247cd225b1eeb14"
+    },
+    {
+      "path": "guide-kit/generator/f6f10_integration.py",
+      "sha256": "4ccb1e95b247f076296daa1619321d5a3d8b4c57c198ee35f006e13d91ef7595"
+    },
+    {
+      "path": "guide-kit/generator/health_adapter.py",
+      "sha256": "f71fb5c91e03aeafb2c1d8ec62afd013ff08b1f8671059eec3554a5e75368f8e"
+    },
+    {
       "path": "guide-kit/generator/horizons.py",
-      "sha256": "847d8d046e7763e163d5c2e8073b961280f38647656a8df3271011229388c4dc"
+      "sha256": "e4c0198b6c163f46f60ef096dc40c5eee7d636d640bf9fc17fb2d6bca4e94f34"
     },
     {
       "path": "guide-kit/generator/llm_backends/__init__.py",
@@ -1001,7 +1017,7 @@
     },
     {
       "path": "guide-kit/generator/planner.py",
-      "sha256": "e6fd0e163847c17b88031437c994d55d1ef471e0e1dedad1b10964597f52bc7d"
+      "sha256": "49878fbd0978635ef5f2c2c46d2f08f05b06cbce97e285c16402de9b0e60f5d6"
     },
     {
       "path": "guide-kit/generator/platform_knowledge.py",
@@ -1013,19 +1029,39 @@
     },
     {
       "path": "guide-kit/generator/prompt.md",
-      "sha256": "435793f9b313d1bf70ad96d2d47449c113d9b943fb22a3f9b09af911dce26adb"
+      "sha256": "451ee71a48bef00cf2aede12b8e3af4f1c68b629c3bfd5ca269a6202adc99cf7"
     },
     {
       "path": "guide-kit/generator/render_work_section_runner.py",
       "sha256": "141c62d63b5d42e7e9f298de9b6c1cc4571a69d0fa3d72312e840a7622faf9b3"
     },
     {
+      "path": "guide-kit/generator/research_formalize.py",
+      "sha256": "caa4143d872f4f2d509e95872ca81ed841efb60d333fbce4326bb597c3928683"
+    },
+    {
+      "path": "guide-kit/generator/scenario_router.py",
+      "sha256": "ab2e8e7ce49fa3decd0b1607c40669f58fca1d948cfb34ae71977e667cb3d085"
+    },
+    {
+      "path": "guide-kit/generator/source_finder.py",
+      "sha256": "79bb2b431e575dd168e9b8658733d4a985eea1ad7dd56fb7725e0ae37804a3e8"
+    },
+    {
       "path": "guide-kit/generator/test_acceptance_backends.py",
       "sha256": "7cf680a9da07fbd0febac40b1637879d1b222c1614a2b94b951d859ddc55088e"
     },
     {
+      "path": "guide-kit/generator/test_adapter_applied_note.py",
+      "sha256": "896548b6f00095234271ca4d56477daa662706a309d8cb0d480fe091f997bbfd"
+    },
+    {
       "path": "guide-kit/generator/test_adapter_work_section.py",
       "sha256": "7fb96934fb7e1792cfb054cbb71772d14ab9a98533c36a0a64a66b401bb7f6b4"
+    },
+    {
+      "path": "guide-kit/generator/test_applied_track.py",
+      "sha256": "c43fcfbae992037f3ab02c744130342ba69fcc1fd2429252ed965d8102e2769b"
     },
     {
       "path": "guide-kit/generator/test_demo_catalog.py",
@@ -1166,6 +1202,18 @@
     {
       "path": "guide-kit/tests/acceptance/test_p1_clean_machine.sh",
       "sha256": "e1406f88ea4d22c6fb170dbddd486deb431425a4041d32a60c28891ec6419c76"
+    },
+    {
+      "path": "guide-kit/tests/test_decomposer.py",
+      "sha256": "4a093d97f1e79cd46540bc90357c2f51826deaaf96371974efbf492efb425df5"
+    },
+    {
+      "path": "guide-kit/tests/test_f6f10_smoke.py",
+      "sha256": "a8ef4fa0b67f8bb083601095a09536a867d8c65dc1b2a2142e65499efb458984"
+    },
+    {
+      "path": "guide-kit/tests/test_planner_area_fallback.py",
+      "sha256": "d5e469080121392ff94da6647f78c85c63b0d851eff0eeb5442c99dd966b7520"
     },
     {
       "path": "memory/MEMORY.md",
