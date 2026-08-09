@@ -154,6 +154,7 @@ chmod +x "$SHIM_DIR/curl"
 # Scenario A: run update.sh --yes on the non-default branch with a conflict
 # ------------------------------------------------------------------
 echo "--- Scenario A: CLAUDE.md conflict + non-default branch ---"
+HEAD_A_BEFORE=$(git -C "$SCRIPT_DIR" rev-parse HEAD)
 set +e
 PATH="$SHIM_DIR:$PATH" HOME="$FAKE_HOME" bash "$SCRIPT_DIR/update.sh" --yes > "$TEST_ROOT/out-a.log" 2>&1
 RC_A=$?
@@ -193,16 +194,23 @@ else
     fail "A: conflicted file path missing from final summary"
 fi
 
-if grep -q "Коммит пропущен" "$TEST_ROOT/out-a.log"; then
-    pass "A: commit skipped on non-default branch under --yes (defect 3)"
+if grep -q "Изменения оставлены незакоммиченными" "$TEST_ROOT/out-a.log"; then
+    pass "A: updater explicitly leaves applied files uncommitted"
 else
-    fail "A: branch guard did not fire / commit was not skipped"
+    fail "A: updater did not explain the no-autocommit contract"
 fi
 
-if [ -z "$(git -C "$SCRIPT_DIR" log --oneline -1 --grep='chore: update' 2>/dev/null)" ]; then
-    pass "A: no 'chore: update' commit landed on the PR branch"
+if [ "$HEAD_A_BEFORE" = "$(git -C "$SCRIPT_DIR" rev-parse HEAD)" ] && \
+   [ -z "$(git -C "$SCRIPT_DIR" diff --cached --name-only)" ]; then
+    pass "A: updater created no commit and changed no staged entries"
 else
-    fail "A: update commit landed on the contributor's PR branch — defect 3 regression"
+    fail "A: updater changed history or the user's index"
+fi
+
+if [ -f "$SCRIPT_DIR/.update-incomplete" ] && grep -q 'Обновление завершилось не полностью' "$TEST_ROOT/out-a.log"; then
+    pass "A: conflict leaves an explicit incomplete-update marker"
+else
+    fail "A: conflict did not preserve/report incomplete update state"
 fi
 
 # ------------------------------------------------------------------
@@ -243,6 +251,12 @@ if [ "$RC_B" -eq 0 ]; then
     pass "B: exit code 0 (no conflicts in this scenario)"
 else
     fail "B: expected exit 0, got $RC_B"
+fi
+
+if [ ! -e "$SCRIPT_DIR/.update-incomplete" ]; then
+    pass "B: successful recovery removes the incomplete-update marker"
+else
+    fail "B: incomplete-update marker survived a successful recovery"
 fi
 
 # ------------------------------------------------------------------

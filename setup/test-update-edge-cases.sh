@@ -25,7 +25,7 @@
 #   T21: legacy owner:user protocols migrate once with backup; other user files stay protected (issue #354)
 #   T22: Quick Close requires a runner card only when the runner and graph exist (issue #356)
 #   T23: wp-sync-bundle prefers folder cards and reads structured open phase statuses
-#   T24-T26: update safety, bootstrap/path contracts, multiplier opt-out
+#   T24-T27: update safety, bootstrap/path contracts, multiplier opt-out, #384/#387/#388
 #
 # Exit: 0 = all PASS, N = N tests failed
 #
@@ -134,6 +134,11 @@ if [ "$CLAUDE_BEFORE" = "$CLAUDE_AFTER" ]; then
     pass "T1: CLAUDE.md unchanged after --check"
 else
     fail "T1: CLAUDE.md was mutated by --check mode"
+fi
+if [ ! -e "$TEMPLATE_DIR/.update-incomplete" ]; then
+    pass "T1: --check does not create an incomplete-update marker"
+else
+    fail "T1: --check created transaction state"
 fi
 
 # ============================================================
@@ -1168,7 +1173,7 @@ echo "--- T19: orphan detection is diagnostic and CWD-independent ---"
 T19_BLOCK="$TEST_WS/t19-orphan-block.sh"
 awk '
     /^# === Step 6f: Orphan detection/{found=1; next}
-    /^# === Step 7: Commit changes/{found=0}
+    /^# === Step 7: Validate applied changes/{found=0}
     found{print}
 ' "$TEMPLATE_DIR/update.sh" > "$T19_BLOCK"
 
@@ -1237,23 +1242,27 @@ else
 fi
 
 # ============================================================
-# T21: legacy platform protocols migrate safely (issue #354)
+# T21: legacy platform memory migrates safely (issues #354/#384)
 # ============================================================
-echo "--- T21: platform protocols migrate once with backup ---"
+echo "--- T21: platform memory migrates once with backup ---"
 
 T21_OWNER_FAILURES=0
-for protocol in protocol-open.md protocol-work.md protocol-close.md protocol-month-close.md; do
-    if [ "$(get_field "$TEMPLATE_DIR/memory/$protocol" owner)" != "platform" ]; then
+for platform_file in \
+    protocol-open.md protocol-work.md protocol-close.md protocol-month-close.md \
+    agent-architecture-framework.md agent-vendor-connect-pattern.md checklists.md \
+    dry-run-contract.md feedback_response_clarity_for_pilot.md hooks-design.md navigation.md \
+    reference/agent-core.md repo-type-rules.md roles.md r-questionnaire.md t-checklist.md templates-dayplan.md; do
+    if [ "$(get_field "$TEMPLATE_DIR/memory/$platform_file" owner)" != "platform" ]; then
         T21_OWNER_FAILURES=$((T21_OWNER_FAILURES + 1))
     fi
 done
 if [ "$T21_OWNER_FAILURES" -eq 0 ]; then
-    pass "T21: all four shared protocols declare owner:platform"
+    pass "T21: exact shared-memory allowlist declares owner:platform"
 else
-    fail "T21: $T21_OWNER_FAILURES shared protocol(s) still have the wrong owner"
+    fail "T21: $T21_OWNER_FAILURES shared memory file(s) still have the wrong owner"
 fi
 
-T21_WIRED_COUNT=$(grep -cE 'migrate_platform_protocol "\$(fpath|f)" "\$(mem_dst|dst)"' "$TEMPLATE_DIR/update.sh")
+T21_WIRED_COUNT=$(grep -cE 'migrate_platform_memory "\$(fpath|f)" "\$(mem_dst|dst)"' "$TEMPLATE_DIR/update.sh")
 if [ "$T21_WIRED_COUNT" -eq 2 ]; then
     pass "T21: migration is wired into repair-pass and normal propagation"
 else
@@ -1263,8 +1272,8 @@ fi
 if (
     eval "$(awk '/^hash_file\(\)/{copy=1} copy{print} copy && /^}/{exit}' "$TEMPLATE_DIR/update.sh")"
     eval "$(awk '/^is_author_mode\(\)/{copy=1} copy{print} copy && /^}/{exit}' "$TEMPLATE_DIR/update.sh")"
-    eval "$(awk '/^is_platform_protocol_path\(\)/{copy=1} copy{print} copy && /^}/{exit}' "$TEMPLATE_DIR/update.sh")"
-    eval "$(awk '/^migrate_platform_protocol\(\)/{copy=1} copy{print} copy && /^}/{exit}' "$TEMPLATE_DIR/update.sh")"
+    eval "$(awk '/^is_migrated_platform_memory_path\(\)/{copy=1} copy{print} copy && /^}/{exit}' "$TEMPLATE_DIR/update.sh")"
+    eval "$(awk '/^migrate_platform_memory\(\)/{copy=1} copy{print} copy && /^}/{exit}' "$TEMPLATE_DIR/update.sh")"
 
     SCRIPT_DIR="$TEMPLATE_DIR"
     WORKSPACE_DIR="$TEST_WS/t21-workspace"
@@ -1278,7 +1287,7 @@ owner: user
 Pilot custom protocol content.
 HEREDOC
 
-    migrate_platform_protocol memory/protocol-open.md "$target"
+    migrate_platform_memory memory/protocol-open.md "$target"
     backup="$WORKSPACE_DIR/.backups/protocol-owner-migration/protocol-open.md"
     grep -q 'Pilot custom protocol content' "$backup"
     cmp -s "$target" "$TEMPLATE_DIR/memory/protocol-open.md"
@@ -1286,7 +1295,7 @@ HEREDOC
 
     # The deployed copy is now owner:platform, so a repeat must be a no-op and
     # must not replace the saved user version.
-    if migrate_platform_protocol memory/protocol-open.md "$target"; then
+    if migrate_platform_memory memory/protocol-open.md "$target"; then
         exit 1
     fi
     [ "$backup_hash" = "$(hash_file "$backup")" ]
@@ -1300,7 +1309,7 @@ owner: user
 ---
 Unrelated user content.
 HEREDOC
-    if migrate_platform_protocol memory/protocol-dt-integration.md "$unrelated"; then
+    if migrate_platform_memory memory/protocol-dt-integration.md "$unrelated"; then
         exit 1
     fi
     grep -q 'Unrelated user content' "$unrelated"
@@ -1314,10 +1323,26 @@ owner: user
 ---
 Author unpublished content.
 HEREDOC
-    if migrate_platform_protocol memory/protocol-work.md "$author_target"; then
+    if migrate_platform_memory memory/protocol-work.md "$author_target"; then
         exit 1
     fi
     grep -q 'Author unpublished content' "$author_target"
+
+    # #384 extends the exact migration to platform-maintained references without
+    # weakening user-owned FPF snapshots and author distinctions.
+    rm -f "$WORKSPACE_DIR/params.yaml"
+    reference_target="$TEST_WS/t21-agent-core.md"
+    cat > "$reference_target" <<'HEREDOC'
+---
+owner: user
+---
+Legacy platform reference with a pilot note.
+HEREDOC
+    migrate_platform_memory memory/reference/agent-core.md "$reference_target"
+    cmp -s "$reference_target" "$TEMPLATE_DIR/memory/reference/agent-core.md"
+    if migrate_platform_memory memory/fpf-reference.md "$unrelated"; then
+        exit 1
+    fi
 ); then
     pass "T21: migration preserves the user copy, is idempotent, allowlisted and author-safe"
 else
@@ -1491,6 +1516,9 @@ else
 fi
 
 RULES_BACKUP_RUN=""
+RULES_SAFE_TO_UPDATE="|.claude/rules/example.md|"
+eval "$(awk '/^hash_file\(\)/{copy=1} copy{print} copy && /^}/{exit}' "$TEMPLATE_DIR/update.sh")"
+eval "$(awk '/^rule_was_safe_to_update\(\)/{copy=1} copy{print} copy && /^}/{exit}' "$TEMPLATE_DIR/update.sh")"
 eval "$(awk '/^backup_rule_before_overwrite\(\)/{copy=1} copy{print} copy && /^}/{exit}' "$TEMPLATE_DIR/update.sh")"
 eval "$(awk '/^copy_platform_file_preserving_user_space\(\)/{copy=1} copy{print} copy && /^}/{exit}' "$TEMPLATE_DIR/update.sh")"
 cat > "$T24_ROOT/rule-upstream.md" <<'EOF'
@@ -1510,6 +1538,30 @@ if grep -q 'Platform rule v2' "$T24_ROOT/.claude/rules/example.md" && \
     pass "T24: rule update preserves USER-SPACE and creates a recoverable pre-image"
 else
     fail "T24: rule preservation or transactional backup failed"
+fi
+
+RULES_SAFE_TO_UPDATE="|"
+cat > "$T24_ROOT/.claude/rules/diverged.md" <<'EOF'
+# Pilot corrected an existing platform rule
+EOF
+cat > "$T24_ROOT/rule-diverged-upstream.md" <<'EOF'
+# Platform replacement
+EOF
+diverged_before=$(hash_file "$T24_ROOT/.claude/rules/diverged.md")
+copy_platform_file_preserving_user_space \
+    "$T24_ROOT/rule-diverged-upstream.md" \
+    "$T24_ROOT/.claude/rules/diverged.md" \
+    ".claude/rules/diverged.md" || true
+diverged_after=$(hash_file "$T24_ROOT/.claude/rules/diverged.md")
+copy_platform_file_preserving_user_space \
+    "$T24_ROOT/rule-diverged-upstream.md" \
+    "$T24_ROOT/.claude/rules/diverged.md" \
+    ".claude/rules/diverged.md" || true
+if [ "$diverged_before" = "$diverged_after" ] && \
+   grep -q 'Pilot corrected' "$T24_ROOT/.claude/rules/diverged.md"; then
+    pass "T24: diverged rule survives repeated repair attempts unchanged"
+else
+    fail "T24: repair overwrote a user-corrected existing rule"
 fi
 
 # ============================================================
@@ -1629,6 +1681,64 @@ if grep -q '<!-- multiplier:off -->\*\*Бюджет дня:\*\* ~Yh РП все�
     pass "T26: DayPlan, WeekPlan, Week Close and Day Close all provide multiplier-off branches"
 else
     fail "T26: one or more plan/report templates lack a multiplier-off branch"
+fi
+
+# ============================================================
+# T27: bootstrap isolation, runtime hot list and memory schema (#384/#387/#388)
+# ============================================================
+echo "--- T27: bootstrap, hot-files and memory frontmatter contracts ---"
+T27_ROOT="$TEST_WS/t27-workspace"
+T27_TEMPLATE="$T27_ROOT/FMT-exocortex-template"
+mkdir -p "$T27_TEMPLATE/.claude/lib" "$T27_ROOT/.claude/rules" "$T27_ROOT/GOV" "$T27_ROOT/memory"
+cp "$TEMPLATE_DIR/.claude/lib/iwe-env-bootstrap.sh" "$T27_TEMPLATE/.claude/lib/"
+if env -u WORKSPACE_DIR -u IWE_ROOT bash -c \
+    'SCRIPT_DIR=caller-owned; source "$1"; [ "$SCRIPT_DIR" = caller-owned ]' -- \
+    "$T27_TEMPLATE/.claude/lib/iwe-env-bootstrap.sh"; then
+    pass "T27: bootstrap leaves the caller's SCRIPT_DIR unchanged"
+else
+    fail "T27: bootstrap still overwrites the caller's SCRIPT_DIR"
+fi
+
+if WORKSPACE_DIR="$T27_ROOT" IWE_ROOT="$T27_ROOT" \
+    bash "$TEMPLATE_DIR/scripts/memory-bleed.sh" --dir "$T27_ROOT/memory" --hot-only >/dev/null; then
+    pass "T27: memory-bleed starts successfully with the shared bootstrap"
+else
+    fail "T27: memory-bleed still fails during bootstrap"
+fi
+
+printf '# t27 rule\n' > "$T27_ROOT/.claude/rules/t27-rule.md"
+printf '# root\n' > "$T27_ROOT/CLAUDE.md"
+printf '# governance\n' > "$T27_ROOT/GOV/CLAUDE.md"
+printf 'GOVERNANCE_REPO=GOV\n' > "$T27_ROOT/.exocortex.env"
+T27_RUNTIME="$T27_ROOT/.iwe-runtime"
+WORKSPACE_DIR="$T27_ROOT" IWE_ROOT="$T27_ROOT" IWE_RUNTIME="$T27_RUNTIME" \
+    bash "$TEMPLATE_DIR/scripts/verify-context-budget.sh" >/dev/null 2>&1 || true
+if [ ! -e "$T27_RUNTIME" ]; then
+    pass "T27: read-only context check does not create runtime state on a fresh clone"
+else
+    fail "T27: context check created runtime state instead of using the shipped fallback"
+fi
+
+T27_SHIPPED_HASH_BEFORE=$(shasum -a 256 "$TEMPLATE_DIR/scripts/hot-files.list" | cut -d' ' -f1)
+IWE_ROOT="$T27_ROOT" IWE_RUNTIME="$T27_RUNTIME" \
+    bash "$TEMPLATE_DIR/scripts/generate-hot-files-list.sh" >/dev/null
+T27_SHIPPED_HASH_AFTER=$(shasum -a 256 "$TEMPLATE_DIR/scripts/hot-files.list" | cut -d' ' -f1)
+if [ "$T27_SHIPPED_HASH_BEFORE" = "$T27_SHIPPED_HASH_AFTER" ] && \
+   grep -q '\$IWE_ROOT/GOV/CLAUDE.md' "$T27_RUNTIME/hot-files.list" && \
+   grep -q 't27-rule.md' "$T27_RUNTIME/hot-files.list"; then
+    pass "T27: install-specific hot list is generated only in runtime"
+else
+    fail "T27: hot-list generation changed the template or missed install-specific paths"
+fi
+
+if MEMORY_OUTPUT=$(WORKSPACE_DIR="$TEMPLATE_DIR" IWE_ROOT="$TEMPLATE_DIR" \
+    bash "$TEMPLATE_DIR/scripts/memory-validate.sh" --dir "$TEMPLATE_DIR/memory" --quiet) && \
+   grep -q 'Итог: 29/29 файлов OK' <<<"$MEMORY_OUTPUT" && \
+   WORKSPACE_DIR="$TEMPLATE_DIR" IWE_ROOT="$TEMPLATE_DIR" \
+    bash "$TEMPLATE_DIR/scripts/memory-validate.sh" "$TEMPLATE_DIR/memory/reference/agent-core.md" --quiet >/dev/null; then
+    pass "T27: every shipped memory frontmatter checked by the validator is valid"
+else
+    fail "T27: shipped memory frontmatter still violates its own schema"
 fi
 
 # ============================================================
