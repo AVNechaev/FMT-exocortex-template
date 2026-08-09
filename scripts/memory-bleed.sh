@@ -18,8 +18,8 @@
 set -eu
 
 # Load unified environment: WORKSPACE_DIR, IWE_ROOT, IWE_SCRIPTS, etc.
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/../.claude/lib/iwe-env-bootstrap.sh" || exit 1
+MEMORY_BLEED_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$MEMORY_BLEED_SCRIPT_DIR/../.claude/lib/iwe-env-bootstrap.sh" || exit 1
 MEMORY_DIR="$IWE_ROOT/memory"
 HOT_LIMIT=150
 HOT_DOWNGRADE_DAYS=14   # HOT → WARM если не упоминался N дней
