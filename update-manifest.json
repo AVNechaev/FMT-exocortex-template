@@ -128,6 +128,10 @@
       "sha256": "030aaa6fe19acc24103744cd1026c93955a2c5ed5ff6cd8dc933c8886ed3339a"
     },
     {
+      "path": ".claude/hooks/residency-gate-skill-adapter.sh",
+      "sha256": "8e8258e78bb943c05c368736595e3d4a96623ee4dd2e36a53bdc1477b290ffd5"
+    },
+    {
       "path": ".claude/hooks/response-clarity-hook.sh",
       "sha256": "094c904d9452b9067dfbbd867adf8902ed49c45296661a6aebdfa2690a9431e8"
     },
@@ -181,7 +185,7 @@
     },
     {
       "path": ".claude/rules-lazy/blocking-rules-full.md",
-      "sha256": "8165a06389eec739dbe5d958bec6c18dda6fdbd28bd27705c366ce994de966e5"
+      "sha256": "eb85beaede3b07c06644b9f8356dbf102d301e5af2ebf4ae3125e2d92e865f52"
     },
     {
       "path": ".claude/rules-lazy/drift-guard.md",
@@ -249,7 +253,7 @@
     },
     {
       "path": ".claude/settings.json",
-      "sha256": "aa84ed4bbec1d39caf2b4e495c1bd9042e1a050361452d38f434618a94a401ff"
+      "sha256": "6a2ea7fd90e2451e0662ace6b7e76041fd9be13b047c82c5dfcbd452a3ad1e6b"
     },
     {
       "path": ".claude/skills-catalog.yaml",
@@ -709,7 +713,7 @@
     },
     {
       "path": "docs/RESIDENCY-GATE-USAGE.md",
-      "sha256": "b7967b7fd110228f7fb0f7791426241aab90834f498568b5d89d6f6f50fac42f"
+      "sha256": "4ff3b40bbbea52c411f89f084c2dba9b18d22aa18656b2999f5c5fe3aaaef0a9"
     },
     {
       "path": "docs/SCRIPT-PROMOTION.md",
@@ -841,7 +845,7 @@
     },
     {
       "path": "extensions/agent-inbox/scripts/iwe-agent-dispatcher.py",
-      "sha256": "802a78974431363aa6ab95e6d33835c39c6d016ef1dafa48f193bf17c363a7df"
+      "sha256": "53a9a4916563f10849b0590584ebf0ea2452b8263ee2c99fe4938bd7dc418960"
     },
     {
       "path": "extensions/agent-inbox/templates/_template.md",
@@ -1213,7 +1217,7 @@
     },
     {
       "path": "memory/fpf-reference.md",
-      "sha256": "908f238afce26cbb6be8e81e45423bda07c5ec87abd96f1f4cecd3b6f16c90f6"
+      "sha256": "d753b57b1a500861034bdd4a522773979b1a8665135ba679afc02ecaeca9f3f9"
     },
     {
       "path": "memory/fpf-term-map.yaml",
@@ -1221,7 +1225,7 @@
     },
     {
       "path": "memory/hard-distinctions.md",
-      "sha256": "c8da5c1cc6802b4dbd2db5d083489348538546bca5b0241faa33b9ac4ab8325c"
+      "sha256": "194a8e2280e627b189c261336dd688750a443e216fd1a2fda837c3935eb2c89a"
     },
     {
       "path": "memory/hooks-design.md",
@@ -1933,7 +1937,7 @@
     },
     {
       "path": "scripts/iwe-agent-dispatcher.py",
-      "sha256": "802a78974431363aa6ab95e6d33835c39c6d016ef1dafa48f193bf17c363a7df"
+      "sha256": "53a9a4916563f10849b0590584ebf0ea2452b8263ee2c99fe4938bd7dc418960"
     },
     {
       "path": "scripts/iwe-audit.sh",
@@ -2301,7 +2305,7 @@
     },
     {
       "path": "setup/validate-template.sh",
-      "sha256": "4d2202c0a343272d0b0fcaaf922c974eaa0ab09fb512784897267f847a7bb0f8"
+      "sha256": "b20cd35e65205ccd4fe426f8dc03ded24e860589662fb02a09e4d95889dee270"
     },
     {
       "path": "shared/rubrics/form-089.yaml",
@@ -2355,6 +2359,7 @@
     "scripts/tests/test_dry_run_gate.py",
     "scripts/tests/test_install_hooks.py",
     "scripts/tests/test_manifest_coverage_local.py",
+    "scripts/tests/test_residency_gate_skill_adapter.py",
     "scripts/tests/test_skill_promote.py",
     "scripts/tests/test_translate_delta.py",
     "scripts/tests/test_translate_parse.py",
