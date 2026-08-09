@@ -8,6 +8,15 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  # CI-MacOS-Costs (WP-7, 09.08.2026): macOS runners cost 10x an ubuntu-minute
+  # (GitHub Actions pricing) and every push to main ran the full os×gov_repo
+  # matrix — 196 runs/month, ~$13.4/mo gross just for this job. macOS coverage
+  # doesn't need to fire on every agentic commit to be effective; a nightly
+  # run plus every PR (external contributors, review gate) catches the same
+  # portability regressions this matrix exists for (0.28.12 BUG-2..4), just
+  # not within minutes of a push nobody's about to release from unreviewed.
+  schedule:
+    - cron: '0 2 * * *'  # 05:00 МСК
 
 jobs:
   # Defense-in-depth для случая --no-verify в pre-commit + прямого push.
@@ -47,30 +56,49 @@ jobs:
   # Корень бага (29 апр, 0.29.13 регрессия): template-sync пропихнул pre-0.29.5
   # код в FMT, валидаторы НЕ были в CI — Євгений нашёл на fresh clone, у нас
   # commit прошёл. Гейт: те же 2 скрипта что Євгений запускает локально.
-  integration-contract:
-    # OS matrix (0.29.18): пилоты на macOS И Linux. CI на ubuntu-latest пропускал
-    # портабельность-баги (0.28.12 BUG-2..4 на Linux). Прогон на обеих ОС.
+  #
+  # Split ubuntu/macOS into two jobs (CI-MacOS-Costs, WP-7, 09.08.2026, вариант
+  # В1): macOS is 10x an ubuntu-minute in GitHub's billing, and every one of
+  # 196 push-to-main runs/month paid that rate for portability coverage that
+  # doesn't need to fire within minutes of an agentic commit to do its job.
+  # ubuntu below still runs on every push/PR (fast feedback for the common
+  # case); macOS runs on PR (review gate for external contributors) and
+  # nightly (catches a portability regression that slipped through by next
+  # morning) — same coverage cadence, ~80% fewer macOS-minutes billed.
+  integration-contract-ubuntu:
     # GOVERNANCE_REPO matrix (12 мая, после Bug 1 b24639f): smoke прогоняется с
     # разными значениями GOVERNANCE_REPO, чтобы поймать hardcoded /DS-strategy/
     # пути которые проходят при дефолтном значении.
-    # NB: validator+test-detectors дублируются 2× по gov_repo (4 прогона вместо 2)
-    # — не зависят от gov_repo, но изоляция в отдельный job усложнила бы yml.
-    # Trade-off приемлемый: оба скрипта быстрые (<10 сек суммарно).
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
         gov_repo: [DS-strategy, DS-pilot-strategy]
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     env:
       SMOKE_GOVERNANCE_REPO: ${{ matrix.gov_repo }}
     steps:
       - uses: actions/checkout@v6
-      - name: Install dependencies (Linux)
-        if: runner.os == 'Linux'
+      - name: Install dependencies
         run: sudo apt-get update && sudo apt-get install -y python3 jq
-      - name: Install dependencies (macOS)
-        if: runner.os == 'macOS'
+      - name: Run integration-contract-validator (8 detectors)
+        run: bash setup/integration-contract-validator.sh
+      - name: Run smoke-test-fresh-install (GOVERNANCE_REPO=${{ matrix.gov_repo }})
+        run: bash setup/smoke-test-fresh-install.sh
+      - name: Run detector regression fixtures (regex gap guard)
+        run: bash setup/test-detectors.sh
+
+  integration-contract-macos:
+    if: github.event_name == 'pull_request' || github.event_name == 'schedule'
+    strategy:
+      fail-fast: false
+      matrix:
+        gov_repo: [DS-strategy, DS-pilot-strategy]
+    runs-on: macos-latest
+    env:
+      SMOKE_GOVERNANCE_REPO: ${{ matrix.gov_repo }}
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install dependencies
         run: brew install jq  # python3 preinstalled
       - name: Run integration-contract-validator (8 detectors)
         run: bash setup/integration-contract-validator.sh
