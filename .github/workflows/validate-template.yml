@@ -412,8 +412,15 @@ jobs:
 
       # issue #343/#347: 14 регрессионных тестов лежали в репо и не запускались нигде —
       # ни один из них не сторожил ни один прогон. Полный набор идёт ~2 минуты.
-      - name: Run update.sh edge-case regression tests (T1-T17)
+      - name: Run update.sh edge-case regression tests (T1-T26)
         run: bash setup/test-update-edge-cases.sh
+
+      # issue #226: тест лежал в репо с 6 июля, ни разу не был подключён к CI —
+      # найдено 2026-08-10 при аудите конвейера доставки (WP-7 Ф62). E2E smoke на
+      # 3 фиксах реального инцидента (конфликт CLAUDE.md при merge, repair-pass
+      # при TOTAL_CHANGES=0) — сторожит именно тот класс регрессии, что уже был.
+      - name: Run update.sh issue #226 regression test
+        run: bash setup/test-update-issue-226.sh
 
       # PR #385: cloud install paths may occur legitimately in old tracked text;
       # only additions made by the current updater run are publication blockers.
