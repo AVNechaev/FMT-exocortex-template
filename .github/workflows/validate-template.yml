@@ -17,6 +17,13 @@ on:
   # not within minutes of a push nobody's about to release from unreviewed.
   schedule:
     - cron: '0 2 * * *'  # 05:00 МСК
+  # WP-7 Ф62 (10.08.2026): weekly-release.yml коммитит version-bump через
+  # default GITHUB_TOKEN — по anti-recursion policy GitHub такой push НЕ
+  # триггерит push-based workflow сам по себе, поэтому weekly явно зовёт этот
+  # workflow через workflow_dispatch. release.yml подписан на его завершение
+  # (workflow_run) и берёт SHA из самого события — без этого входа CI на
+  # bot-коммите вообще не запускался бы, и релиз шёл бы непроверенным.
+  workflow_dispatch:
 
 jobs:
   # Defense-in-depth для случая --no-verify в pre-commit + прямого push.
