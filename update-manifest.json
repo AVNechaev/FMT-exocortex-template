@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "version": "0.38.2",
+  "version": "0.38.3",
   "description": "Манифест платформенных файлов FMT-exocortex-template. Используется update.sh для доставки обновлений.",
   "files": [
     {
@@ -565,7 +565,7 @@
     },
     {
       "path": ".claude/skills/week-close/SKILL.md",
-      "sha256": "754db3355b722564ec8c3e465b55e4bf718585afde1bcec198cbfa9e910f6ead"
+      "sha256": "938b8500dd36bb962d0ecac85fb0d9c7521d7aadcd831edc4686c5831f9745c6"
     },
     {
       "path": ".claude/skills/week-close/week-close/SKILL.md",
@@ -928,6 +928,14 @@
       "sha256": "d3b6d57f3a25fe882c0e1c1c3c15e1b38d852dc7a80d4a3f548d8f0fc4cff119"
     },
     {
+      "path": "extensions/strategy-cycle/README.md",
+      "sha256": "f1830d944b0d0731663790500c49f4b41c359ecc1def4573886731542fbef93d"
+    },
+    {
+      "path": "extensions/strategy-cycle/SPEC.md",
+      "sha256": "11dc6bde6782588e40a8c733ca04628a2f310a96d07363ef61a568d8fb69daca"
+    },
+    {
       "path": "guide-kit/.gitignore",
       "sha256": "15ed85cf9b54eb982fc6e54d0177aa1e2516f839fa0de00c19387cf6f196817a"
     },
@@ -1280,6 +1288,10 @@
       "sha256": "951872ce350cb40e619a095e2d4de282735d81d5a0370256b380b31eded62986"
     },
     {
+      "path": "memory/lpf-hypothesis-log.md",
+      "sha256": "81ebfebb69798af60bb7b16eb6d1eec1c01f1c0e0be7d0b0e92faa9943b30bfb"
+    },
+    {
       "path": "memory/memory-lifecycle-spec.md",
       "sha256": "f794f558a747135450061c71eca078e7868de9b3b446facf553b7b33c7a9d230"
     },
@@ -1557,7 +1569,7 @@
     },
     {
       "path": "roles/strategist/prompts/strategy-session-weekly/steps/03-dissatisfactions.md",
-      "sha256": "6a114d5dd735b53b291c732f9c804d45f7e2a44f71ce956883536dc40134cf9e"
+      "sha256": "e94477f479a6918fd6bf7ee6af24353421fec63008c2da2f13370cf3be515be9"
     },
     {
       "path": "roles/strategist/prompts/strategy-session-weekly/steps/04-strategy-sync.md",
@@ -1577,11 +1589,11 @@
     },
     {
       "path": "roles/strategist/prompts/strategy-session-weekly/steps/06a-pool.md",
-      "sha256": "c94e72897c291419ca5047a3ccd196926f7ad1d5c85736ab1f6dfa9c9b50bc76"
+      "sha256": "fbbc35bc212b4cb8cc4bd865027d555fb7c968f61c280ecc442066ffecaae797"
     },
     {
       "path": "roles/strategist/prompts/strategy-session-weekly/steps/06b-budget.md",
-      "sha256": "e50887c3ce39c4d916dd6a09360a63d2b816d4d24ee3359c6367494ab56cf4bb"
+      "sha256": "e85d58fea904270c2d29f7857dbd9f17e8b4e06ced8c0ccce9af618d4a196846"
     },
     {
       "path": "roles/strategist/prompts/strategy-session-weekly/steps/06c-finalize.md",
