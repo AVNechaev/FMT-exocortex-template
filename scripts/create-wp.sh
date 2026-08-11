@@ -8,15 +8,14 @@
 #
 # Использование:
 #   bash create-wp.sh --title "Название" --budget 5h --priority P3 [--slug slug] [--repo "репо"] [--related "WP-150:dependency,WP-167:продукт"]
-#   bash create-wp.sh --title "Название" --budget 5h --priority P3 --state "belonging (Оснащённость): из → в" --hypothesis "H-101 | —:infra|techdebt|order|spinoff"
+#   bash create-wp.sh --title "Название" --budget 5h --priority P3 --state "belonging (Оснащённость): из → в" [--hypothesis H-101]
 #   bash create-wp.sh --title "Название" --budget 5h --priority P3 --no-consent-check
 #
 # --state (WP-505): target state transition (WP-457 State-Transition Gate).
 #   REQUIRED when <governance>/docs/state-axes-registry.yaml exists (author install);
 #   optional otherwise (typical user install — gate inactive per template contract).
 #   Must mention at least one gate_ready axis code from the registry file.
-# --hypothesis (WP-496 Ф8): REQUIRED when <governance>/current/hypotheses-log.md exists —
-#   H-NNN anchored in the log, or explicit dash with reason code (—:infra|techdebt|order|spinoff).
+# --hypothesis (WP-505): H-NNN from current/hypotheses-log.md, or "—" (default).
 #
 # Предусловие: consent state file должен существовать:
 #   touch ${IWE:-$HOME/IWE}/.claude/state/wp-consent-{N}
@@ -112,43 +111,6 @@ PYEOF
     echo "   Передано: $STATE" >&2
     exit 1
   fi
-fi
-
-# --- Hypothesis Gate (WP-496 Ф8) ---
-# Mirror of the State-Transition Gate: when the hypotheses log exists (author
-# install), --hypothesis is mandatory — either an H-NNN recorded in the log or
-# an explicit dash with a reason code. A WP references an EXISTING bet
-# (many WPs per hypothesis); new hypotheses enter only via the pilot's entry
-# filter, never as a side effect of creating a WP. Installs without the log
-# keep the gate off.
-HYP_LOG="$STRATEGY/current/hypotheses-log.md"
-if [[ -f "$HYP_LOG" ]]; then
-  HYP_USAGE="H-NNN (из current/hypotheses-log.md) либо —:infra | —:techdebt | —:order | —:spinoff"
-  if [[ -z "$HYPOTHESIS" ]]; then
-    echo "🚫 Hypothesis Gate (WP-496): --hypothesis обязателен — журнал гипотез найден:" >&2
-    echo "   $HYP_LOG" >&2
-    echo "   Формат: $HYP_USAGE" >&2
-    exit 1
-  fi
-  case "$HYPOTHESIS" in
-    "—:infra"|"—:techdebt"|"—:order"|"—:spinoff") : ;;
-    *)
-      HYP_IDS=$(grep -oE '\bH-[0-9]{3}\b' <<<"$HYPOTHESIS" | sort -u)
-      if [[ -z "$HYP_IDS" ]]; then
-        echo "🚫 Hypothesis Gate: не распознан ни H-NNN, ни код причины" >&2
-        echo "   Передано: $HYPOTHESIS" >&2
-        echo "   Формат: $HYP_USAGE" >&2
-        exit 1
-      fi
-      for HID in $HYP_IDS; do
-        if ! grep -q "id=$HID " "$HYP_LOG"; then
-          echo "🚫 Hypothesis Gate: $HID не найден среди якорей журнала ($HYP_LOG)" >&2
-          echo "   Новая гипотеза заводится через входной фильтр журнала, не через create-wp" >&2
-          exit 1
-        fi
-      done
-      ;;
-  esac
 fi
 
 # Registry cell «Ставка»: Russian axis names + hypothesis id (WP-505).
