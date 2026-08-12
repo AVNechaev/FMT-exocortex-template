@@ -807,10 +807,26 @@ INCEOF
   # заведомо не укладывается в тайм-бокс, обновление тихо теряется как "проверено".
   # --fast (issue #230) сравнивает только версию манифеста — секунда вместо минут.
   if [ -d "$IWE/FMT-exocortex-template" ]; then
-    local upd_status
-    upd_status=$(run_bounded "${ISSUE_SWEEP_TIMEOUT:-10}" bash -c \
-      "cd '$IWE/FMT-exocortex-template' && bash update.sh --check --fast 2>&1 | grep -oE 'Версия совпадает|Версия отличается' | head -1")
-    echo "| Update IWE | 🟢 | ${upd_status:-проверено} |"
+    # issue #406: три дефекта здесь раньше складывались в вечнозелёную строку —
+    # (1) эмодзи был зашит 🟢 без ветвления; (2) update.sh с тех пор (issue #230/
+    # #288) отдаёт 5 разных формулировок с префиксом ✓/⚠ — старый grep на
+    # буквальные "Версия совпадает"/"Версия отличается" не покрывал ни ветку
+    # «состав изменился», ни текущую формулировку успеха («…совпадают», не
+    # «совпадает»), и при пустом совпадении молча падал на 🟢; (3) секция
+    # «Требует внимания» собирает только 🟡/🔴 строки — раз эта строка не могла
+    # стать не-зелёной, доступное обновление никогда туда не попадало. Эмодзи
+    # теперь читается по первому символу реального вывода (✓ → 🟢, ⚠ → 🟡),
+    # а не угадывается заранее.
+    local upd_output upd_emoji upd_status
+    upd_output=$(run_bounded "${ISSUE_SWEEP_TIMEOUT:-10}" bash -c \
+      "cd '$IWE/FMT-exocortex-template' && bash update.sh --check --fast 2>&1")
+    upd_status=$(printf '%s\n' "$upd_output" | grep -E '^[✓⚠]' | head -1)
+    case "$upd_status" in
+        ✓*) upd_emoji="🟢" ;;
+        ⚠*) upd_emoji="🟡" ;;
+        *) upd_emoji="🟡"; upd_status="${upd_status:-не удалось определить статус (тайм-аут или пустой вывод update.sh --check --fast)}" ;;
+    esac
+    echo "| Update IWE | $upd_emoji | ${upd_status} |"
   fi
 
   # Base repos (FPF/SPF/ZP) — fetch + behind count
