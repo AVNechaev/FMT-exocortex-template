@@ -439,14 +439,17 @@ HEREDOC
 # this test, which would pass even if update.sh's real code diverged. A file
 # (not `python3 -c "$VAR"`) sidesteps bash re-quoting/escaping issues with the
 # block's embedded '\n' and mixed quotes.
+# issue #402: the block now invokes $PY_BIN (not a literal `python3`) and takes
+# its path via argv (`sys.argv[1]`), not an interpolated `$MCP_WORKSPACE` — the
+# marker and the post-extraction substitution both follow that shape now.
 T9_PY_BLOCK=$(awk '/^# === Step 6c: Migrate workspace \.mcp\.json to Gateway ===$/{found=1} found' "$TEMPLATE_DIR/update.sh" | \
-              sed -n '/^    python3 -c "$/,/^" 2>\/dev\/null$/p' | sed '1d;$d')
+              sed -n '/^    \$PY_BIN -c "$/,/^" "\$MCP_WORKSPACE" 2>\/dev\/null$/p' | sed '1d;$d')
 if [ -z "$T9_PY_BLOCK" ]; then
     fail "T9: could not extract Step 6c migration block from update.sh — marker comment moved?"
 else
     T9_PYFILE="$TEST_WS/t9-migration.py"
-    printf '%s' "$T9_PY_BLOCK" | sed "s|\$MCP_WORKSPACE|$T9_MCP|g" > "$T9_PYFILE"
-    python3 "$T9_PYFILE" >/dev/null 2>&1
+    printf '%s' "$T9_PY_BLOCK" > "$T9_PYFILE"
+    python3 "$T9_PYFILE" "$T9_MCP" >/dev/null 2>&1
 
     if python3 -c "
 import json
@@ -1171,11 +1174,22 @@ fi
 echo "--- T19: orphan detection is diagnostic and CWD-independent ---"
 
 T19_BLOCK="$TEST_WS/t19-orphan-block.sh"
-awk '
-    /^# === Step 6f: Orphan detection/{found=1; next}
-    /^# === Step 7: Validate applied changes/{found=0}
-    found{print}
-' "$TEMPLATE_DIR/update.sh" > "$T19_BLOCK"
+{
+    # issue #402: Step 6f now gates on py_available(), defined in the Python
+    # resolution preamble (not part of the Step 6f slice) — an isolated
+    # extraction needs that dependency too, same reasoning as pulling in only
+    # the Step 6f block itself instead of the whole script.
+    awk '
+        /^# === Cross-platform Python resolution/{found=1}
+        /^py_available\(\) \{/{print; found=0; next}
+        found{print}
+    ' "$TEMPLATE_DIR/update.sh"
+    awk '
+        /^# === Step 6f: Orphan detection/{found=1; next}
+        /^# === Step 7: Validate applied changes/{found=0}
+        found{print}
+    ' "$TEMPLATE_DIR/update.sh"
+} > "$T19_BLOCK"
 
 if [ ! -s "$T19_BLOCK" ]; then
     fail "T19: could not extract the orphan-detection block"

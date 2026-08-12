@@ -544,21 +544,40 @@ render_iwe_status() {
   echo "| Подсистема | Статус | Детали |"
   echo "|------------|--------|--------|"
 
-  # Per-role launchd agents (старый com.exocortex.scheduler отключён с марта 2026)
-  # com.strategist.morning намеренно отключён 2026-06-13 (bug-2026-06-12-day-open-dual-writer-race.md):
-  # сервер = единственный владелец Day Open. На Mac владельцем конвейера Day Open теперь
-  # является com.iwe.day-open (WP-356). Проверяем его + остальные per-role агенты.
+  # Per-role launchd agents. issue #412: раньше список из четырёх агентов был
+  # зашит в коде (com.iwe.day-open/com.strategist.notereview/com.pulse.daily/
+  # com.aisystant.profiler.recalculate) — на инсталляции, где реально стоят
+  # другие per-role юниты (например com.strategist.morning/weekreview),
+  # строка не могла стать зелёной: зашитые агенты вечно "missing", а реально
+  # установленные вообще не проверялись. Вместо списка ожиданий — читаем,
+  # что реально лежит в ~/Library/LaunchAgents/ на этой машине, и проверяем
+  # ровно это (тот же принцип, что не-деплой ⚪ ≠ авария у Scheduler/триаж
+  # выше). Фильтр ограничен известными IWE-префиксами (не голый `com.*.plist`,
+  # code review нашёл: захватывал бы любой сторонний plist — Docker, Adobe,
+  # Google Keystone и т.п., воспроизводя тот же симптом «никогда не
+  # зелёная» зеркально, ложными срабатываниями вместо пропусков).
   if command -v launchctl &>/dev/null; then
-    local agents_bad=""
-    for agent in com.iwe.day-open com.strategist.notereview com.pulse.daily com.aisystant.profiler.recalculate; do
-      local line status
-      line=$(launchctl list 2>/dev/null | awk -v a="$agent" '$3==a{print}')
-      [ -z "$line" ] && { agents_bad="$agents_bad $agent(missing)"; continue; }
-      status=$(echo "$line" | awk '{print $2}')
-      [ "$status" != "0" ] && [ "$status" != "-" ] && agents_bad="$agents_bad $agent(exit=$status)"
-    done
-    if [ -z "$agents_bad" ]; then
-      echo "| LaunchAgents | 🟢 | per-role агенты OK |"
+    local plist_dir="$HOME/Library/LaunchAgents"
+    local agents_bad="" agents_checked=0
+    if [ -d "$plist_dir" ]; then
+      for plist in "$plist_dir"/com.iwe.*.plist "$plist_dir"/com.strategist.*.plist \
+                   "$plist_dir"/com.pulse.*.plist "$plist_dir"/com.aisystant.*.plist \
+                   "$plist_dir"/com.exocortex.*.plist "$plist_dir"/com.extractor.*.plist; do
+        [ -e "$plist" ] || continue
+        local agent
+        agent=$(basename "$plist" .plist)
+        agents_checked=$((agents_checked + 1))
+        local line status
+        line=$(launchctl list 2>/dev/null | awk -v a="$agent" '$3==a{print}')
+        [ -z "$line" ] && { agents_bad="$agents_bad $agent(not loaded)"; continue; }
+        status=$(echo "$line" | awk '{print $2}')
+        [ "$status" != "0" ] && [ "$status" != "-" ] && agents_bad="$agents_bad $agent(exit=$status)"
+      done
+    fi
+    if [ "$agents_checked" -eq 0 ]; then
+      echo "| LaunchAgents | ⚪ | ни одного plist в ~/Library/LaunchAgents — планировщик здесь не устанавливали |"
+    elif [ -z "$agents_bad" ]; then
+      echo "| LaunchAgents | 🟢 | per-role агенты OK ($agents_checked) |"
     else
       echo "| LaunchAgents | 🟡 |${agents_bad} |"
     fi
