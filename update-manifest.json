@@ -633,7 +633,7 @@
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "d50ef03fe85d1b94b6afa0786402c6d7e69eebda808de302ad67fc61c6434277"
+      "sha256": "add9b00cceff0d11fc89ef4cb2e7171cabfc1259a1cf3b532e90f531970b85a6"
     },
     {
       "path": "CLAUDE.md",
@@ -1857,7 +1857,7 @@
     },
     {
       "path": "scripts/claude-peer-adapter.sh",
-      "sha256": "4cf626ca5615f49465fbf9255b3be6033e025bf9268009aa49eb99c464e905b0"
+      "sha256": "d55d5920c0aec585adf34a55af2720220356871f7eae5c8e6a2c7c2f6b5eb080"
     },
     {
       "path": "scripts/close-wp.sh",
@@ -1865,7 +1865,7 @@
     },
     {
       "path": "scripts/codex-peer-adapter.sh",
-      "sha256": "177f76df2eeaad6506b4727256d095e01f0e94caad43f682f3a24b65f67de0b5"
+      "sha256": "c735ed3ffba03d20ea14e388625a89c88be357b0618c4b276f512e2a38daf169"
     },
     {
       "path": "scripts/config/pipeline-security-whitelist.yaml",
@@ -1890,14 +1890,6 @@
     {
       "path": "scripts/create-skill.sh",
       "sha256": "073c0bd106f8caf404330e216e4303429839fed08e0075c97e8d4c98694a06f7"
-    },
-    {
-      "path": "scripts/create-wp.sh",
-      "sha256": "53e54c4fb7fdd08691404527012e50c71210ca3f1637cc3f79a07773263ce0ac"
-    },
-    {
-      "path": "scripts/create-wp.sh",
-      "sha256": "53e54c4fb7fdd08691404527012e50c71210ca3f1637cc3f79a07773263ce0ac"
     },
     {
       "path": "scripts/create-wp.sh",
@@ -1929,7 +1921,7 @@
     },
     {
       "path": "scripts/day-open-pipeline.sh",
-      "sha256": "1e187e32dcccea33e89b6f1e5df211864ca886d78b3ecb3c6efc5828e7415427"
+      "sha256": "88d5480323bdf73935aed1e2a0726d3e384632948f19f148b3be35304efe424a"
     },
     {
       "path": "scripts/day-open-preflight.sh",
@@ -1985,7 +1977,7 @@
     },
     {
       "path": "scripts/hermes-peer-adapter.sh",
-      "sha256": "4d6c4f8711e67810d226fbe7daff140096ab03b8ccbd6ae5d7d00f1b2c42b1d1"
+      "sha256": "0d0f13fc6d00bd4c5b29df813e1b1aa9382441ad968d4ed891b03d70173dd700"
     },
     {
       "path": "scripts/hindsight_adapter.py",
