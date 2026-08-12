@@ -93,7 +93,7 @@
     },
     {
       "path": ".claude/hooks/memory-exocortex-sync.sh",
-      "sha256": "db77c45f58aa5d783f4a337c505665060eed474d0ccdaa048484ba4050610a0d"
+      "sha256": "871c87683a683c98d3df253533fa4cfe9eb665a722d711d07dc8a614846ac1ae"
     },
     {
       "path": ".claude/hooks/pack-creator-spf-guard.sh",
@@ -253,7 +253,7 @@
     },
     {
       "path": ".claude/settings.json",
-      "sha256": "6a2ea7fd90e2451e0662ace6b7e76041fd9be13b047c82c5dfcbd452a3ad1e6b"
+      "sha256": "6b813603cd749920206338e43d0fccb4b850f26e1f43ec7f9fd126dfdd8b51be"
     },
     {
       "path": ".claude/skills-catalog.yaml",
@@ -269,7 +269,7 @@
     },
     {
       "path": ".claude/skills/agent-fault/SKILL.md",
-      "sha256": "900306a3b85029aa3b740ec2278da693176a691dde548733ffbabb09dc193e73"
+      "sha256": "657db63775afc4ba41b3e72d4d2d1ad549142dde1522f1eb42ecd61b6fd67ebf"
     },
     {
       "path": ".claude/skills/apply-captures/SKILL.md",
@@ -305,7 +305,7 @@
     },
     {
       "path": ".claude/skills/check-secret/SKILL.md",
-      "sha256": "c2ba83003aab46ead77d33b1d84f21ca8c690a7df92b4907494fd321df2162e6"
+      "sha256": "1a614d7a6fc460c50e6c9aa1573c1ef8bc0daa3938ab1a99c8d575f1bfa00164"
     },
     {
       "path": ".claude/skills/check-secret/check.sh",
@@ -353,7 +353,7 @@
     },
     {
       "path": ".claude/skills/extend/SKILL.md",
-      "sha256": "ee882b3b180b8721727fa84cf86138ca5114c787d8bd83449db499e9424440ff"
+      "sha256": "d5f4cbc7a7883f1f03a33f5fd982c3941527de2359a4784fa60e2ddd168ac912"
     },
     {
       "path": ".claude/skills/fpf/SKILL.md",
@@ -385,7 +385,7 @@
     },
     {
       "path": ".claude/skills/kimi-peer-writer/SKILL.md",
-      "sha256": "15ef3aee2dc24d5798b20ffb1c30b36973eac52a5ec3b19bee33ed6b1c2244d3"
+      "sha256": "50961a5c7ef49101dc594bfeb9a35164e1aef4468dfc9e3e48067b98c645bbb5"
     },
     {
       "path": ".claude/skills/lesson-close/SKILL.md",
@@ -421,7 +421,7 @@
     },
     {
       "path": ".claude/skills/peer-conversation/SKILL.md",
-      "sha256": "9ec0c4ff52928c42dadc690373fb38ba70a1bf44addf20a669c270ffd9c7bd0a"
+      "sha256": "b3d61c6491905c28a5f2a0eea0a8efd4960593a9941860711d1c3c6beea1090c"
     },
     {
       "path": ".claude/skills/personal-guide-render/SKILL.md",
@@ -561,7 +561,7 @@
     },
     {
       "path": ".claude/skills/week-close-pilot/SKILL.md",
-      "sha256": "e9accf6bfe8def5cb87fb811b3370ff9bd236b6ec7bf3b6c84b9293338a893cc"
+      "sha256": "5b0ff7a1f2d462722aa0dfb006c82842fe8c87da5c12f7600d55854784d86757"
     },
     {
       "path": ".claude/skills/week-close/SKILL.md",
@@ -573,7 +573,7 @@
     },
     {
       "path": ".claude/skills/wp-new/SKILL.md",
-      "sha256": "06edf17ec6a251ef4b3272dfd63a7497856d1b3f7510e94b46cf3c7866618b76"
+      "sha256": "02d6265b087f452adf7c3a71c4122caec1f6f833de84f7b062fc3e61c021639a"
     },
     {
       "path": ".claude/styles/p05-core.md",
@@ -585,7 +585,7 @@
     },
     {
       "path": ".claude/sync-manifest.yaml",
-      "sha256": "5181fabdf723fbc7ba0afc0901197c18f74d64c7067b0412b02c8cfb1757908b"
+      "sha256": "d4d1fddfce286cb7db3300b421a1bc0552210dd8e9356aafb7e3b84765a20cc7"
     },
     {
       "path": ".claude/templates/drr-template.md",
@@ -1605,7 +1605,7 @@
     },
     {
       "path": "roles/strategist/prompts/strategy-session-weekly/steps/08-confirm.md",
-      "sha256": "036d1e1fb2f0c762c1b5752c4d101dc382a5962a3d6df62b252cb49e21ca9ec9"
+      "sha256": "18fd3f447bd0d165d8226498bae14732ec6d6f9db5415c4543ce1dc06d6f08fd"
     },
     {
       "path": "roles/strategist/prompts/strategy-session.md",
@@ -1929,7 +1929,7 @@
     },
     {
       "path": "scripts/day-open-scaffold.sh",
-      "sha256": "3162a76478126c69759defd417fa2523af7fbbb8777721db6787c4b89ba85c99"
+      "sha256": "830ac941393c1029bd9593476928cc9c296d95b0cd84565cec442730a375619b"
     },
     {
       "path": "scripts/day-open-smoke-extended.sh",
@@ -2305,7 +2305,7 @@
     },
     {
       "path": "scripts/tests/test_update_install_path_guard.sh",
-      "sha256": "e86c97daa4bcaa224b1c1686b6c291f5a670c63dc94c5fde83c531fa6004d4ca"
+      "sha256": "d8e59a1836aaea9642f8a380c2dad3de2ae29104c1db337077eeb92b59f966d6"
     },
     {
       "path": "scripts/tests/test_upgrade_worktree_cleanup.sh",
@@ -2397,7 +2397,7 @@
     },
     {
       "path": "update.sh",
-      "sha256": "fcd35d0d72afe32ec6b44c9c04bdd124e58c522ba80dedcc00e0de6fe8e274f5"
+      "sha256": "27ed2bf7dc8722f1d43932241f5b7b44c7bd70494a72e469b49768aaf96433bf"
     }
   ],
   "excluded_paths": [
