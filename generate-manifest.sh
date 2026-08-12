@@ -143,6 +143,7 @@ SCRIPT_CONTRACT_EXPLICIT_INCLUDE=(
     "scripts/tests/test_hook_classification.sh"
     "scripts/tests/test_update_install_path_guard.sh"
     "scripts/tests/test_upgrade_worktree_cleanup.sh"
+    "scripts/tests/test_issues_413_418.py"
     "scripts/tests/test_session_guard_hypothesis_gate.sh"
 )
 
