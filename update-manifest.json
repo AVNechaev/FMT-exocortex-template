@@ -61,7 +61,7 @@
     },
     {
       "path": ".claude/hooks/destructive-guard.sh",
-      "sha256": "082102b3fa6ebf3cae4a968f6556f4fc0b03c80edf0351ea8b57e540752e8a19"
+      "sha256": "3fd94e91db31347513df92e1070fe09a48fce4b8db0b321f7bc67e3ffcc1829c"
     },
     {
       "path": ".claude/hooks/dry-run-gate.sh",
@@ -245,7 +245,7 @@
     },
     {
       "path": ".claude/scripts/memory-drift-scan.py",
-      "sha256": "fbe797ff59dd6260f8c3187ee3902cab37d35a37a70aff494996b4cbaff734bb"
+      "sha256": "e1a484a888fc81be5ffa8acb3d2d375e8bec7794385982b11d4d71f24a0d69b8"
     },
     {
       "path": ".claude/scripts/wp-sync-bundle.sh",
@@ -1861,7 +1861,7 @@
     },
     {
       "path": "scripts/close-wp.sh",
-      "sha256": "448b1a68971b4ef9a69e44a38384d745bca38cf72cce94afed700df2bf15fc48"
+      "sha256": "57ac198f937530a9a692cf9baf98729006ae5576e628d2c19323dce6ef11dcac"
     },
     {
       "path": "scripts/codex-peer-adapter.sh",
@@ -1929,7 +1929,7 @@
     },
     {
       "path": "scripts/day-open-scaffold.sh",
-      "sha256": "cc6ba46e9ff10ed40e6b334483f798f565e098119cbeb1cfbd623500e3b121d5"
+      "sha256": "3162a76478126c69759defd417fa2523af7fbbb8777721db6787c4b89ba85c99"
     },
     {
       "path": "scripts/day-open-smoke-extended.sh",
@@ -2021,7 +2021,7 @@
     },
     {
       "path": "scripts/iwe-drift-helpers/check-status-legend.sh",
-      "sha256": "8f39d9857944ae166eb08c813b665f3b51404f2d1d8663566a4be5f37858d21a"
+      "sha256": "3a20ed7301bc59312aa47e2bd2a1942a1864f983cc02efcbed8c1a02f3c5da9b"
     },
     {
       "path": "scripts/iwe-drift.sh",
@@ -2294,6 +2294,10 @@
     {
       "path": "scripts/tests/test_hook_classification.sh",
       "sha256": "99c99c821223e70a8a0b1cb89ce9a72f2bd1e5eebd011c2f42eadde056125491"
+    },
+    {
+      "path": "scripts/tests/test_issues_413_418.py",
+      "sha256": "11c81d661b3b1bfe98f7cd33a70429f7aeb3fd2909ca13fec6f731eafbc9ebd5"
     },
     {
       "path": "scripts/tests/test_session_guard_hypothesis_gate.sh",
