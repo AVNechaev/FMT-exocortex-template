@@ -32,6 +32,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0  # WP-7 Ф62 п.4: нужна полная история для git diff (keyword-warning ниже)
       - name: Check CHANGELOG/manifest version sync
         run: |
           if [ ! -f "CHANGELOG.md" ] || [ ! -f "update-manifest.json" ]; then
@@ -57,6 +59,55 @@ jobs:
           echo "PASS: CHANGELOG/manifest version sync ($CHANGELOG_VERSION)"
       - name: Check README version badge sync
         run: bash scripts/sync-version-badge.sh --check
+
+      # WP-7 Ф62 п.4: подстраховка от пропуска метки [security] при разметке
+      # CHANGELOG (allowlist/рендер — scripts/changelog-append.sh). Только
+      # предупреждение, никогда не блокирует — DRR:
+      # decisions/2026-08/2026-08-10-wp-7-arhgeyt-changelog-klassifikaciya-bez-lts.md
+      - name: Warn on unlabeled security-like CHANGELOG entries
+        run: |
+          if [ ! -f CHANGELOG.md ]; then
+            echo "SKIP: CHANGELOG.md не найден"
+            exit 0
+          fi
+
+          EVENT="${{ github.event_name }}"
+          if [ "$EVENT" = "push" ]; then
+            BASE="${{ github.event.before }}"
+          elif [ "$EVENT" = "pull_request" ]; then
+            BASE="${{ github.event.pull_request.base.sha }}"
+          else
+            echo "SKIP: событие '$EVENT' (schedule/workflow_dispatch) не несёт нового диапазона коммитов"
+            exit 0
+          fi
+
+          # Общая логика извлечения — scripts/changelog-diff-lines.sh
+          # (выделена из дублей в этом файле и notify-update.yml, code review
+          # 13.08: третье повторение одной и той же логики, DP.SC.172 P2).
+          NEW_LINES=$(bash scripts/changelog-diff-lines.sh "$BASE")
+
+          if [ -z "$NEW_LINES" ]; then
+            echo "PASS: нет новых строк CHANGELOG.md для проверки"
+            exit 0
+          fi
+
+          # Узкий список — голые "leak"/"credential" дают false-positive на
+          # рутинных багфиксах вроде "fix: memory leak" (пир-ревью с Codex,
+          # 2026-08-13).
+          PATTERN='vulnerability|CVE-[0-9]{4}-[0-9]+|exploit|credential leak|secret leak|token leak|data breach|privilege escalation|\bRCE\b'
+
+          while IFS= read -r line; do
+            [ -z "$line" ] && continue
+            # Якорим на позицию бирки-префикса, не голую подстроку — иначе
+            # "[migration] fix: ... CVE-2026-9999 in [security]-adjacent
+            # helper" молча проходит без предупреждения (найдено code review
+            # 13.08, verify-подагент).
+            if echo "$line" | grep -qiE "$PATTERN" && ! echo "$line" | grep -q '^- \[security\] '; then
+              echo "::warning file=CHANGELOG.md::возможно security-пункт без метки [security]: $line"
+            fi
+          done <<< "$NEW_LINES"
+
+          echo "PASS: проверка завершена (предупреждение — не блокировка)"
 
   # Integration contract validator + fresh-install smoke-test.
   # Defense-in-depth для случая `git commit --no-verify` в pre-commit.
