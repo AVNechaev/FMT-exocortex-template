@@ -5,6 +5,22 @@ All notable changes to FMT-exocortex-template will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versioning: [Semantic Versioning](https://semver.org/).
 
+Классификация записей (WP-7 Ф62 п.4): пункт получает метку `security`/
+`migration`/`behavior`/`optional` через git trailer в теле коммита —
+`Changelog-Tag: <tag>`. **Trailer обязан быть в последнем непрерывном
+блоке строк вида `key: value` в самом конце сообщения** (git-конвенция
+trailer-парсинга) — если после него идёт ещё один абзац (например,
+`Refs:`), git его не распознает и коммит останется без метки:
+```
+fix(area): краткое описание
+
+Тело коммита с объяснением.
+
+Changelog-Tag: security
+Refs: WP-NNN
+```
+Отсутствие метки не означает «безопасно» — просто «не классифицировано».
+
 
 
 
