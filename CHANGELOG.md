@@ -118,16 +118,20 @@ Versioning: [Semantic Versioning](https://semver.org/).
 
 
 
-## [Unreleased] — обновлено 2026-08-12
+
+## [Unreleased] — обновлено 2026-08-13
 
 ### Added
 
+- `c578eb8` feat: promote day-open-pipeline.sh to platform
 - `0c1cfba` feat(wp518): link work packages to hypotheses
 - `52887e6` feat(create-wp): Hypothesis Gate (WP-496 Ф8) — --hypothesis обязателен при наличии журнала гипотез
 - `86daabe` feat(strategy-cycle): WP-agnostic decision-package contract + hypothesis-log regulation
 
 ### Changed
 
+- `9bf3db4` Merge pull request #421 from TserenTserenov/codex/fix-manifest-after-420-delivery
+- `88e447c` Merge pull request #420 from TserenTserenov/codex/fix-issues-413-418-main
 - `b8b903f` Merge remote-tracking branch 'origin/main'
 - `6402816` revert(create-wp): откат Hypothesis Gate (52887e6) — заменён механизмом РП518
 - `1ca4fe0` Merge remote-tracking branch 'origin/main'
@@ -139,6 +143,11 @@ Versioning: [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- `a6e4c36` fix(#405): treat cancelled WPs as terminal (#422)
+- `6c3d493` fix: regenerate manifest after #420
+- `89f1b84` fix: resolve regressions #413-#418
+- `a4cbca7` fix(#406): Update IWE светофор day-open-scaffold.sh был вечнозелёным
+- `0e58249` fix(#411,#412,#404,#408,#409,#410,#397,#402): issue funnel — hook/detector/skill/update.sh fixes
 - `7bfa0e6` fix(onboarding): correct МИМ name in template docs — Мастерская, not Школа
 
 
