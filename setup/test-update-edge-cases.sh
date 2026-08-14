@@ -30,6 +30,8 @@
 #   T29: author_mode skip classifier verdicts on synthetic template history (WP-7 F71)
 #   T30: update.sh wires stage-A observability scripts in (WP-7 F71)
 #   T31: extensions-gate is fail-closed: traversal/symlink/broken-manifest/manifest-edit block (WP-7 F71)
+#   T32: settings-merge-apply.sh applies with backup, rolls back on broken input (WP-7 F71 stage B)
+#   T33: update.sh wires stage-B flags with consensus safeguards (WP-7 F71)
 #
 # Exit: 0 = all PASS, N = N tests failed
 #
@@ -1921,6 +1923,72 @@ if grep -Fq '"defaultMode": "default"' "$TEMPLATE_DIR/.claude/settings.json"; th
     pass "T31: template settings.json ships defaultMode=default (not acceptEdits)"
 else
     fail "T31: template settings.json must not ship auto-accept edit mode"
+fi
+
+# T32: settings-merge-apply.sh applies with backup and never leaves a torn file (WP-7 F71 stage B)
+echo ""
+echo "--- T32: settings.json merge APPLY with backup/rollback (WP-7 F71 stage B) ---"
+T32_WS="$TEST_WS/t32-ws"
+mkdir -p "$T32_WS/.claude"
+cp "$TEST_WS/t28/template.json" "$T32_WS/template.json"
+cp "$TEST_WS/t28/workspace.json" "$T32_WS/.claude/settings.json"
+T32_APPLY_OUT=$(bash "$TEMPLATE_DIR/.claude/scripts/settings-merge-apply.sh" \
+    "$T32_WS/template.json" "$T32_WS/.claude/settings.json" python3 2>&1)
+T32_RC=$?
+if [ "$T32_RC" -eq 0 ] && python3 -c '
+import json, sys
+p = json.load(open(sys.argv[1]))
+hooks = json.dumps(p.get("hooks", {}))
+sys.exit(0 if p["model"] == "sonnet" and p["newKey"] is True and "my-custom.sh" in hooks and "new-hook.sh" in hooks else 1)
+' "$T32_WS/.claude/settings.json"; then
+    pass "T32: merge applied — user values kept, template additions present"
+else
+    fail "T32: apply failed or merged content wrong (rc=$T32_RC): $T32_APPLY_OUT"
+fi
+T32_BACKUP=$(find "$T32_WS/.backups/settings-merge" -name 'settings.json.*' 2>/dev/null | head -1)
+if [ -n "$T32_BACKUP" ] && grep -Fq '"userOnly": 1' "$T32_BACKUP"; then
+    pass "T32: backup of the pre-merge settings.json exists"
+else
+    fail "T32: no backup written before apply"
+fi
+if [ ! -f "$T32_WS/.claude/settings.merged.preview.json" ]; then
+    pass "T32: preview file is consumed after a successful apply"
+else
+    fail "T32: preview file left behind after apply"
+fi
+printf '%s\n' '{broken' > "$T32_WS/broken-template.json"
+T32_BEFORE=$(shasum -a 256 "$T32_WS/.claude/settings.json" | cut -d' ' -f1)
+if bash "$TEMPLATE_DIR/.claude/scripts/settings-merge-apply.sh" \
+    "$T32_WS/broken-template.json" "$T32_WS/.claude/settings.json" python3 >/dev/null 2>&1; then
+    fail "T32: broken template input was accepted by apply"
+else
+    T32_AFTER=$(shasum -a 256 "$T32_WS/.claude/settings.json" | cut -d' ' -f1)
+    if [ "$T32_BEFORE" = "$T32_AFTER" ]; then
+        pass "T32: broken input rejected, workspace settings.json byte-identical"
+    else
+        fail "T32: broken input rejected but workspace settings.json changed"
+    fi
+fi
+
+# T33: update.sh wires stage-B flags with their consensus safeguards (WP-7 F71)
+echo ""
+echo "--- T33: stage-B flags contract in update.sh (WP-7 F71) ---"
+if grep -Fq -- '--apply-settings-merge) APPLY_SETTINGS_MERGE=true' "$TEMPLATE_DIR/update.sh" && \
+   grep -Fq -- '--refresh-stale)    REFRESH_STALE=true' "$TEMPLATE_DIR/update.sh"; then
+    pass "T33: both stage-B flags are parsed and default to off"
+else
+    fail "T33: stage-B flag parsing missing in update.sh"
+fi
+if grep -Fq -- '--refresh-stale отклонён' "$TEMPLATE_DIR/update.sh" && \
+   grep -Fq '.backups/refresh-stale/' "$TEMPLATE_DIR/update.sh"; then
+    pass "T33: refresh-stale refuses on unknown>0 and backs up before overwrite"
+else
+    fail "T33: refresh-stale safeguards (unknown block / backup) missing"
+fi
+if grep -Fq 'settings-merge-apply.sh' "$TEMPLATE_DIR/update.sh"; then
+    pass "T33: update.sh delegates settings apply to the standalone tested script"
+else
+    fail "T33: update.sh does not call settings-merge-apply.sh"
 fi
 
 # ============================================================
