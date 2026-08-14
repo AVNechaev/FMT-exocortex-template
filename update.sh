@@ -412,6 +412,39 @@ apply_refresh_stale() {
     echo "  --refresh-stale: обновлено $refreshed из ${#AUTHOR_STALE_PAIRS[@]}, бэкап: $backup_root"
 }
 
+# --apply-settings-merge (stage B): применяется независимо от того, менялся ли
+# settings.json шаблона в ЭТОМ прогоне — живой e2e-прогон 14.08 показал, что
+# пользовательский путь «увидел предпросмотр → перезапустил с флагом» иначе
+# делает ничего (шаблон уже обновлён прошлым прогоном, файл не в UPDATED).
+apply_settings_merge_if_requested() {
+    [ "$APPLY_SETTINGS_MERGE" = "true" ] || return 0
+    local src="$SCRIPT_DIR/.claude/settings.json"
+    local dst="$WORKSPACE_DIR/.claude/settings.json"
+    local applier="$SCRIPT_DIR/.claude/scripts/settings-merge-apply.sh"
+    if [ ! -f "$src" ] || [ ! -f "$dst" ]; then
+        echo "  ⚠ --apply-settings-merge: нет одной из копий settings.json, применять нечего"
+        return 0
+    fi
+    if cmp -s "$src" "$dst"; then
+        echo "  --apply-settings-merge: settings.json уже совпадает с шаблоном, слияние не требуется"
+        return 0
+    fi
+    if ! py_available || [ ! -f "$applier" ]; then
+        echo "  ⚠ --apply-settings-merge: python3 или $applier недоступны — слияние не применено"
+        return 0
+    fi
+    local apply_rc=0 apply_out
+    apply_out=$(bash "$applier" "$src" "$dst" "$PY_BIN" 2>&1) || apply_rc=$?
+    printf '%s\n' "$apply_out" | sed 's/^/    /'
+    if [ "$apply_rc" -eq 0 ]; then
+        echo "  ✓ .claude/settings.json — обновлён слиянием (--apply-settings-merge)"
+    else
+        echo "  ⚠ .claude/settings.json — слияние не применено (см. причину выше), workspace-копия цела"
+        report_settings_merge_preview "$src" "$dst"
+    fi
+    return 0
+}
+
 # settings.json merge PREVIEW (WP-7 F71 stage A): generate a merged candidate
 # next to the real file and report the differences. The real settings.json is
 # intentionally left untouched (bug-2026-07-11 clobber guard stays in force);
@@ -1071,6 +1104,10 @@ if [ "$TOTAL_CHANGES" -eq 0 ]; then
         fi
     fi
     finish_update_transaction
+    # Флаги stage B осмысленны и когда обновлений нет: workspace-копии могли
+    # отстать от уже актуального шаблона (repair_pass выше их классифицировал).
+    apply_settings_merge_if_requested
+    report_author_skip_summary
     echo "✓ Всё актуально. Обновлений нет. ($UNCHANGED файлов проверено)"
     exit 0
 fi
@@ -1708,18 +1745,11 @@ for f in "${NEW_FILES[@]}" "${UPDATED_FILES[@]}"; do
                 mkdir -p "$(dirname "$dst")"
                 cp "$SCRIPT_DIR/$f" "$dst"
                 echo "  ✓ $f → workspace (new install)"
-            elif [ "$APPLY_SETTINGS_MERGE" = "true" ] && py_available && [ -f "$SCRIPT_DIR/.claude/scripts/settings-merge-apply.sh" ]; then
-                # Stage B: явный опт-ин пилота. Скрипт сам делает бэкап,
-                # пост-валидацию и откат при любом сбое.
-                APPLY_RC=0
-                APPLY_OUT=$(bash "$SCRIPT_DIR/.claude/scripts/settings-merge-apply.sh" "$SCRIPT_DIR/$f" "$dst" "$PY_BIN" 2>&1) || APPLY_RC=$?
-                printf '%s\n' "$APPLY_OUT" | sed 's/^/    /'
-                if [ "$APPLY_RC" -eq 0 ]; then
-                    echo "  ✓ $f — обновлён слиянием (--apply-settings-merge)"
-                else
-                    echo "  ⚠ $f — слияние не применено (см. причину выше), workspace-копия цела"
-                    report_settings_merge_preview "$SCRIPT_DIR/$f" "$dst"
-                fi
+            elif [ "$APPLY_SETTINGS_MERGE" = "true" ]; then
+                # Stage B применяется единым блоком ПОСЛЕ propagation-цикла
+                # (apply_settings_merge_if_requested) — здесь только тишина,
+                # чтобы не задваивать вывод для файла, попавшего в UPDATED.
+                :
             else
                 echo "  ⚠ $f — платформа обновила hooks/permissions, workspace-копия НЕ тронута (несёт пользовательские хуки). Сверь вручную: diff \"$SCRIPT_DIR/$f\" \"$dst\""
                 report_settings_merge_preview "$SCRIPT_DIR/$f" "$dst"
@@ -1727,6 +1757,10 @@ for f in "${NEW_FILES[@]}" "${UPDATED_FILES[@]}"; do
             ;;
     esac
 done
+
+# Stage B: слияние настроек по явному флагу — вне propagation-цикла, чтобы
+# работать и на повторном прогоне, когда settings.json шаблона уже не в UPDATED.
+apply_settings_merge_if_requested
 
 # === Step 5d: Repair-pass для critical runtime files ===
 # Выполняется ПОСЛЕ propagation, чтобы repair не дублировал работу NEW_FILES/UPDATED_FILES.
