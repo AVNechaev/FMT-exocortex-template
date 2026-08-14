@@ -236,6 +236,10 @@
       "sha256": "229d92059b32a772424853ee3c5ac56e2141acfa209b2d42db8879454deb033a"
     },
     {
+      "path": ".claude/scripts/classify-workspace-copy.sh",
+      "sha256": "52809beda6fed89d77251ea37135eb14cd4ec0f669a49255655b6c1c7de3d427"
+    },
+    {
       "path": ".claude/scripts/generate-rules-registry.py",
       "sha256": "814607296a21ae1ce8a21f2484fce2c3e62be23f481da172fb55f920dfab793a"
     },
@@ -246,6 +250,10 @@
     {
       "path": ".claude/scripts/memory-drift-scan.py",
       "sha256": "e1a484a888fc81be5ffa8acb3d2d375e8bec7794385982b11d4d71f24a0d69b8"
+    },
+    {
+      "path": ".claude/scripts/settings-merge-preview.py",
+      "sha256": "85cc623ab22dbc311de1b892c22cd5e2d2ce9edc9b46cbaf97b38dc7a4cff453"
     },
     {
       "path": ".claude/scripts/wp-sync-bundle.sh",
@@ -2401,7 +2409,7 @@
     },
     {
       "path": "update.sh",
-      "sha256": "27ed2bf7dc8722f1d43932241f5b7b44c7bd70494a72e469b49768aaf96433bf"
+      "sha256": "a0ea8ea3d6e3d81e0e60f65c8ba2bf5341bedafed45c1e5d41b1e1b12c405bb5"
     }
   ],
   "excluded_paths": [

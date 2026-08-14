@@ -26,6 +26,9 @@
 #   T22: Quick Close requires a runner card only when the runner and graph exist (issue #356)
 #   T23: wp-sync-bundle prefers folder cards and reads structured open phase statuses
 #   T24-T27: update safety, bootstrap/path contracts, multiplier opt-out, #384/#387/#388
+#   T28: settings.json merge preview never touches inputs, honors merge rules (WP-7 F71)
+#   T29: author_mode skip classifier verdicts on synthetic template history (WP-7 F71)
+#   T30: update.sh wires stage-A observability scripts in (WP-7 F71)
 #
 # Exit: 0 = all PASS, N = N tests failed
 #
@@ -1747,12 +1750,125 @@ fi
 
 if MEMORY_OUTPUT=$(WORKSPACE_DIR="$TEMPLATE_DIR" IWE_ROOT="$TEMPLATE_DIR" \
     bash "$TEMPLATE_DIR/scripts/memory-validate.sh" --dir "$TEMPLATE_DIR/memory" --quiet) && \
-   grep -q 'Итог: 29/29 файлов OK' <<<"$MEMORY_OUTPUT" && \
+   grep -qE 'Итог: ([0-9]+)/\1 файлов OK' <<<"$MEMORY_OUTPUT" && \
    WORKSPACE_DIR="$TEMPLATE_DIR" IWE_ROOT="$TEMPLATE_DIR" \
     bash "$TEMPLATE_DIR/scripts/memory-validate.sh" "$TEMPLATE_DIR/memory/reference/agent-core.md" --quiet >/dev/null; then
     pass "T27: every shipped memory frontmatter checked by the validator is valid"
 else
     fail "T27: shipped memory frontmatter still violates its own schema"
+fi
+
+# T28: settings-merge-preview.py builds a merged preview and never touches inputs (WP-7 F71 stage A)
+echo ""
+echo "--- T28: settings.json merge preview (WP-7 F71 stage A) ---"
+T28_DIR="$TEST_WS/t28"
+mkdir -p "$T28_DIR"
+cat > "$T28_DIR/template.json" <<'EOF'
+{"model": "opus", "hooks": {"PreToolUse": [{"matcher": "Bash", "hooks": [{"type": "command", "command": "tpl-hook.sh"}]}], "SessionStart": [{"hooks": [{"type": "command", "command": "new-hook.sh"}]}]}, "permissions": {"allow": ["Bash(ls:*)", "Bash(git status:*)"]}, "newKey": true}
+EOF
+cat > "$T28_DIR/workspace.json" <<'EOF'
+{"model": "sonnet", "hooks": {"PreToolUse": [{"matcher": "Bash", "hooks": [{"type": "command", "command": "my-custom.sh"}]}, {"matcher": "Bash", "hooks": [{"type": "command", "command": "tpl-hook.sh"}]}]}, "permissions": {"allow": ["Bash(ls:*)", "mcp__my__*"]}, "userOnly": 1}
+EOF
+T28_WS_HASH_BEFORE=$(shasum -a 256 "$T28_DIR/workspace.json" | cut -d' ' -f1)
+T28_REPORT=$(python3 "$TEMPLATE_DIR/.claude/scripts/settings-merge-preview.py" \
+    "$T28_DIR/template.json" "$T28_DIR/workspace.json" "$T28_DIR/preview.json")
+T28_RC=$?
+T28_WS_HASH_AFTER=$(shasum -a 256 "$T28_DIR/workspace.json" | cut -d' ' -f1)
+if [ "$T28_RC" -eq 0 ] && python3 -m json.tool "$T28_DIR/preview.json" >/dev/null 2>&1; then
+    pass "T28: preview is generated and is valid JSON"
+else
+    fail "T28: preview missing or invalid JSON (rc=$T28_RC)"
+fi
+if grep -Fq 'my-custom.sh' "$T28_DIR/preview.json" && grep -Fq 'new-hook.sh' "$T28_DIR/preview.json"; then
+    pass "T28: user hook preserved AND template-new hook added"
+else
+    fail "T28: hook union lost a side (user or template)"
+fi
+if python3 -c '
+import json, sys
+p = json.load(open(sys.argv[1]))
+sys.exit(0 if p["model"] == "sonnet" and p["newKey"] is True and p["userOnly"] == 1 else 1)
+' "$T28_DIR/preview.json"; then
+    pass "T28: conflict keeps user value; template-new and user-only keys survive"
+else
+    fail "T28: scalar merge rules violated (conflict/user-only/template-new)"
+fi
+if grep -Fq '"model"' <<<"$T28_REPORT" && grep -Fq '"hooks_deduped": 1' <<<"$T28_REPORT"; then
+    pass "T28: report names the conflict key and counts deduped hooks"
+else
+    fail "T28: report misses conflict key or dedup counter: $T28_REPORT"
+fi
+if [ "$T28_WS_HASH_BEFORE" = "$T28_WS_HASH_AFTER" ]; then
+    pass "T28: workspace settings.json is byte-identical after preview"
+else
+    fail "T28: preview run modified workspace settings.json"
+fi
+echo '{broken' > "$T28_DIR/bad.json"
+if python3 "$TEMPLATE_DIR/.claude/scripts/settings-merge-preview.py" \
+    "$T28_DIR/bad.json" "$T28_DIR/workspace.json" "$T28_DIR/bad-preview.json" >/dev/null 2>&1; then
+    fail "T28: broken input JSON was accepted"
+else
+    if [ ! -f "$T28_DIR/bad-preview.json" ]; then
+        pass "T28: broken input rejected, no preview written"
+    else
+        fail "T28: broken input rejected but a torn preview file exists"
+    fi
+fi
+
+# T29: classify-workspace-copy.sh verdicts on a synthetic template history (WP-7 F71 stage A)
+echo ""
+echo "--- T29: author_mode skip classifier (WP-7 F71 stage A) ---"
+T29_DIR="$TEST_WS/t29"
+mkdir -p "$T29_DIR/repo"
+git -C "$T29_DIR/repo" init -q
+git -C "$T29_DIR/repo" -c user.email=t@t -c user.name=t commit -q --allow-empty -m root
+echo "v1" > "$T29_DIR/repo/f.md"
+git -C "$T29_DIR/repo" add f.md
+git -C "$T29_DIR/repo" -c user.email=t@t -c user.name=t commit -qm v1
+echo "v2" > "$T29_DIR/repo/f.md"
+git -C "$T29_DIR/repo" add f.md
+git -C "$T29_DIR/repo" -c user.email=t@t -c user.name=t commit -qm v2
+echo "v1" > "$T29_DIR/dst-stale"
+echo "edited by user" > "$T29_DIR/dst-authored"
+echo "v2" > "$T29_DIR/dst-uptodate"
+T29_CLS="$TEMPLATE_DIR/.claude/scripts/classify-workspace-copy.sh"
+t29_case() {
+    local expect="$1"; shift
+    local got
+    got=$(bash "$T29_CLS" "$@")
+    if [ "$got" = "$expect" ]; then
+        pass "T29: $expect"
+    else
+        fail "T29: expected '$expect', got '$got' (args: $*)"
+    fi
+}
+echo "never committed" > "$T29_DIR/repo/orphan.md"
+t29_case "unknown no-history" "$T29_DIR/repo" orphan.md "$T29_DIR/dst-authored"
+t29_case "stale history"     "$T29_DIR/repo" f.md "$T29_DIR/dst-stale"
+t29_case "authored diverged" "$T29_DIR/repo" f.md "$T29_DIR/dst-authored"
+t29_case "uptodate current"  "$T29_DIR/repo" f.md "$T29_DIR/dst-uptodate"
+t29_case "unknown no-git"    "$T29_DIR"      f.md "$T29_DIR/dst-authored"
+if [ "$(bash "$T29_CLS" --templated "$T29_DIR/repo" f.md "$T29_DIR/dst-authored")" = "unknown templated" ]; then
+    pass "T29: --templated downgrades authored to unknown (substituted placeholders)"
+else
+    fail "T29: --templated must not claim 'authored' for substituted files"
+fi
+
+# T30: update.sh wires the stage-A scripts in (grep-level, same idiom as T16)
+echo ""
+echo "--- T30: update.sh integration of stage-A observability (WP-7 F71) ---"
+if grep -Fq 'classify-workspace-copy.sh' "$TEMPLATE_DIR/update.sh" && \
+   grep -Fq 'settings-merge-preview.py' "$TEMPLATE_DIR/update.sh" && \
+   grep -Fq 'report_author_skip_summary' "$TEMPLATE_DIR/update.sh"; then
+    pass "T30: update.sh calls classifier, merge preview and prints the skip summary"
+else
+    fail "T30: update.sh lost a stage-A integration point"
+fi
+T30_GENERIC=$(grep -c 'author_mode: рабочая копия не тронута' "$TEMPLATE_DIR/update.sh" || true)
+if [ "${T30_GENERIC:-0}" -le 1 ]; then
+    pass "T30: generic skip message survives only as the degraded-mode fallback"
+else
+    fail "T30: $T30_GENERIC generic skip messages remain — a skip site bypasses the classifier"
 fi
 
 # ============================================================

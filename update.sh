@@ -305,6 +305,90 @@ author_diverged() {
     return 1
 }
 
+# author_mode skip classification (WP-7 F71 stage A, peer-session 2026-08-14-05):
+# tell the author WHY each file was skipped (authored edits vs merely stale vs
+# undecidable) instead of one generic warning per file — Konstantin's live
+# 0.36.1→0.38.3 report: 43 skipped files triaged by hand for an hour.
+# Delegates to the shipped classifier; a missing classifier degrades loudly
+# (one warning per run), never silently.
+AUTHOR_SKIP_AUTHORED=0
+AUTHOR_SKIP_STALE=0
+AUTHOR_SKIP_UNKNOWN=0
+CLASSIFIER_DEGRADED_WARNED=false
+report_author_skip() {
+    local fpath="$1" dst="$2" mode="${3:-raw}"
+    local classifier="$SCRIPT_DIR/.claude/scripts/classify-workspace-copy.sh"
+    local verdict="" reason=""
+    if [ ! -x "$classifier" ]; then
+        if [ "$CLASSIFIER_DEGRADED_WARNED" = false ]; then
+            echo "  ⚠ классификатор пропусков недоступен ($classifier) — деградация до общего сообщения"
+            CLASSIFIER_DEGRADED_WARNED=true
+        fi
+        echo "  ⚠ $fpath — author_mode: рабочая копия не тронута. Сверь: diff \"$SCRIPT_DIR/$fpath\" \"$dst\""
+        AUTHOR_SKIP_UNKNOWN=$((AUTHOR_SKIP_UNKNOWN + 1))
+        return 0
+    fi
+    local classify_out
+    if [ "$mode" = "templated" ]; then
+        classify_out=$(bash "$classifier" --templated "$SCRIPT_DIR" "$fpath" "$dst" 2>/dev/null || true)
+    else
+        classify_out=$(bash "$classifier" "$SCRIPT_DIR" "$fpath" "$dst" 2>/dev/null || true)
+    fi
+    verdict="${classify_out%% *}"
+    reason="${classify_out#* }"
+    case "$verdict" in
+        uptodate)
+            # Byte-identical to the template — not a real skip, no warning needed.
+            ;;
+        stale)
+            echo "  ⚠ $fpath — author_mode: отстал от шаблона, авторских правок нет. Обновить: cp \"$SCRIPT_DIR/$fpath\" \"$dst\""
+            AUTHOR_SKIP_STALE=$((AUTHOR_SKIP_STALE + 1))
+            ;;
+        authored)
+            echo "  ⚠ $fpath — author_mode: есть авторские правки, не тронут. Сверь: diff \"$SCRIPT_DIR/$fpath\" \"$dst\""
+            AUTHOR_SKIP_AUTHORED=$((AUTHOR_SKIP_AUTHORED + 1))
+            ;;
+        *)
+            echo "  ⚠ $fpath — author_mode: происхождение копии не установлено (${reason:-нет вердикта}), не тронут. Сверь: diff \"$SCRIPT_DIR/$fpath\" \"$dst\""
+            AUTHOR_SKIP_UNKNOWN=$((AUTHOR_SKIP_UNKNOWN + 1))
+            ;;
+    esac
+    return 0
+}
+
+report_author_skip_summary() {
+    local total=$((AUTHOR_SKIP_AUTHORED + AUTHOR_SKIP_STALE + AUTHOR_SKIP_UNKNOWN))
+    [ "$total" -gt 0 ] || return 0
+    echo ""
+    echo "  author_mode: пропущено $total файл(ов) — авторских $AUTHOR_SKIP_AUTHORED, отставших $AUTHOR_SKIP_STALE, неизвестно $AUTHOR_SKIP_UNKNOWN"
+}
+
+# settings.json merge PREVIEW (WP-7 F71 stage A): generate a merged candidate
+# next to the real file and report the differences. The real settings.json is
+# intentionally left untouched (bug-2026-07-11 clobber guard stays in force);
+# auto-apply is a separate flag-gated stage B.
+report_settings_merge_preview() {
+    local src="$1" dst="$2"
+    local merger="$SCRIPT_DIR/.claude/scripts/settings-merge-preview.py"
+    py_available && [ -f "$merger" ] || return 0
+    local preview="$WORKSPACE_DIR/.claude/settings.merged.preview.json"
+    local report_file="$TMPDIR_UPDATE/settings-merge-report.json"
+    if ! "$PY_BIN" "$merger" "$src" "$dst" "$preview" > "$report_file" 2>/dev/null; then
+        echo "    ⚠ предпросмотр слияния не построен (битый JSON в одном из файлов)"
+        return 0
+    fi
+    "$PY_BIN" - "$report_file" <<'PY' 2>/dev/null || true
+import json, sys
+with open(sys.argv[1], encoding="utf-8") as handle:
+    r = json.load(handle)
+print(f"    → предпросмотр слияния: {r['preview']}")
+print(f"    + из шаблона: ключей {r['keys_added_from_template']}, hook-записей {r['hooks_added_from_template']}, permissions {r['permissions_added_from_template']}")
+if r["conflicts"]:
+    print(f"    ⚠ конфликты (оставлено ваше значение): {', '.join(r['conflicts'])}")
+PY
+    return 0
+}
+
 # === Detect directories ===
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
@@ -663,7 +747,7 @@ repair_pass() {
                         REPAIRED=$((REPAIRED + 1))
                     fi
                 elif [ -r "$dst" ] && is_author_mode && [ "$(hash_file "$SCRIPT_DIR/$fpath")" != "$(hash_file "$dst")" ]; then
-                    echo "  ⚠ $fpath — author_mode: рабочая копия не тронута. Сверь: diff \"$SCRIPT_DIR/$fpath\" \"$dst\""
+                    report_author_skip "$fpath" "$dst"
                 elif [ -r "$dst" ] && [ "$(hash_file "$SCRIPT_DIR/$fpath")" != "$(hash_file "$dst")" ]; then
                     if copy_platform_file_preserving_user_space "$SCRIPT_DIR/$fpath" "$dst" "$fpath"; then
                         case "$fpath" in *.sh) chmod +x "$dst" ;; esac
@@ -1493,7 +1577,7 @@ if [ -d "$CLAUDE_MEMORY_DIR" ]; then
                     elif is_author_mode && [ -f "$dst" ]; then
                         # issue #238: тот же класс, что уже закрыт для .claude/*-веток —
                         # эта ветка тоже слепо копировала SCRIPT_DIR поверх live-копии.
-                        echo "  ⚠ $fname — author_mode: memory/ рабочая копия не тронута. Сверь: diff \"$SCRIPT_DIR/$f\" \"$dst\""
+                        report_author_skip "$f" "$dst"
                     else
                         cp "$SCRIPT_DIR/$f" "$dst"
                         MEM_UPDATED=$((MEM_UPDATED + 1))
@@ -1516,7 +1600,9 @@ for f in "${NEW_FILES[@]}" "${UPDATED_FILES[@]}"; do
             src="$SCRIPT_DIR/$f"
             dst="$WORKSPACE_DIR/$f"
             if is_author_mode && [ -f "$dst" ]; then
-                echo "  ⚠ $f — author_mode: рабочая копия не тронута. Сверь: diff \"$src\" \"$dst\""
+                # --templated: deployed SKILL.md carries substituted install_constants,
+                # a raw blob can never match template history — "authored" would lie.
+                report_author_skip "$f" "$dst" templated
                 continue
             fi
             mkdir -p "$(dirname "$dst")"
@@ -1557,7 +1643,7 @@ for f in "${NEW_FILES[@]}" "${UPDATED_FILES[@]}"; do
             src="$SCRIPT_DIR/$f"
             dst="$WORKSPACE_DIR/$f"
             if is_author_mode && [ -f "$dst" ]; then
-                echo "  ⚠ $f — author_mode: рабочая копия не тронута. Сверь: diff \"$src\" \"$dst\""
+                report_author_skip "$f" "$dst"
                 continue
             fi
             mkdir -p "$(dirname "$dst")"
@@ -1575,6 +1661,7 @@ for f in "${NEW_FILES[@]}" "${UPDATED_FILES[@]}"; do
                 echo "  ✓ $f → workspace (new install)"
             else
                 echo "  ⚠ $f — платформа обновила hooks/permissions, workspace-копия НЕ тронута (несёт пользовательские хуки). Сверь вручную: diff \"$SCRIPT_DIR/$f\" \"$dst\""
+                report_settings_merge_preview "$SCRIPT_DIR/$f" "$dst"
             fi
             ;;
     esac
@@ -1938,6 +2025,7 @@ if [ "${AUTHOR_SKIPPED:-0}" -gt 0 ]; then
     echo "  ⚠ author_mode: $AUTHOR_SKIPPED файлов пропущено (несмёрженные локальные правки)."
     echo "    Синхронизация — через promote-скрипты, либо вручную после git push."
 fi
+report_author_skip_summary
 echo "=========================================="
 echo ""
 echo "Перезапустите Claude Code для применения обновлений в memory/."
