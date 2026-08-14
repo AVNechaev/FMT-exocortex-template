@@ -237,7 +237,7 @@
     },
     {
       "path": ".claude/scripts/classify-workspace-copy.sh",
-      "sha256": "52809beda6fed89d77251ea37135eb14cd4ec0f669a49255655b6c1c7de3d427"
+      "sha256": "39e14176892023597366818e5d8afeba763a72403999da362c385e0235245cd5"
     },
     {
       "path": ".claude/scripts/generate-rules-registry.py",
@@ -2189,7 +2189,7 @@
     },
     {
       "path": "scripts/session-guard.sh",
-      "sha256": "80226e05117a27f6c3dbb185545afe5d4aa397c294d7e1b2200c301c642c959b"
+      "sha256": "37f0b652ac6e3fcdc64dc5ce3f1b31892e05f28e73e545a418cb5e123b6a6c2a"
     },
     {
       "path": "scripts/settings-promote.sh",
