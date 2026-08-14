@@ -135,10 +135,12 @@ Refs: WP-NNN
 
 
 
-## [Unreleased] — обновлено 2026-08-13
+
+## [Unreleased] — обновлено 2026-08-14
 
 ### Added
 
+- `82394ba` feat(release): классификация CHANGELOG (security/migration/behavior/optional)
 - `c578eb8` feat: promote day-open-pipeline.sh to platform
 - `0c1cfba` feat(wp518): link work packages to hypotheses
 - `52887e6` feat(create-wp): Hypothesis Gate (WP-496 Ф8) — --hypothesis обязателен при наличии журнала гипотез
@@ -146,6 +148,7 @@ Refs: WP-NNN
 
 ### Changed
 
+- [behavior] `c370fde` docs(changelog): задокументировать конвенцию Changelog-Tag trailer
 - `9bf3db4` Merge pull request #421 from TserenTserenov/codex/fix-manifest-after-420-delivery
 - `88e447c` Merge pull request #420 from TserenTserenov/codex/fix-issues-413-418-main
 - `b8b903f` Merge remote-tracking branch 'origin/main'
@@ -159,6 +162,7 @@ Refs: WP-NNN
 
 ### Fixed
 
+- `b4f24c6` fix(dayopen): коммитить только файлы этого прогона, не весь archive/day-plans (WP-484)
 - `a6e4c36` fix(#405): treat cancelled WPs as terminal (#422)
 - `6c3d493` fix: regenerate manifest after #420
 - `89f1b84` fix: resolve regressions #413-#418

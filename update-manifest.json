@@ -609,7 +609,7 @@
     },
     {
       "path": ".github/workflows/notify-update.yml",
-      "sha256": "672316f4226d43912c77b9ad2b2a66c90e987f6939688e83a7bfd40859cb797f"
+      "sha256": "7a31dd64679fe304d06ad116ccfb9b2765a0a6271d4211deab854749e792b436"
     },
     {
       "path": ".github/workflows/post-release-audit.yml",
@@ -633,7 +633,7 @@
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "83bc723c3a99a56afd452fbe350ddcaf752e30d2140e6532af3dbc33f2651be0"
+      "sha256": "e823b97330e35bc416ba4bcb6efce6b180246b7eda0e03700de246a0ee84c97f"
     },
     {
       "path": "CLAUDE.md",
@@ -1805,7 +1805,11 @@
     },
     {
       "path": "scripts/changelog-append.sh",
-      "sha256": "9b24d66af9bda65bd24e201074183b6333c597558f80864a9bf3bc6f259df14d"
+      "sha256": "c559e833e45c8c68e0386971f5518e05c943992d40c4b7cf5a3cdf0b3294a1ac"
+    },
+    {
+      "path": "scripts/changelog-diff-lines.sh",
+      "sha256": "92d55dc631f6c763edfe3be9312ffc5a7ea6540889abddb5c16dda2b802b4d86"
     },
     {
       "path": "scripts/changelog-flush.sh",
@@ -1921,7 +1925,7 @@
     },
     {
       "path": "scripts/day-open-pipeline.sh",
-      "sha256": "5f23ac7ac2011a5f45eb81708117732e68fdd38119f788f5cf412d3802ba6963"
+      "sha256": "efdc97d8e09d925267c0f33ff86973f31b28be9c5f6419699abc786d36a7376c"
     },
     {
       "path": "scripts/day-open-preflight.sh",

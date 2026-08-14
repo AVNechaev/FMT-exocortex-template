@@ -911,7 +911,21 @@ done
 # after this line was written and nobody updated it (bug found 2026-07-02).
 git commit -m "feat(dayplan): $DATE — auto Day Open (WP-356) [allow:current]" --trailer "Co-Authored-By: Kimi <noreply@moonshot.ai>" -- "$DAYPLAN_PATH" ${ARCHIVE_TARGETS[@]+"${ARCHIVE_TARGETS[@]}"} ${ARCHIVED_PATHS[@]+"${ARCHIVED_PATHS[@]}"} || abort "Git commit failed"
 
-git push || abort "Git push failed"
+# Push with fetch+rebase retries: origin/main moves continuously (parallel agent
+# sessions, ledger-publish every 30 min), so a plain push loses the race whenever
+# anything landed between this run's start and its commit — exactly how the
+# 2026-08-14 07:22 run died after an otherwise green pipeline (WP-520 class:
+# shared checkout vs busy origin). --autostash covers the routinely dirty shared
+# worktree; on rebase failure we abort the rebase and leave the checkout as-is,
+# which is no worse than the old unconditional abort.
+PUSH_OK=false
+for PUSH_ATTEMPT in 1 2 3; do
+  if git push; then PUSH_OK=true; break; fi
+  echo "  push rejected (attempt $PUSH_ATTEMPT/3) — fetch+rebase onto origin/main and retry"
+  git fetch origin main --quiet || true
+  git rebase origin/main --autostash || { git rebase --abort 2>/dev/null || true; break; }
+done
+[ "$PUSH_OK" = "true" ] || abort "Git push failed (after fetch+rebase retries)"
 
 # WP-484 F64: input-hash means "this data set is PUBLISHED", so it is recorded
 # only after the remote accepted the commit (see the guard comment at step 3).
