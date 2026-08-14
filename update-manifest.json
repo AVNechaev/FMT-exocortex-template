@@ -69,7 +69,7 @@
     },
     {
       "path": ".claude/hooks/extensions-gate.sh",
-      "sha256": "53e8290974b37427b15e27797687fc4a54991fc3c9e615aa94a85bc1d655e217"
+      "sha256": "fd72b8a1badbe6234aa9b5a1629547ae624c18b691c8e94779950736dc2899a5"
     },
     {
       "path": ".claude/hooks/inject-code-style.sh",
@@ -261,7 +261,7 @@
     },
     {
       "path": ".claude/settings.json",
-      "sha256": "6b813603cd749920206338e43d0fccb4b850f26e1f43ec7f9fd126dfdd8b51be"
+      "sha256": "c2d350e46293eaad3a390858be3c3d5ff8260f10ec288af411512be1611fc0e8"
     },
     {
       "path": ".claude/skills-catalog.yaml",

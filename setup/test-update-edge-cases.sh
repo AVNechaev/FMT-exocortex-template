@@ -29,6 +29,7 @@
 #   T28: settings.json merge preview never touches inputs, honors merge rules (WP-7 F71)
 #   T29: author_mode skip classifier verdicts on synthetic template history (WP-7 F71)
 #   T30: update.sh wires stage-A observability scripts in (WP-7 F71)
+#   T31: extensions-gate is fail-closed: traversal/symlink/broken-manifest/manifest-edit block (WP-7 F71)
 #
 # Exit: 0 = all PASS, N = N tests failed
 #
@@ -1869,6 +1870,57 @@ if [ "${T30_GENERIC:-0}" -le 1 ]; then
     pass "T30: generic skip message survives only as the degraded-mode fallback"
 else
     fail "T30: $T30_GENERIC generic skip messages remain — a skip site bypasses the classifier"
+fi
+
+# T31: extensions-gate is fail-closed (отчёт Константина 14.08.2026, WP-7 F71)
+echo ""
+echo "--- T31: extensions-gate fail-closed matrix (WP-7 F71) ---"
+T31_WS="$TEST_WS/t31-ws"
+mkdir -p "$T31_WS/.claude/hooks" "$T31_WS/.claude/skills/my-skill" \
+         "$T31_WS/.claude/skills/day-open" "$T31_WS/memory"
+cp "$TEMPLATE_DIR/.claude/hooks/extensions-gate.sh" "$T31_WS/.claude/hooks/"
+printf '%s\n' '{"files": [{"path": ".claude/skills/day-open/SKILL.md"}]}' > "$T31_WS/update-manifest.json"
+touch "$T31_WS/.claude/skills/my-skill/SKILL.md" "$T31_WS/.claude/skills/day-open/SKILL.md" \
+      "$T31_WS/memory/protocol-open.md"
+ln -s "$T31_WS/.claude/skills/day-open/SKILL.md" "$T31_WS/.claude/skills/my-skill/link.md"
+t31_gate() {
+    printf '{"tool_input": {"file_path": "%s"}}' "$1" | bash "$T31_WS/.claude/hooks/extensions-gate.sh"
+}
+t31_blocked() {
+    local out
+    out=$(t31_gate "$1")
+    if grep -Fq '"decision": "block"' <<<"$out"; then
+        pass "T31: $2"
+    else
+        fail "T31: $2 — гейт пропустил: $out"
+    fi
+}
+t31_allowed() {
+    local out
+    out=$(t31_gate "$1")
+    if grep -Fq '"decision": "block"' <<<"$out"; then
+        fail "T31: $2 — гейт заблокировал: $out"
+    else
+        pass "T31: $2"
+    fi
+}
+t31_allowed "$T31_WS/.claude/skills/my-skill/SKILL.md"                "own skill (not in manifest) is allowed"
+t31_allowed "$T31_WS/README.md"                                       "ordinary file is allowed"
+t31_blocked "$T31_WS/.claude/skills/day-open/SKILL.md"                "platform skill is blocked"
+t31_blocked "$T31_WS/memory/protocol-open.md"                         "memory/protocol-* is blocked"
+t31_blocked "$T31_WS/.claude/skills/my-skill/../day-open/SKILL.md"    "traversal via .. is blocked before classification"
+t31_blocked "$T31_WS/update-manifest.json"                            "manifest itself is always blocked"
+t31_blocked "$T31_WS/.claude/skills/my-skill/link.md"                 "symlink into a platform skill is blocked by real path"
+printf '%s\n' '{broken' > "$T31_WS/update-manifest.json"
+t31_blocked "$T31_WS/.claude/skills/my-skill/SKILL.md"                "broken manifest fails closed (no allow on tool failure)"
+printf '%s\n' '{"files": []}' > "$T31_WS/update-manifest.json"
+t31_blocked "$T31_WS/.claude/skills/my-skill/SKILL.md"                "empty manifest .files fails closed"
+printf '%s\n' '{"files": [{"path": ".claude/skills/day-open/SKILL.md"}]}' > "$T31_WS/update-manifest.json"
+t31_allowed "$T31_WS/.claude/skills/my-skill/SKILL.md"                "restoring the manifest restores the allow"
+if grep -Fq '"defaultMode": "default"' "$TEMPLATE_DIR/.claude/settings.json"; then
+    pass "T31: template settings.json ships defaultMode=default (not acceptEdits)"
+else
+    fail "T31: template settings.json must not ship auto-accept edit mode"
 fi
 
 # ============================================================
