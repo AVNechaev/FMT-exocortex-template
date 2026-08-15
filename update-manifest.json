@@ -73,7 +73,7 @@
     },
     {
       "path": ".claude/hooks/inject-code-style.sh",
-      "sha256": "99d028f6f863e4e35c505cce427e6a874a549025e0c00a9b4bb0d13871a0a90e"
+      "sha256": "085b2d7d9dba02576ece94d92c63c051358ff5e29e205c824f5be5fa51452060"
     },
     {
       "path": ".claude/hooks/inject-communication-style.sh",
@@ -365,7 +365,7 @@
     },
     {
       "path": ".claude/skills/extend/SKILL.md",
-      "sha256": "d5f4cbc7a7883f1f03a33f5fd982c3941527de2359a4784fa60e2ddd168ac912"
+      "sha256": "c2c867c9d385e0025bd9e281d87d6da2eb3d85fa5bcffa021c3ed5cc42fe0def"
     },
     {
       "path": ".claude/skills/fpf/SKILL.md",
@@ -640,12 +640,16 @@
       "sha256": "13c0512dafbb06fe34b0efb34311874114188121d3c0609d514775b9a5c5398c"
     },
     {
+      "path": "AGENTS-agent-blocks.md",
+      "sha256": "609c4037e9d70ea4a30c75d83626e48041e3b4746c3a217ba868a83bc6897738"
+    },
+    {
       "path": "AGENTS.md",
       "sha256": "7a94fb8ac1cb077412d7facfa0c08655e99a79503efbea3056ea586d5cd92652"
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "959ac8c843f683265ec54613cd621c01862fc2b9bde629519ddac4b2d21c26e4"
+      "sha256": "c8e942c53010e431b0fad3e14862752a27afe553576dce5179171b88040467bb"
     },
     {
       "path": "CLAUDE.md",
@@ -1253,7 +1257,7 @@
     },
     {
       "path": "memory/communication-style-base.md",
-      "sha256": "8c553c4558a403256ff585ed4760ce43b26c304526d63e3e25c79dec572d3590"
+      "sha256": "9775eda3c479f6149434469f7f925cfabb6925e5b0e410227c0070142f455f4f"
     },
     {
       "path": "memory/communication-style-downstream-template.md",
@@ -1877,7 +1881,7 @@
     },
     {
       "path": "scripts/close-wp.sh",
-      "sha256": "57ac198f937530a9a692cf9baf98729006ae5576e628d2c19323dce6ef11dcac"
+      "sha256": "1708ba2d92f31e0770ceff9847ddfd1012776f28302134704e1fd91caa02ba92"
     },
     {
       "path": "scripts/codex-peer-adapter.sh",
@@ -1909,7 +1913,7 @@
     },
     {
       "path": "scripts/create-wp.sh",
-      "sha256": "53e54c4fb7fdd08691404527012e50c71210ca3f1637cc3f79a07773263ce0ac"
+      "sha256": "d915d9acaea07dfd2be43266d2136b1cae6fe9589987ea7c877277888a4cd551"
     },
     {
       "path": "scripts/day-close-lock.sh",
@@ -1937,7 +1941,7 @@
     },
     {
       "path": "scripts/day-open-pipeline.sh",
-      "sha256": "c615ba6e9ae7a24cc080a50756f52e799c5c4bc612e3b01948b34f9f77d14d7d"
+      "sha256": "cbd5b60230db40e2f0c24c88a5f5dc2cf26725ad0a7de0dd47b683441e87ecfc"
     },
     {
       "path": "scripts/day-open-preflight.sh",
@@ -2280,6 +2284,10 @@
       "sha256": "2265e5dda20c17e17ea66d2c870fa0f97e3a053f741239fe61beaa785f944a58"
     },
     {
+      "path": "scripts/tests/test_create_wp_number_padding.py",
+      "sha256": "fc5c500573c067fb1e6882834d2e0a1d7cd287446f9df5c9b49c1b404362e201"
+    },
+    {
       "path": "scripts/tests/test_create_wp_registry_coherence.sh",
       "sha256": "852828b4b741b9922fd0a72b5089214a3ee1663874d7950976ed8115958adb69"
     },
@@ -2313,7 +2321,7 @@
     },
     {
       "path": "scripts/tests/test_issues_413_418.py",
-      "sha256": "deccd502f68f06f7d95c8382e5daf25bb0ce62bd5df2ac3e9729f91c4a7f7d4e"
+      "sha256": "23a1581ea39df97ebda73ae5faea1b24b1c331ee3cd0ff8daa16a46669a83b7e"
     },
     {
       "path": "scripts/tests/test_session_guard_hypothesis_gate.sh",
@@ -2413,11 +2421,11 @@
     },
     {
       "path": "update.sh",
-      "sha256": "b05c02ebecbdaa245ad513556048c7135d7fd6add4a9c25662982f8ad394fbd4"
+      "sha256": "0bb7299434f63420b665f24ea50c127778776694f11da0c7a8e6c6fce77936ed"
     }
   ],
   "excluded_paths": [
-    "AGENTS-agent-blocks.md",
+    ".github/workflows/nightly-template-audit.yml",
     "docs/developer/README.md",
     "docs/developer/card-template.md",
     "docs/developer/code-style.md",
@@ -2439,7 +2447,6 @@
     "scripts/tests/conftest.py",
     "scripts/tests/test_agent_dashboard.py",
     "scripts/tests/test_copy_to_aisystant.py",
-    "scripts/tests/test_create_wp_number_padding.py",
     "scripts/tests/test_create_wp_weekplan_writer.py",
     "scripts/tests/test_day_close_prepare.py",
     "scripts/tests/test_delivery_content.py",
