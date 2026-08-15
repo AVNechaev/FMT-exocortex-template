@@ -136,10 +136,13 @@ Refs: WP-NNN
 
 
 
-## [Unreleased] — обновлено 2026-08-14
+
+## [Unreleased] — обновлено 2026-08-15
 
 ### Added
 
+- [behavior] `14ef9f6` feat(update): этап Б конвейера обновления — --apply-settings-merge и --refresh-stale
+- [behavior] `59e859d` feat(update): этап А наблюдаемости конвейера обновления — классификация author_mode-пропусков и предпросмотр слияния settings.json
 - `82394ba` feat(release): классификация CHANGELOG (security/migration/behavior/optional)
 - `c578eb8` feat: promote day-open-pipeline.sh to platform
 - `0c1cfba` feat(wp518): link work packages to hypotheses
@@ -148,6 +151,9 @@ Refs: WP-NNN
 
 ### Changed
 
+- [optional] `1bcfdf2` chore(manifest): перегенерация после автосинка адаптеров 2026-08-15 (B2 gate)
+- [optional] `c26b8a7` chore(manifest): перегенерация — settings-merge-apply.sh попал в git после генерации (B2)
+- [optional] `0063969` chore(manifest): перегенерация после no-history-фикса классификатора и session-guard (B2 gate)
 - [behavior] `c370fde` docs(changelog): задокументировать конвенцию Changelog-Tag trailer
 - `9bf3db4` Merge pull request #421 from TserenTserenov/codex/fix-manifest-after-420-delivery
 - `88e447c` Merge pull request #420 from TserenTserenov/codex/fix-issues-413-418-main
@@ -162,6 +168,10 @@ Refs: WP-NNN
 
 ### Fixed
 
+- `cdb7c29` fix(day-open): reap stale .git/HEAD.lock before commit + clearer race-guard message (WP-484 Ф95)
+- [behavior] `978d382` fix(update): --apply-settings-merge работает и на повторном прогоне
+- [security] `4a934aa` fix(security): defaultMode=default вместо acceptEdits + fail-closed extensions-gate
+- `6ec4c40` fix(day-open): push с повтором fetch+rebase против гонки с занятым origin (промоция из авторского IWE, v0.38.3)
 - `b4f24c6` fix(dayopen): коммитить только файлы этого прогона, не весь archive/day-plans (WP-484)
 - `a6e4c36` fix(#405): treat cancelled WPs as terminal (#422)
 - `6c3d493` fix: regenerate manifest after #420

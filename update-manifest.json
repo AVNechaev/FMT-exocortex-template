@@ -645,7 +645,7 @@
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "e823b97330e35bc416ba4bcb6efce6b180246b7eda0e03700de246a0ee84c97f"
+      "sha256": "959ac8c843f683265ec54613cd621c01862fc2b9bde629519ddac4b2d21c26e4"
     },
     {
       "path": "CLAUDE.md",
@@ -1937,7 +1937,7 @@
     },
     {
       "path": "scripts/day-open-pipeline.sh",
-      "sha256": "efdc97d8e09d925267c0f33ff86973f31b28be9c5f6419699abc786d36a7376c"
+      "sha256": "c615ba6e9ae7a24cc080a50756f52e799c5c4bc612e3b01948b34f9f77d14d7d"
     },
     {
       "path": "scripts/day-open-preflight.sh",
