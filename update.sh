@@ -25,6 +25,7 @@ VERSION="2.4.1"  # fix (WP-401): deprecated-file removal now checks is_protected
 REPO="TserenTserenov/FMT-exocortex-template" # UPSTREAM-CONST: do not substitute
 BRANCH="main"
 RAW_BASE="https://raw.githubusercontent.com/$REPO/$BRANCH"
+API_BASE="https://api.github.com/repos/$REPO"
 
 CHECK_ONLY=false
 AUTO_YES=false
@@ -641,6 +642,30 @@ assert_self_unmutated() {
     fi
 }
 
+# Resolve main once before fetching the manifest.  Every subsequent download uses
+# that immutable commit, so a push between manifest and file requests cannot mix
+# hashes from one revision with content from another (issue #398).
+resolve_delivery_ref() {
+    local resolved_ref
+    if ! py_available; then
+        echo "  ⚠ Нет python3: поставка проверяется по подвижной ветке $BRANCH."
+        return 0
+    fi
+    # shellcheck disable=SC2086  # CURL_BASE_OPTS intentionally contains multiple flags.
+    if resolved_ref=$(curl $CURL_BASE_OPTS $_CURL_SSL_OPT -sSfL "$API_BASE/commits/$BRANCH" 2>/dev/null | \
+        "$PY_BIN" -c '
+import json, re, sys
+sha = json.load(sys.stdin).get("sha", "")
+if not re.fullmatch(r"[0-9a-f]{40}", sha):
+    raise SystemExit(1)
+print(sha)'); then
+        RAW_BASE="https://raw.githubusercontent.com/$REPO/$resolved_ref"
+        echo "  Снимок поставки: ${resolved_ref:0:12}"
+    else
+        echo "  ⚠ Не удалось закрепить $BRANCH по commit SHA; используется подвижная ветка."
+    fi
+}
+
 # === Temp directory ===
 TMPDIR_UPDATE=$(mktemp -d 2>/dev/null || { mkdir -p "/tmp/exocortex-update-$$"; echo "/tmp/exocortex-update-$$"; })
 cleanup_update() {
@@ -692,6 +717,7 @@ echo ""
 
 # === Step 1: Fetch manifest ===
 echo "[1] Загрузка манифеста..."
+resolve_delivery_ref
 MANIFEST_URL="$RAW_BASE/update-manifest.json"
 MANIFEST="$TMPDIR_UPDATE/manifest.json"
 

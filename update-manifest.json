@@ -649,7 +649,7 @@
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "c036cd38dfe738d39582e29bd9211affe998bea31d44bfdf4fc1d4688ac0fb24"
+      "sha256": "1a4d72d70e384d2ea6b7b0b18fab93328b00809deb49c750596c8013c72d61e8"
     },
     {
       "path": "CLAUDE.md",
@@ -2332,6 +2332,10 @@
       "sha256": "45d241902da232578652c576f3240088936fb165a4ada29917089e802df61edb"
     },
     {
+      "path": "scripts/tests/test_update_delivery_ref.sh",
+      "sha256": "7bebb678d80a13c5080e89c335b0d4fb88727ce0f6a3dd6db5fc44493af42b7c"
+    },
+    {
       "path": "scripts/tests/test_update_deprecated_mirror_guard.sh",
       "sha256": "7cf9f47166c53d47064fb48d5406f64adacb8296b5782e3563f64796e0a499d5"
     },
@@ -2341,7 +2345,7 @@
     },
     {
       "path": "scripts/tests/test_update_settings_merge_drift.sh",
-      "sha256": "b1636bcda143a2b162860b8b29524dbdd809ac9471f2847259b29d5a22e2ec75"
+      "sha256": "0bbff3338ba5176f2bf8d62c8d18de80bdaff7c8dde264ca6c0de7b3e0d34906"
     },
     {
       "path": "scripts/tests/test_upgrade_worktree_cleanup.sh",
@@ -2433,7 +2437,7 @@
     },
     {
       "path": "update.sh",
-      "sha256": "9dc62c9d1dba72fe3560cdfaed7b3e3f673d8c3fdd743264c1b227665ba2084d"
+      "sha256": "0ad89d565a318539dfbbb6f008ad6284b4579268bdbf57394256511f78e4532d"
     }
   ],
   "excluded_paths": [
