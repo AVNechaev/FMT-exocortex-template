@@ -649,7 +649,7 @@
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "d8e24e39b4e7e27acf348000b1cd9ea6bef4c21e055503d299d31501fc425133"
+      "sha256": "c036cd38dfe738d39582e29bd9211affe998bea31d44bfdf4fc1d4688ac0fb24"
     },
     {
       "path": "CLAUDE.md",
@@ -2332,8 +2332,16 @@
       "sha256": "45d241902da232578652c576f3240088936fb165a4ada29917089e802df61edb"
     },
     {
+      "path": "scripts/tests/test_update_deprecated_mirror_guard.sh",
+      "sha256": "7cf9f47166c53d47064fb48d5406f64adacb8296b5782e3563f64796e0a499d5"
+    },
+    {
       "path": "scripts/tests/test_update_install_path_guard.sh",
       "sha256": "d8e59a1836aaea9642f8a380c2dad3de2ae29104c1db337077eeb92b59f966d6"
+    },
+    {
+      "path": "scripts/tests/test_update_settings_merge_drift.sh",
+      "sha256": "b1636bcda143a2b162860b8b29524dbdd809ac9471f2847259b29d5a22e2ec75"
     },
     {
       "path": "scripts/tests/test_upgrade_worktree_cleanup.sh",
@@ -2425,7 +2433,7 @@
     },
     {
       "path": "update.sh",
-      "sha256": "2043034ec78a47aebe5085ebcf66963ebcac48cc722c6df5a93713c4b36b0512"
+      "sha256": "9dc62c9d1dba72fe3560cdfaed7b3e3f673d8c3fdd743264c1b227665ba2084d"
     }
   ],
   "excluded_paths": [
