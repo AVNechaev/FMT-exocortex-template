@@ -13,8 +13,12 @@
    файл: печатает предупреждение в stderr, содержимое файла не меняется.
 
 Тест выполняет python-блок ИЗ РЕАЛЬНОГО create-wp.sh (извлекается по
-heredoc-маркерам между «# --- Шаг 4: WeekPlan ---» и следующим PYEOF),
+heredoc-маркерам между «# --- Шаг 3: WeekPlan ---» и следующим PYEOF),
 не копию логики — иначе тест проверял бы дубликат, не продакшен-код.
+
+Номер шага в маркере (issue #485: удалён archive stub, Шаг 4 стал Шагом 3)
+следует за нумерацией в create-wp.sh — при очередном сдвиге шагов поправить
+и здесь.
 """
 
 import re
@@ -26,9 +30,9 @@ CREATE_WP = Path(__file__).parent.parent / "create-wp.sh"
 
 
 def _extract_weekplan_writer() -> str:
-    """Достаёт python-heredoc шага 4 (WeekPlan writer) из create-wp.sh."""
+    """Достаёт python-heredoc шага 3 (WeekPlan writer) из create-wp.sh."""
     text = CREATE_WP.read_text(encoding="utf-8")
-    marker = "# --- Шаг 4: WeekPlan ---"
+    marker = "# --- Шаг 3: WeekPlan ---"
     start = text.index(marker)
     heredoc_start = text.index("<<'PYEOF'\n", start) + len("<<'PYEOF'\n")
     heredoc_end = text.index("\nPYEOF", heredoc_start)

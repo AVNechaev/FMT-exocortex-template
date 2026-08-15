@@ -786,6 +786,7 @@ repair_pass() {
     # recognizes the closing `)` of a process substitution.  Keep the manifest
     # reader in ordinary temporary files: its diagnostics stay visible and the
     # repair pass remains available on the oldest supported shell.
+    local repair_paths repair_errors
     repair_paths=$(mktemp "${TMPDIR:-/tmp}/iwe-repair-paths.XXXXXX") || {
         echo "  ⚠ repair_pass: не удалось создать временный список" >&2
         return 0
