@@ -891,10 +891,15 @@ fi
 # session open on the same machine at the same time.
 SG_AGENT="day-open-pipeline"
 if [ "$PROBE" != "true" ]; then
+  # WP-484 F91: explicit --slug keeps note-file resolution unambiguous when the
+  # agent has 2+ open semaphores (a stale housekeeping semaphore used to make
+  # both note-file calls fail in one run); the slug is fixed by the `open
+  # --housekeeping day-open` call above. --owner-pid from the author copy is NOT
+  # ported: this parser swallows unknown flags and misparses the PID as positional.
   bash "$IWE/scripts/session-guard.sh" open --housekeeping day-open --agent "$SG_AGENT" 2>/dev/null || true
-  bash "$IWE/scripts/session-guard.sh" note-file "$DAYPLAN_PATH" --agent "$SG_AGENT"
+  bash "$IWE/scripts/session-guard.sh" note-file "$DAYPLAN_PATH" --agent "$SG_AGENT" --slug day-open
   for f in "${ARCHIVED_PATHS[@]+"${ARCHIVED_PATHS[@]}"}"; do
-    bash "$IWE/scripts/session-guard.sh" note-file "$ARCHIVE_DIR/$(basename "$f")" --agent "$SG_AGENT"
+    bash "$IWE/scripts/session-guard.sh" note-file "$ARCHIVE_DIR/$(basename "$f")" --agent "$SG_AGENT" --slug day-open
   done
 fi
 
