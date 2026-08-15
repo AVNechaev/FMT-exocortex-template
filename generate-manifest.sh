@@ -135,6 +135,7 @@ SCRIPT_CONTRACT_EXPLICIT_INCLUDE=(
     "scripts/tests/test_capture_bus_contract.sh"
     "scripts/tests/test_critical_alert_contract.sh"
     "scripts/tests/test_create_wp_number_padding.py"
+    "scripts/tests/test_create_wp_weekplan_writer.py"
     "scripts/tests/validate_manifest_coverage.sh"
     "scripts/tests/lib/capture_fixture.sh"
     "scripts/tests/lib/seed_strategy_fixture.sh"

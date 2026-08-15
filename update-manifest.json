@@ -2296,6 +2296,10 @@
       "sha256": "926603ebb29d83b7e3db5e0998182e1cc8c8b756820e3b99950d24071cbb093a"
     },
     {
+      "path": "scripts/tests/test_create_wp_weekplan_writer.py",
+      "sha256": "126dabff6e7e72c7564e2d0acfdf0449eca9adf06e76010f1175c9b02fe70fc8"
+    },
+    {
       "path": "scripts/tests/test_critical_alert_contract.sh",
       "sha256": "ef00075dd25cc016c0d21d4605dcb9444c62493a08f90c44c92b60eb8fec2547"
     },
@@ -2447,7 +2451,6 @@
     "scripts/tests/conftest.py",
     "scripts/tests/test_agent_dashboard.py",
     "scripts/tests/test_copy_to_aisystant.py",
-    "scripts/tests/test_create_wp_weekplan_writer.py",
     "scripts/tests/test_day_close_prepare.py",
     "scripts/tests/test_delivery_content.py",
     "scripts/tests/test_delivery_formal.py",
