@@ -25,6 +25,7 @@ VERSION="2.4.1"  # fix (WP-401): deprecated-file removal now checks is_protected
 REPO="TserenTserenov/FMT-exocortex-template" # UPSTREAM-CONST: do not substitute
 BRANCH="main"
 RAW_BASE="https://raw.githubusercontent.com/$REPO/$BRANCH"
+API_BASE="https://api.github.com/repos/$REPO"
 
 CHECK_ONLY=false
 AUTO_YES=false
@@ -189,6 +190,16 @@ is_protected_user_file() {
         params.yaml|memory/MEMORY.md|.claude/settings.local.json|sessions/00-index.md) return 0 ;;
         *) return 1 ;;
     esac
+}
+
+# A template directory can also be a Git mirror of the canonical repository.
+# In that role, removing a path that upstream still tracks makes the mirror dirty
+# on every update and prevents its next fast-forward sync.  A conventional
+# `upstream` remote is an explicit signal of that role, so leave deprecated-file
+# cleanup to the canonical history instead of changing the mirror locally.
+is_upstream_git_mirror() {
+    git -C "$SCRIPT_DIR" rev-parse --is-inside-work-tree >/dev/null 2>&1 || return 1
+    git -C "$SCRIPT_DIR" remote get-url upstream >/dev/null 2>&1
 }
 
 # Личные L4-конфиги в memory/: update.sh сеет их при ОТСУТСТВИИ (новая инсталляция),
@@ -471,6 +482,25 @@ PY
     return 0
 }
 
+# The settings merge warning must compare the template with the workspace, not
+# depend on this run having downloaded a changed template file.  Forks normally
+# fast-forward their template mirror before update.sh, which otherwise leaves
+# UPDATED_FILES empty and hides this actionable drift forever.
+report_settings_merge_drift() {
+    [ "$APPLY_SETTINGS_MERGE" = "true" ] && return 0
+    local src="$SCRIPT_DIR/.claude/settings.json"
+    local dst="$WORKSPACE_DIR/.claude/settings.json"
+    [ -f "$src" ] && [ -f "$dst" ] || return 0
+    cmp -s "$src" "$dst" && return 0
+
+    echo "  ⚠ .claude/settings.json — платформа обновила hooks/permissions, workspace-копия НЕ тронута (несёт пользовательские хуки)."
+    if $CHECK_ONLY; then
+        echo "    Режим --check: предпросмотр не записан. Запустите update.sh без --check, чтобы получить безопасный план слияния."
+        return 0
+    fi
+    report_settings_merge_preview "$src" "$dst"
+}
+
 # === Detect directories ===
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
@@ -612,6 +642,30 @@ assert_self_unmutated() {
     fi
 }
 
+# Resolve main once before fetching the manifest.  Every subsequent download uses
+# that immutable commit, so a push between manifest and file requests cannot mix
+# hashes from one revision with content from another (issue #398).
+resolve_delivery_ref() {
+    local resolved_ref
+    if ! py_available; then
+        echo "  ⚠ Нет python3: поставка проверяется по подвижной ветке $BRANCH."
+        return 0
+    fi
+    # shellcheck disable=SC2086  # CURL_BASE_OPTS intentionally contains multiple flags.
+    if resolved_ref=$(curl $CURL_BASE_OPTS $_CURL_SSL_OPT -sSfL "$API_BASE/commits/$BRANCH" 2>/dev/null | \
+        "$PY_BIN" -c '
+import json, re, sys
+sha = json.load(sys.stdin).get("sha", "")
+if not re.fullmatch(r"[0-9a-f]{40}", sha):
+    raise SystemExit(1)
+print(sha)'); then
+        RAW_BASE="https://raw.githubusercontent.com/$REPO/$resolved_ref"
+        echo "  Снимок поставки: ${resolved_ref:0:12}"
+    else
+        echo "  ⚠ Не удалось закрепить $BRANCH по commit SHA; используется подвижная ветка."
+    fi
+}
+
 # === Temp directory ===
 TMPDIR_UPDATE=$(mktemp -d 2>/dev/null || { mkdir -p "/tmp/exocortex-update-$$"; echo "/tmp/exocortex-update-$$"; })
 cleanup_update() {
@@ -663,6 +717,7 @@ echo ""
 
 # === Step 1: Fetch manifest ===
 echo "[1] Загрузка манифеста..."
+resolve_delivery_ref
 MANIFEST_URL="$RAW_BASE/update-manifest.json"
 MANIFEST="$TMPDIR_UPDATE/manifest.json"
 
@@ -1032,6 +1087,9 @@ printf "\n"
 DEPRECATED_FOUND=()
 DEPRECATED_REASONS=()
 
+if is_upstream_git_mirror; then
+    echo "  ⚠ Каталог шаблона — git-зеркало с remote upstream: удаление устаревших файлов пропущено. Их должен удалить сам канон."
+else
 while IFS='|' read -r fpath freason; do
     [ -z "$fpath" ] && continue
     # Same guard as the download loop above: a protected user file must never be
@@ -1052,6 +1110,7 @@ for entry in data.get('deprecated_files', []):
     print(entry.get('path','') + '|' + entry.get('reason',''))
 " "$MANIFEST" 2>/dev/null || true
     fi)
+fi
 
 TOTAL_CHANGES=$(( ${#NEW_FILES[@]} + ${#UPDATED_FILES[@]} + ${#DEPRECATED_FOUND[@]} ))
 
@@ -1087,6 +1146,7 @@ if [ "$TOTAL_CHANGES" -eq 0 ] && [ ${#SKIPPED_DOWNLOAD[@]} -gt 0 ]; then
         assert_self_unmutated
     else
         repair_pass
+        report_settings_merge_drift
     fi
     exit 0
 fi
@@ -1766,9 +1826,6 @@ for f in "${NEW_FILES[@]}" "${UPDATED_FILES[@]}"; do
                 # (apply_settings_merge_if_requested) — здесь только тишина,
                 # чтобы не задваивать вывод для файла, попавшего в UPDATED.
                 :
-            else
-                echo "  ⚠ $f — платформа обновила hooks/permissions, workspace-копия НЕ тронута (несёт пользовательские хуки). Сверь вручную: diff \"$SCRIPT_DIR/$f\" \"$dst\""
-                report_settings_merge_preview "$SCRIPT_DIR/$f" "$dst"
             fi
             ;;
     esac
@@ -1777,6 +1834,7 @@ done
 # Stage B: слияние настроек по явному флагу — вне propagation-цикла, чтобы
 # работать и на повторном прогоне, когда settings.json шаблона уже не в UPDATED.
 apply_settings_merge_if_requested
+report_settings_merge_drift
 
 # === Step 5d: Repair-pass для critical runtime files ===
 # Выполняется ПОСЛЕ propagation, чтобы repair не дублировал работу NEW_FILES/UPDATED_FILES.
