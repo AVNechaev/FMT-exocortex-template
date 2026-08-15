@@ -620,8 +620,12 @@
       "sha256": "9b61f9aa74d0abb0037fcf7ae8b867bb7d5b59b3c0a391ae2d89398edc3c3f33"
     },
     {
+      "path": ".github/workflows/notify-security.yml",
+      "sha256": "9ebf408d9c75c8e1a62b905339b869d476528bfccd52e99d44a50f1a3c73153b"
+    },
+    {
       "path": ".github/workflows/notify-update.yml",
-      "sha256": "bbd669fb6fcc6ee1a76576908e7ec1cba24b577d4dbdf6e281fb9026e6b5ed0e"
+      "sha256": "672316f4226d43912c77b9ad2b2a66c90e987f6939688e83a7bfd40859cb797f"
     },
     {
       "path": ".github/workflows/post-release-audit.yml",

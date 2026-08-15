@@ -103,6 +103,7 @@ FILES_EXCLUDE_EXACT=(
 # per-file include, same technique as setup/validate-template.sh below.
 GITHUB_EXPLICIT_INCLUDE=(
     ".github/workflows/cloud-scheduler.yml"
+    ".github/workflows/notify-security.yml"
     ".github/workflows/notify-update.yml"
     ".github/workflows/post-release-audit.yml"
 )
