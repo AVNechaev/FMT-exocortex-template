@@ -621,7 +621,7 @@
     },
     {
       "path": ".github/workflows/notify-update.yml",
-      "sha256": "b54bf64cf4ea8bf4940f192c6ecf608b0d535ef336a53123ac20b772f5ec9789"
+      "sha256": "bbd669fb6fcc6ee1a76576908e7ec1cba24b577d4dbdf6e281fb9026e6b5ed0e"
     },
     {
       "path": ".github/workflows/post-release-audit.yml",
