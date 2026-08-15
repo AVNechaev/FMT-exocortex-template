@@ -9,9 +9,10 @@ on:
     - cron: '28 4 * * *'  # 7:28 MSK
   workflow_dispatch:       # ручной запуск для тестирования
   push:
-    branches: [main]        # найдено code review 13.08: без этого фильтра фичебранчи/worktree тоже триггерят уведомление о неревьюженном контенте
-    paths:
-      - 'CHANGELOG.md'     # WP-7 Ф62 п.4: триггер для срочного security-уведомления (job notify-security)
+    branches: [main]
+    # Не используем paths: GitHub создавал пустой failing-run до планирования
+    # job. Ненужные push завершаются успешно после проверки diff ниже, а
+    # webhook всё равно вызывается только для новых [security]-строк.
 
 permissions:
   contents: read
