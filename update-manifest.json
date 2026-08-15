@@ -1873,7 +1873,7 @@
     },
     {
       "path": "scripts/claude-peer-adapter.sh",
-      "sha256": "f5b354a8b330ef3601636c8f6e0791d7a471962001d27090738f8902afece214"
+      "sha256": "00260975c09e2d5fc47506a5faf725f16ff432dd1adce923a728264f4bb2b67c"
     },
     {
       "path": "scripts/close-wp.sh",
@@ -1881,7 +1881,7 @@
     },
     {
       "path": "scripts/codex-peer-adapter.sh",
-      "sha256": "69af213809d3c142d1f65c17f9614143426162cccddc8be05a346b554dd1e19d"
+      "sha256": "715b235ccad524bf170513abb59760b9b3c1d73117ca97d8475f6fa9226621bc"
     },
     {
       "path": "scripts/config/pipeline-security-whitelist.yaml",
@@ -1993,7 +1993,7 @@
     },
     {
       "path": "scripts/hermes-peer-adapter.sh",
-      "sha256": "0d0f13fc6d00bd4c5b29df813e1b1aa9382441ad968d4ed891b03d70173dd700"
+      "sha256": "d91905470bb5cbddfafbc8cf972e1da7dd9f967136e72cc4536ad0861bc0f448"
     },
     {
       "path": "scripts/hindsight_adapter.py",
