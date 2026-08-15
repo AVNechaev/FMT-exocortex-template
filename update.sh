@@ -782,6 +782,40 @@ fi
 # REPAIRED — глобальный счётчик, читается вызывающим кодом после возврата.
 repair_pass() {
     REPAIRED=0
+    # Bash 3.2 (macOS) parses the apostrophe in the comment below before it
+    # recognizes the closing `)` of a process substitution.  Keep the manifest
+    # reader in ordinary temporary files: its diagnostics stay visible and the
+    # repair pass remains available on the oldest supported shell.
+    local repair_paths repair_errors
+    repair_paths=$(mktemp "${TMPDIR:-/tmp}/iwe-repair-paths.XXXXXX") || {
+        echo "  ⚠ repair_pass: не удалось создать временный список" >&2
+        return 0
+    }
+    repair_errors=$(mktemp "${TMPDIR:-/tmp}/iwe-repair-errors.XXXXXX") || {
+        rm -f "$repair_paths"
+        echo "  ⚠ repair_pass: не удалось создать файл диагностики" >&2
+        return 0
+    }
+
+    if py_available; then
+        if ! $PY_BIN -c "
+import json, sys
+with open(sys.argv[1]) as f:
+    data = json.load(f)
+for entry in data.get('files', []):
+    print(entry['path'] + '|')
+" "$MANIFEST" > "$repair_paths" 2> "$repair_errors"; then
+            sed 's/^/  ⚠ repair_pass: /' "$repair_errors" >&2
+            rm -f "$repair_paths" "$repair_errors"
+            report_owner_user_memory_drift
+            return 0
+        fi
+    else
+        echo "  ⚠ repair_pass: python недоступен — сверка runtime-файлов пропущена" >&2
+    fi
+
+    [ -s "$repair_errors" ] && sed 's/^/  ⚠ repair_pass: /' "$repair_errors" >&2
+
     while IFS='|' read -r fpath _; do
         [ -z "$fpath" ] && continue
         [ ! -f "$SCRIPT_DIR/$fpath" ] && continue
@@ -855,26 +889,8 @@ repair_pass() {
                 fi
                 ;;
         esac
-    done < <(
-        # issue #402: path via argv, not interpolated — see FILES_MATCH above for why.
-        # stderr is NOT suppressed here on purpose: the old `2>/dev/null` made a
-        # broken interpreter (or, before this fix, an embedded path native Python
-        # couldn't resolve) return zero rows with no diagnostic — "nothing to
-        # repair" looked identical to a real clean pass. A visible ⚠ beats silence;
-        # stderr is routed through a prefixer so it doesn't get read as a file row
-        # by the `while IFS='|' read` loop above (which only sees this fd's stdout).
-        if py_available; then
-            $PY_BIN -c "
-import json, sys
-with open(sys.argv[1]) as f:
-    data = json.load(f)
-for entry in data.get('files', []):
-    print(entry['path'] + '|')
-" "$MANIFEST" 2> >(sed 's/^/  ⚠ repair_pass: /' >&2)
-        else
-            echo "  ⚠ repair_pass: python недоступен — сверка runtime-файлов пропущена" >&2
-        fi
-    )
+    done < "$repair_paths"
+    rm -f "$repair_paths" "$repair_errors"
     if [ "$REPAIRED" -gt 0 ]; then
         echo "  ✓ $REPAIRED runtime-файлов восстановлено"
     fi

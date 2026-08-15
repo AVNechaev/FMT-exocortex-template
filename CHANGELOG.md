@@ -168,6 +168,13 @@ Refs: WP-NNN
 
 ### Fixed
 
+- `create-wp.sh` больше не создаёт pending-архив, а `close-wp.sh` закрывает `WP-009` по bare ID `9` без второго контекстного файла (#425, #431).
+- `update.sh`: repair-pass снова работает в системном Bash 3.2 macOS; один ремонт закрывает #433 и #438 без потери диагностик.
+- `inject-code-style.sh`: ограничение контекста считает и обрезает Unicode-символы в одной единице, поэтому кириллица не вызывает ложную обрезку (#435).
+- `/extend`: каталог включает все 16 реально вызываемых точек расширения, в том числе проверки day-open, month-close и strategy-session (#436).
+- `AGENTS-agent-blocks.md` снова входит в поставку; манифест пересобран по актуальному дереву (#437).
+- CI-workflow ночного аудита явно помечен как недоставляемый, поэтому собственный валидатор манифеста больше не отвергает релиз (#423).
+- Seed-копия `day-open-pipeline.sh` синхронизирована с каноническим скриптом, поэтому новая установка не получает отставший конвейер (#427).
 - `cdb7c29` fix(day-open): reap stale .git/HEAD.lock before commit + clearer race-guard message (WP-484 Ф95)
 - [behavior] `978d382` fix(update): --apply-settings-merge работает и на повторном прогоне
 - [security] `4a934aa` fix(security): defaultMode=default вместо acceptEdits + fail-closed extensions-gate

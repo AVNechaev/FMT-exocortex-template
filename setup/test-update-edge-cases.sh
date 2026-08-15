@@ -1992,6 +1992,73 @@ else
 fi
 
 # ============================================================
+# T34: code-style cap uses the same Unicode unit for count and slice (#435)
+# ============================================================
+echo ""
+echo "--- T34: code-style Unicode cap contract (#435) ---"
+T34_BASE="$TEST_WS/t34-base.json"
+T34_CAPPED="$TEST_WS/t34-capped.json"
+T34_PAYLOAD="{\"session_id\":\"t34-base\",\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"$T16_PROJ/t16-fixture.py\"}}"
+if printf '%s' "$T34_PAYLOAD" | HOME="$T16_HOME" CLAUDE_PROJECT_DIR="$T16_PROJ" \
+    IWE_GOVERNANCE_REPO="DS-strategy" bash "$TEMPLATE_DIR/.claude/hooks/inject-code-style.sh" > "$T34_BASE" 2>/dev/null; then
+    T34_CHARS=$(python3 -c "import json; print(len(json.load(open('$T34_BASE'))['hookSpecificOutput']['additionalContext']))")
+    T34_BYTES=$(python3 -c "import json; print(len(json.load(open('$T34_BASE'))['hookSpecificOutput']['additionalContext'].encode()))")
+    T34_PAYLOAD="{\"session_id\":\"t34-capped\",\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"$T16_PROJ/t16-fixture.py\"}}"
+    if [ "$T34_BYTES" -gt "$T34_CHARS" ] && \
+       printf '%s' "$T34_PAYLOAD" | HOME="$T16_HOME" CLAUDE_PROJECT_DIR="$T16_PROJ" \
+          IWE_GOVERNANCE_REPO="DS-strategy" CODE_STYLE_INJECT_CAP="$T34_CHARS" \
+          bash "$TEMPLATE_DIR/.claude/hooks/inject-code-style.sh" > "$T34_CAPPED" 2>/dev/null && \
+       python3 - "$T34_BASE" "$T34_CAPPED" <<'PY'
+import json
+import sys
+
+baseline = json.load(open(sys.argv[1], encoding="utf-8"))["hookSpecificOutput"]["additionalContext"]
+capped = json.load(open(sys.argv[2], encoding="utf-8"))["hookSpecificOutput"]["additionalContext"]
+raise SystemExit(0 if baseline == capped and "[…обрезано до лимита" not in capped else 1)
+PY
+    then
+        pass "T34: Cyrillic context at its character cap is not falsely truncated by bytes"
+    else
+        fail "T34: code-style cap count and slice diverge on Cyrillic"
+    fi
+else
+    fail "T34: inject-code-style did not produce a baseline context"
+fi
+
+# ============================================================
+# T35: /extend lists every extension point that a protocol invokes (#436)
+# ============================================================
+echo ""
+echo "--- T35: /extend catalog matches protocol extension points (#436) ---"
+if python3 - "$TEMPLATE_DIR" <<'PY'
+from pathlib import Path
+import re
+import sys
+
+root = Path(sys.argv[1])
+call_re = re.compile(r"load-extensions\.sh\s+([a-z-]+)\s+(before|after|checks|sync)")
+row_re = re.compile(r"^\| `([^`]+)` \| `([^`]+)` \| `extensions/", re.MULTILINE)
+
+sources = [root / "memory/protocol-close.md", root / "memory/protocol-open.md"]
+sources.extend(path for path in (root / ".claude/skills").rglob("*.md") if path != root / ".claude/skills/extend/SKILL.md")
+called = {
+    match.groups()
+    for path in sources
+    for match in call_re.finditer(path.read_text(encoding="utf-8"))
+}
+catalog = set(row_re.findall((root / ".claude/skills/extend/SKILL.md").read_text(encoding="utf-8")))
+if len(called) != 16 or catalog != called:
+    missing = sorted(called - catalog)
+    extra = sorted(catalog - called)
+    raise SystemExit(f"called={len(called)} catalog={len(catalog)} missing={missing} extra={extra}")
+PY
+then
+    pass "T35: /extend lists all 16 invoked extension points"
+else
+    fail "T35: /extend catalog differs from invoked extension points"
+fi
+
+# ============================================================
 # Summary
 # ============================================================
 echo ""

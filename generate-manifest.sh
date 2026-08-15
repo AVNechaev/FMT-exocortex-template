@@ -72,7 +72,6 @@ EXCLUDED_SCRIPTS=(
 EXCLUDED_EXACT=(
     "promotion-status.yaml"
     "scripts/guide-kit-sync-state.yaml"         # provenance vendored-копии guide-kit/ — нужен CI drift-check, не пользователям
-    "AGENTS-agent-blocks.md"
     "${EXCLUDED_SCRIPTS[@]}"
 )
 
@@ -107,6 +106,9 @@ GITHUB_EXPLICIT_INCLUDE=(
     ".github/workflows/notify-update.yml"
     ".github/workflows/post-release-audit.yml"
 )
+GITHUB_CI_ONLY_EXCLUDE=(
+    ".github/workflows/nightly-template-audit.yml"
+)
 SETUP_EXPLICIT_INCLUDE=(
     "setup/build-runtime.sh"
     "setup/install-iwe-paths.sh"
@@ -132,6 +134,8 @@ SCRIPT_CONTRACT_EXPLICIT_INCLUDE=(
     "scripts/tests/test_create_wp_contract.sh"
     "scripts/tests/test_capture_bus_contract.sh"
     "scripts/tests/test_critical_alert_contract.sh"
+    "scripts/tests/test_create_wp_number_padding.py"
+    "scripts/tests/test_create_wp_weekplan_writer.py"
     "scripts/tests/validate_manifest_coverage.sh"
     "scripts/tests/lib/capture_fixture.sh"
     "scripts/tests/lib/seed_strategy_fixture.sh"
@@ -165,6 +169,13 @@ while IFS= read -r rel; do
         "${GITHUB_EXPLICIT_INCLUDE[@]}" \
         "${SCRIPT_CONTRACT_EXPLICIT_INCLUDE[@]}"; then
         FILES+=("$rel")
+        continue
+    fi
+    # .github/ is normally outside the delivery manifest.  Keep every tracked
+    # workflow explicitly classified, otherwise manifest-coverage correctly
+    # reports a silent delivery gap (#423).
+    if is_explicit_include "$rel" "${GITHUB_CI_ONLY_EXCLUDE[@]}"; then
+        EXCLUDED_PATHS+=("$rel")
         continue
     fi
     skip=false
