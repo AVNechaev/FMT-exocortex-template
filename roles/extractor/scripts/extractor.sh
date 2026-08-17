@@ -191,26 +191,78 @@ $extra_args"
             done
         fi
 
-        # Очистить staging area
-        git -C "$strategy_dir" reset --quiet 2>/dev/null || true
-
-        # Стейджим ТОЛЬКО наши файлы
-        git -C "$strategy_dir" add inbox/captures.md inbox/extraction-reports/ >> "$LOG_FILE" 2>&1 || true
-        if ! git -C "$strategy_dir" diff --cached --quiet 2>/dev/null; then
-            git -C "$strategy_dir" commit -m "inbox-check: extraction report $DATE" >> "$LOG_FILE" 2>&1 \
-                && log "Committed $_gov_repo" \
-                || log "WARN: git commit failed"
-        else
-            log "No new changes to commit in $_gov_repo"
-        fi
-
-        if ! git -C "$strategy_dir" diff --quiet origin/main..HEAD 2>/dev/null; then
-            git -C "$strategy_dir" push >> "$LOG_FILE" 2>&1 && log "Pushed $_gov_repo" || log "WARN: git push failed"
-        fi
+        commit_extractor_changes "$strategy_dir" "$_gov_repo"
     fi
 
     # macOS notification
     notify "KE: $command_file" "Процесс завершён"
+}
+
+commit_extractor_changes() {
+    local strategy_dir="$1"
+    local repo_name="$2"
+    local branch head_before origin_before head_after origin_after target_changes
+
+    if ! branch=$(git -C "$strategy_dir" branch --show-current 2>/dev/null); then
+        log "WARN: cannot determine branch for $repo_name; skipping commit"
+        return 0
+    fi
+    if [ "$branch" != "main" ]; then
+        log "SKIP: $repo_name is on branch '$branch', expected 'main'"
+        return 0
+    fi
+
+    if ! head_before=$(git -C "$strategy_dir" rev-parse HEAD 2>/dev/null) || \
+       ! origin_before=$(git -C "$strategy_dir" rev-parse origin/main 2>/dev/null); then
+        log "WARN: cannot resolve HEAD or origin/main for $repo_name; skipping commit"
+        return 0
+    fi
+    if [ "$head_before" != "$origin_before" ]; then
+        log "SKIP: $repo_name is not aligned with origin/main; skipping commit"
+        return 0
+    fi
+
+    # Не трогаем файлы экстрактора, если их уже подготовил другой процесс.
+    # `commit --only` сохраняет staging всех остальных путей без ручного reset.
+    if ! git -C "$strategy_dir" diff --cached --quiet -- \
+        inbox/captures.md inbox/extraction-reports/; then
+        log "SKIP: extractor paths are already staged; skipping commit"
+        return 0
+    fi
+
+    target_changes=$(git -C "$strategy_dir" status --porcelain --untracked-files=all -- \
+        inbox/captures.md inbox/extraction-reports/)
+    if [ -z "$target_changes" ]; then
+        log "No new changes to commit in $repo_name"
+        return 0
+    fi
+
+    if ! head_after=$(git -C "$strategy_dir" rev-parse HEAD 2>/dev/null) || \
+       ! origin_after=$(git -C "$strategy_dir" rev-parse origin/main 2>/dev/null) || \
+       [ "$head_after" != "$head_before" ] || [ "$origin_after" != "$origin_before" ]; then
+        log "SKIP: $repo_name changed before extractor commit"
+        return 0
+    fi
+
+    if ! git -C "$strategy_dir" commit --only \
+        -m "inbox-check: extraction report $DATE" -- \
+        inbox/captures.md inbox/extraction-reports/ >> "$LOG_FILE" 2>&1; then
+        log "WARN: git commit failed for $repo_name"
+        return 0
+    fi
+
+    if ! head_after=$(git -C "$strategy_dir" rev-parse HEAD 2>/dev/null) || \
+       [ "$head_after" = "$head_before" ]; then
+        log "WARN: commit did not advance HEAD for $repo_name"
+        return 0
+    fi
+    log "Committed $repo_name"
+
+    if git -C "$strategy_dir" push origin "$head_after:refs/heads/main" >> "$LOG_FILE" 2>&1; then
+        log "Pushed $repo_name"
+    else
+        log "WARN: git push failed; only the extractor commit was offered"
+    fi
 }
 
 # Проверка рабочих часов
