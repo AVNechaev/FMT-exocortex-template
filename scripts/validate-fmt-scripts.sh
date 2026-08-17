@@ -85,8 +85,9 @@ if [[ "$MODE" != "settings-json" ]]; then
         #   - cmd || echo "DS-strategy"            (bare fallback после ||, issue #275)
         #   - if [ -d "$DIR/DS-strategy" ]; ... case DS-strategy)  (auto-detect идиома,
         #     физическая проверка существования репо, не хардкод-протечка, issue #275)
-        #   - строка, где ЖЕ упомянут $IWE_GOVERNANCE_REPO (документирует переопределение
-        #     тут же — docstring/dict-присваивание/тестовый env, issues #446/#450)
+        #   - строка со ссылкой на переменную $IWE_GOVERNANCE_REPO или её dict-ключом
+        #     "IWE_GOVERNANCE_REPO": — структурно демонстрирует переопределение, не
+        #     просто содержит имя переменной где-то в комментарии (issues #446/#450)
         #   - файл лежит в scripts/tests/ — тестовая фикстура легитимно использует литерал
         #     дефолтного имени как значение, не как утечку личного репо (issues #446/#450)
         # Запрещено: буквальное имя governance-репо вне fallback-паттерна в исполняемых строках
@@ -98,7 +99,7 @@ if [[ "$MODE" != "settings-json" ]]; then
         # безопасным fallback-хвостом) прошёл бы незамеченным, т.к. хвост строки матчит
         # safe-паттерн, даже когда начало строки содержит отдельный, опасный хардкод.
         case "$f" in
-            */tests/*) : ;;  # issues #446/#450: тестовые фикстуры — не сканировать вовсе
+            scripts/tests/*|*/scripts/tests/*) : ;;  # issues #446/#450: фикстуры конвенции scripts/tests/ — не сканировать. Уже, чем */tests/* — другие tests/-каталоги репо (.claude/skills/*/tests/, guide-kit/tests/) продолжают проверяться как обычно.
             *)
         if grep -q "$AUTHOR_GOV_REPO" "$f" 2>/dev/null; then
             bad_lines=$(grep -n "$AUTHOR_GOV_REPO" "$f" \
@@ -108,7 +109,7 @@ if [[ "$MODE" != "settings-json" ]]; then
                 | grep -vE '^[0-9]*:[[:space:]]*[A-Z_]+_TMPL=' \
                 | grep -vE "os\.environ\.get\([^)]*,[[:space:]]*[\"']" \
                 | grep -vE '^[0-9]*:\s*[A-Z_][A-Z0-9_]*="[^"]*"[[:space:]]*[\\]$' \
-                | grep -v 'IWE_GOVERNANCE_REPO' \
+                | grep -vE '\$IWE_GOVERNANCE_REPO|"IWE_GOVERNANCE_REPO"[[:space:]]*:' \
                 || true)
             if [[ -n "$bad_lines" ]]; then
                 bad_lines=$(echo "$bad_lines" | while IFS= read -r bl; do
