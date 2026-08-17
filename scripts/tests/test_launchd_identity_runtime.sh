@@ -29,7 +29,8 @@ bash "$ROOT/setup/build-runtime.sh" --quiet --workspace "$WORKSPACE" --env-file 
 assert_plist_identity() {
     local plist="$1"
     local key="$2"
-    awk -v key="$key" -v value="runtime-test-user" '
+    local value="$3"
+    awk -v key="$key" -v value="$value" '
         $0 == "        <key>" key "</key>" {
             getline
             matched = $0 == "        <string>" value "</string>"
@@ -51,8 +52,8 @@ PLISTS=(
 for rel in "${PLISTS[@]}"; do
     plist="$WORKSPACE/.iwe-runtime/$rel"
     [ -f "$plist" ] || { echo "FAIL: missing rendered plist $rel" >&2; exit 1; }
-    assert_plist_identity "$plist" USER
-    assert_plist_identity "$plist" LOGNAME
+    assert_plist_identity "$plist" USER runtime-test-user
+    assert_plist_identity "$plist" LOGNAME runtime-test-user
     if command -v plutil >/dev/null 2>&1 && ! plutil -lint "$plist" >/dev/null; then
         echo "FAIL: rendered plist is invalid: $rel" >&2
         exit 1
@@ -65,14 +66,12 @@ done
 
 MISSING_ENV="$TMP/missing-user.env"
 grep -v '^USER_NAME=' "$ENV_FILE" > "$MISSING_ENV"
-if bash "$ROOT/setup/build-runtime.sh" --quiet --workspace "$TMP/missing" --env-file "$MISSING_ENV" >"$TMP/missing.out" 2>&1; then
-    echo "FAIL: build-runtime accepted an absent USER_NAME" >&2
-    exit 1
-fi
-grep -q 'USER_NAME is required' "$TMP/missing.out" || {
-    echo "FAIL: missing USER_NAME was not reported clearly" >&2
-    cat "$TMP/missing.out" >&2
-    exit 1
-}
+FALLBACK_USER=$(id -un)
+bash "$ROOT/setup/build-runtime.sh" --quiet --workspace "$TMP/missing" --env-file "$MISSING_ENV"
+for rel in "${PLISTS[@]}"; do
+    plist="$TMP/missing/.iwe-runtime/$rel"
+    assert_plist_identity "$plist" USER "$FALLBACK_USER"
+    assert_plist_identity "$plist" LOGNAME "$FALLBACK_USER"
+done
 
-echo "PASS: all launchd jobs render explicit USER and LOGNAME; missing USER_NAME fails"
+echo "PASS: all launchd jobs render explicit USER and LOGNAME with a build-time fallback"

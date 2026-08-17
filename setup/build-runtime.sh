@@ -161,6 +161,12 @@ fi
 env_get() {
     local raw
     raw=$(grep "^$1=" "$ENV_FILE" 2>/dev/null | head -1 | cut -d'=' -f2-)
+    # launchd не передаёт USER/LOGNAME в job, но build выполняется в
+    # интерактивной системе, где Unix login доступен надёжно. Явное значение
+    # из env-файла сохраняет приоритет для нестандартных установок.
+    if [ -z "$raw" ] && [ "$1" = "USER_NAME" ]; then
+        raw=$(id -un 2>/dev/null || true)
+    fi
     case "$raw" in
         \"*\") [ ${#raw} -ge 2 ] && raw="${raw#\"}" && raw="${raw%\"}" ;;
         \'*\') [ ${#raw} -ge 2 ] && raw="${raw#\'}" && raw="${raw%\'}" ;;
@@ -198,11 +204,11 @@ if [ "${#SUBSTITUTED_FILES[@]}" -eq 0 ] && [ "${#COPIED_FILES[@]}" -eq 0 ]; then
     exit 3
 fi
 
-# USER/LOGNAME are absent from launchd's minimal environment.  They must come
-# from explicit user configuration rather than be inferred while the job runs.
+# USER/LOGNAME are absent from launchd's minimal environment. They are rendered
+# during the build from explicit configuration or the current Unix login.
 if [ -z "$(env_get USER_NAME)" ]; then
-    echo "ERROR: USER_NAME is required in .exocortex.env to render launchd jobs." >&2
-    echo "Run update.sh to add it automatically, or set USER_NAME to the Unix login name." >&2
+    echo "ERROR: cannot determine USER_NAME to render launchd jobs." >&2
+    echo "Set USER_NAME in .exocortex.env or run the build as a Unix user." >&2
     exit 7
 fi
 
