@@ -261,7 +261,7 @@
     },
     {
       "path": ".claude/scripts/wp-sync-bundle.sh",
-      "sha256": "cbb565d904644e70489a32e5df117239283a92a76794362fcac305c72ad4fa35"
+      "sha256": "7881aab93ca6f0d8a20d10f587b5faa731a5445244b950a02abe9e79fe3a0f10"
     },
     {
       "path": ".claude/settings.json",
@@ -653,7 +653,7 @@
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "1a4d72d70e384d2ea6b7b0b18fab93328b00809deb49c750596c8013c72d61e8"
+      "sha256": "f6d88e3bc47a30d9f561b68934078bf7e286de880cc5926e02864a161b137b4d"
     },
     {
       "path": "CLAUDE.md",
@@ -873,7 +873,7 @@
     },
     {
       "path": "extensions/agent-inbox/scripts/iwe-agent-dispatcher.py",
-      "sha256": "53a9a4916563f10849b0590584ebf0ea2452b8263ee2c99fe4938bd7dc418960"
+      "sha256": "d736ab9d8b2c7d3c51f1b03a43e230b9ce6b0c11c8e0ec3440add731cbe78fd2"
     },
     {
       "path": "extensions/agent-inbox/templates/_template.md",
@@ -1349,7 +1349,7 @@
     },
     {
       "path": "memory/protocol-open.md",
-      "sha256": "838b7a9b7becb7a09b61dc2338147e29f9f2b00f26d1a084686a75c0fbe0c9e6"
+      "sha256": "fe6c7ab7e9c4382b831b3bf58985c6ce5c6d8ef667834efa3d2e80759fb7778a"
     },
     {
       "path": "memory/protocol-work.md",
@@ -1485,7 +1485,7 @@
     },
     {
       "path": "roles/extractor/prompts/inbox-check.md",
-      "sha256": "a2fa14ca7b56e477dcc2de15f6dc632e266106dab3c43eabf8303e6cdc5af09a"
+      "sha256": "e0d869263a97a5541d5a24635572490e2e9f37a59ac62ea36d387284cfcd9074"
     },
     {
       "path": "roles/extractor/prompts/knowledge-audit.md",
@@ -1509,11 +1509,11 @@
     },
     {
       "path": "roles/extractor/scripts/extractor.sh",
-      "sha256": "0745ce19bb3dbb5b1c1d7cb3164c07a0bc1b2d8cb9544fd69e061c76c8dcd284"
+      "sha256": "a63006b35ff917c73853c7db1bce5ce91dcc1c791d43e55b16f790e02a77aa38"
     },
     {
       "path": "roles/extractor/scripts/launchd/com.extractor.inbox-check.plist",
-      "sha256": "efface168a481f459b2c6b660bbaf4a6fa8440053456c0226364d6ccbcc69e97"
+      "sha256": "0f698455a221d847c195a22d3207c1ae348c338c86f2f6e1ba7cba8b7b37a45e"
     },
     {
       "path": "roles/extractor/scripts/systemd/iwe-extractor-inbox-check.service",
@@ -1605,7 +1605,7 @@
     },
     {
       "path": "roles/strategist/prompts/strategy-session-weekly/steps/03-dissatisfactions.md",
-      "sha256": "e94477f479a6918fd6bf7ee6af24353421fec63008c2da2f13370cf3be515be9"
+      "sha256": "e171f1183bab34f96217e5c70873a249ff76271f5b51c61362397ad10e408c79"
     },
     {
       "path": "roles/strategist/prompts/strategy-session-weekly/steps/04-strategy-sync.md",
@@ -1897,7 +1897,7 @@
     },
     {
       "path": "scripts/claude-peer-adapter.sh",
-      "sha256": "00260975c09e2d5fc47506a5faf725f16ff432dd1adce923a728264f4bb2b67c"
+      "sha256": "e77e76d34ed89227d54bfafbffd4550d6603301bbe7a4e3a6707ad4e2c99eb14"
     },
     {
       "path": "scripts/close-wp.sh",
@@ -1933,7 +1933,7 @@
     },
     {
       "path": "scripts/create-wp.sh",
-      "sha256": "d915d9acaea07dfd2be43266d2136b1cae6fe9589987ea7c877277888a4cd551"
+      "sha256": "4652a5dee092c6e8f29506125e999e823aef049c8fc890011f6a65b721626aca"
     },
     {
       "path": "scripts/day-close-lock.sh",
@@ -1978,6 +1978,10 @@
     {
       "path": "scripts/day-open-smoke.sh",
       "sha256": "fc7780833a9aacb15cc104c61f8e2ca974577a0f70e35fdeb0d037cebce771a7"
+    },
+    {
+      "path": "scripts/external-tracker.py",
+      "sha256": "d248cb83b373ad9e8e71c6af6a42634d8dde25c5a56ba2ef667627109321ad9b"
     },
     {
       "path": "scripts/fmt-critical-alert.sh",
@@ -2037,7 +2041,7 @@
     },
     {
       "path": "scripts/iwe-agent-dispatcher.py",
-      "sha256": "53a9a4916563f10849b0590584ebf0ea2452b8263ee2c99fe4938bd7dc418960"
+      "sha256": "d736ab9d8b2c7d3c51f1b03a43e230b9ce6b0c11c8e0ec3440add731cbe78fd2"
     },
     {
       "path": "scripts/iwe-audit.sh",
@@ -2276,6 +2280,10 @@
       "sha256": "a2c4efd4a82bc5b432a968a54918da7821b3357a442ed4be4e29c7e1070fccf0"
     },
     {
+      "path": "scripts/test_external_tracker.py",
+      "sha256": "f2ae015d394a447778e1ed75ecfa16d80fe98e1164655b3431940c7e783d206c"
+    },
+    {
       "path": "scripts/tests/lib/capture_fixture.sh",
       "sha256": "edf6eba925d890e2aa52541be8fff27fb48ab11f5c7c69a8a3b1b001408978cd"
     },
@@ -2344,16 +2352,8 @@
       "sha256": "99c99c821223e70a8a0b1cb89ce9a72f2bd1e5eebd011c2f42eadde056125491"
     },
     {
-      "path": "scripts/tests/test_hindsight_docs_contract.sh",
-      "sha256": "6e63ee7b0210a6ad47b3bff1d04c3ca404d6b4b627d7977ba8207da198ae7c3c"
-    },
-    {
       "path": "scripts/tests/test_issues_413_418.py",
       "sha256": "bec574712bb6c776c2c3b0f571b87b152c33745214fe9dd7788b2a2dbff6fedd"
-    },
-    {
-      "path": "scripts/tests/test_launchd_identity_runtime.sh",
-      "sha256": "93dd3f5a501f747872a540d56aee6eeb1f122155ba995de5f71451aef735013f"
     },
     {
       "path": "scripts/tests/test_session_guard_hypothesis_gate.sh",
@@ -2429,7 +2429,7 @@
     },
     {
       "path": "setup/build-runtime.sh",
-      "sha256": "ef7724c0452f01f58f28530066db9d40f158a500aaacba283b9287ad78520a85"
+      "sha256": "818f7ed16d24e87fea34a028d093709bdd09e41ba6a6afec23f8460c4b6ebe20"
     },
     {
       "path": "setup/install-iwe-paths.sh",
@@ -2495,7 +2495,9 @@
     "scripts/tests/test_delivery_content.py",
     "scripts/tests/test_delivery_formal.py",
     "scripts/tests/test_dry_run_gate.py",
+    "scripts/tests/test_hindsight_docs_contract.sh",
     "scripts/tests/test_install_hooks.py",
+    "scripts/tests/test_launchd_identity_runtime.sh",
     "scripts/tests/test_manifest_coverage_local.py",
     "scripts/tests/test_residency_gate_skill_adapter.py",
     "scripts/tests/test_skill_promote.py",

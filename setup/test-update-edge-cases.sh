@@ -1504,6 +1504,23 @@ else
     fail "T23: legacy checkbox fallback regressed (rc=$T23_LEGACY_RC): $T23_LEGACY_OUT"
 fi
 
+mkdir -p "$T23_GOV/archive/wp-contexts"
+cat > "$T23_GOV/archive/wp-contexts/WP-469-unrelated.md" <<'HEREDOC'
+---
+wp: 469
+status: done
+---
+HEREDOC
+
+T23_PREFIX_OUT=$(IWE_WORKSPACE="$T23_ROOT" IWE_GOVERNANCE_REPO=governance \
+    bash "$TEMPLATE_DIR/.claude/scripts/wp-sync-bundle.sh" WP-46 2>&1)
+T23_PREFIX_RC=$?
+if [ "$T23_PREFIX_RC" -eq 1 ] && [[ "$T23_PREFIX_OUT" == *'WP-46: файл не найден'* ]]; then
+    pass "T23: a shorter WP ID does not resolve a longer numeric prefix"
+else
+    fail "T23: numeric-prefix archive lookup regressed (rc=$T23_PREFIX_RC): $T23_PREFIX_OUT"
+fi
+
 # ============================================================
 # T24: public-fork CLAUDE bases stay raw and rules survive repair
 # ============================================================
