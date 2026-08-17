@@ -85,14 +85,21 @@ if [[ "$MODE" != "settings-json" ]]; then
         #   - cmd || echo "DS-strategy"            (bare fallback после ||, issue #275)
         #   - if [ -d "$DIR/DS-strategy" ]; ... case DS-strategy)  (auto-detect идиома,
         #     физическая проверка существования репо, не хардкод-протечка, issue #275)
+        #   - строка, где ЖЕ упомянут $IWE_GOVERNANCE_REPO (документирует переопределение
+        #     тут же — docstring/dict-присваивание/тестовый env, issues #446/#450)
+        #   - файл лежит в scripts/tests/ — тестовая фикстура легитимно использует литерал
+        #     дефолтного имени как значение, не как утечку личного репо (issues #446/#450)
         # Запрещено: буквальное имя governance-репо вне fallback-паттерна в исполняемых строках
         # Комментарии (#) пропускаются — документация не влияет на поведение
         #
         # issue #275: паттерны "|| echo <literal>" и "if [ -d .../<literal> ]" исключаются
-        # только когда <literal> встречается на строке РОВНО ОДИН раз — иначе, например,
+        # только когда <литерал> встречается на строке РОВНО ОДИН раз — иначе, например,
         # `cd ".../DS-strategy" || echo "DS-strategy"` (реальный хардкод в cd, замаскированный
         # безопасным fallback-хвостом) прошёл бы незамеченным, т.к. хвост строки матчит
         # safe-паттерн, даже когда начало строки содержит отдельный, опасный хардкод.
+        case "$f" in
+            */tests/*) : ;;  # issues #446/#450: тестовые фикстуры — не сканировать вовсе
+            *)
         if grep -q "$AUTHOR_GOV_REPO" "$f" 2>/dev/null; then
             bad_lines=$(grep -n "$AUTHOR_GOV_REPO" "$f" \
                 | grep -v '^\s*#\|^[0-9]*:\s*#' \
@@ -101,6 +108,7 @@ if [[ "$MODE" != "settings-json" ]]; then
                 | grep -vE '^[0-9]*:[[:space:]]*[A-Z_]+_TMPL=' \
                 | grep -vE "os\.environ\.get\([^)]*,[[:space:]]*[\"']" \
                 | grep -vE '^[0-9]*:\s*[A-Z_][A-Z0-9_]*="[^"]*"[[:space:]]*[\\]$' \
+                | grep -v 'IWE_GOVERNANCE_REPO' \
                 || true)
             if [[ -n "$bad_lines" ]]; then
                 bad_lines=$(echo "$bad_lines" | while IFS= read -r bl; do
@@ -126,6 +134,8 @@ if [[ "$MODE" != "settings-json" ]]; then
                 errors=$((errors + 1))
             fi
         fi
+            ;;
+        esac
 
         # Проверка 4: set -e + ((VAR++)) без || true → silent exit при VAR==0 (B8 gap)
         # $((VAR + 1)) — безопасно (арифметика, не команда).
