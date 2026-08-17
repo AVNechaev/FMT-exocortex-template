@@ -152,6 +152,8 @@ SCRIPT_CONTRACT_EXPLICIT_INCLUDE=(
     "scripts/tests/test_update_delivery_ref.sh"
     "scripts/tests/test_upgrade_worktree_cleanup.sh"
     "scripts/tests/test_issues_413_418.py"
+    "scripts/tests/test_hindsight_docs_contract.sh"
+    "scripts/tests/test_launchd_identity_runtime.sh"
     "scripts/tests/test_session_guard_hypothesis_gate.sh"
 )
 
