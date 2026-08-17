@@ -54,6 +54,9 @@ for rel in "${PLISTS[@]}"; do
     [ -f "$plist" ] || { echo "FAIL: missing rendered plist $rel" >&2; exit 1; }
     assert_plist_identity "$plist" USER runtime-test-user
     assert_plist_identity "$plist" LOGNAME runtime-test-user
+    if [ "$rel" = "roles/extractor/scripts/launchd/com.extractor.inbox-check.plist" ]; then
+        assert_plist_identity "$plist" IWE_GOVERNANCE_REPO DS-strategy
+    fi
     if command -v plutil >/dev/null 2>&1 && ! plutil -lint "$plist" >/dev/null; then
         echo "FAIL: rendered plist is invalid: $rel" >&2
         exit 1
