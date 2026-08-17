@@ -1545,6 +1545,19 @@ if [ -f "$ENV_FILE" ]; then
             ENV_IWE_RUNTIME="$DETECT_WS_RT/.iwe-runtime"
         fi
 
+        # WP-5 Ф43: launchd does not reliably export USER/LOGNAME.  Keep the
+        # Unix login name as explicit runtime input so generated plist files
+        # never infer it from their own minimal environment.
+        if ! grep -q '^USER_NAME=' "$ENV_FILE" 2>/dev/null; then
+            DETECTED_USER_NAME=$(id -un 2>/dev/null || true)
+            if [ -z "$DETECTED_USER_NAME" ]; then
+                echo "  ОШИБКА: не удалось определить Unix login для USER_NAME; добавьте его в .exocortex.env вручную."
+            else
+                echo "USER_NAME=$DETECTED_USER_NAME" >> "$ENV_FILE"
+                echo "  ✓ Добавлено USER_NAME=$DETECTED_USER_NAME в .exocortex.env (WP-5 Ф43)"
+            fi
+        fi
+
         # === Migrate .exocortex.env from FMT to workspace (WP-273 Этап 2) ===
         # Если .exocortex.env живёт в FMT (legacy ≤0.28.x), копируем в workspace.
         # FMT остаётся read-only. Workspace = source-of-truth user state.

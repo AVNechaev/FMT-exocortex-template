@@ -392,6 +392,7 @@ HEREDOC
 
 cp "$TEMPLATE_DIR/.exocortex.env" "$T8_WS/.exocortex.env" 2>/dev/null || cat > "$T8_WS/.exocortex.env" <<HEREDOC
 HOME_DIR=$HOME
+USER_NAME=test-user
 WORKSPACE_DIR=$T8_WS
 CLAUDE_PATH=/usr/bin/claude
 CLAUDE_PROJECT_SLUG=test
@@ -873,6 +874,7 @@ T14_WS="$TEST_WS/t14-workspace"
 mkdir -p "$T14_WS"
 cat > "$T14_WS/.exocortex.env" <<HEREDOC
 HOME_DIR=$HOME
+USER_NAME=test-user
 WORKSPACE_DIR=$T14_WS
 CLAUDE_PATH=/usr/bin/claude
 CLAUDE_PROJECT_SLUG=test
@@ -1513,6 +1515,7 @@ mkdir -p "$T24_TEMPLATE" "$T24_ROOT/.claude/rules"
 cat > "$T24_ROOT/.exocortex.env" <<EOF
 WORKSPACE_DIR="$T24_ROOT"
 HOME_DIR="$T24_ROOT/home"
+USER_NAME="test-user"
 CLAUDE_PATH="$T24_ROOT/bin/claude"
 IWE_TEMPLATE="$T24_TEMPLATE"
 IWE_RUNTIME="$T24_ROOT/.iwe-runtime"

@@ -23,6 +23,7 @@
 #   3 — overlay-реестр не найден
 #   4 — отсутствуют source-файлы из реестра
 #   5 — drift detected (только в --diff режиме при найденных расхождениях)
+#   7 — отсутствует обязательное значение runtime-конфигурации
 #
 # WP-273 Этап 2 Ф18. ArchGate v2 → F (Generated runtime).
 
@@ -195,6 +196,14 @@ while IFS= read -r line; do PLACEHOLDERS+=("$line"); done < <(parse_list "placeh
 if [ "${#SUBSTITUTED_FILES[@]}" -eq 0 ] && [ "${#COPIED_FILES[@]}" -eq 0 ]; then
     echo "ERROR: Overlay-реестр пуст или повреждён: $OVERLAY_FILE" >&2
     exit 3
+fi
+
+# USER/LOGNAME are absent from launchd's minimal environment.  They must come
+# from explicit user configuration rather than be inferred while the job runs.
+if [ -z "$(env_get USER_NAME)" ]; then
+    echo "ERROR: USER_NAME is required in .exocortex.env to render launchd jobs." >&2
+    echo "Run update.sh to add it automatically, or set USER_NAME to the Unix login name." >&2
+    exit 7
 fi
 
 # === Verify source files exist in FMT ===
