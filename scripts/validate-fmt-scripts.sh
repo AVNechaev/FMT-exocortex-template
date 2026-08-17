@@ -125,6 +125,19 @@ if [[ "$MODE" != "settings-json" ]]; then
                         if echo "$bl" | grep -qE '^[0-9]*:[[:space:]]*[A-Za-z0-9_*|-]*\|?'"$AUTHOR_GOV_REPO"'\)[[:space:]]*$'; then
                             continue
                         fi
+                        # auto-detect идиома, продолжение (issue #450): follow-up
+                        # присваивание ВНУТРИ уже безопасного `if [ -d .../LITERAL" ]; then`
+                        # (сам if строкой выше уже matчит паттерн на 2 проверки раньше) — тот
+                        # же физический detect, не отдельный хардкод. Безопасно только для
+                        # голого `VAR="LITERAL"` без хвоста — не расширяет паттерн на строки
+                        # с чем-то ещё после литерала.
+                        if echo "$bl" | grep -qE '^[0-9]*:[[:space:]]*[A-Z_][A-Z0-9_]*="'"$AUTHOR_GOV_REPO"'"[[:space:]]*$'; then
+                            lineno="${bl%%:*}"
+                            prev_line=$(sed -n "$((lineno - 1))p" "$f" 2>/dev/null)
+                            if echo "$prev_line" | grep -qE '^[[:space:]]*if \[ -d "[^"]*/'"$AUTHOR_GOV_REPO"'" \]; then$'; then
+                                continue
+                            fi
+                        fi
                     fi
                     echo "$bl"
                 done)
