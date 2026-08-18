@@ -33,7 +33,7 @@ REORDERED_REGISTRY = """\
 EXTRA_COLUMN_REGISTRY = """\
 | # | P | Название | Ст | Репо | Ставка | Бюджет |
 |---|---|---|---|---|---|---|
-| 541 | P2 | Тест А | ⏳ | DS-my-strategy/inbox/WP-541/ | Оснащённость | 2h |
+| 541 | P2 | Тест А | ⏳ | governance-repo/inbox/WP-541/ | Оснащённость | 2h |
 """
 
 
