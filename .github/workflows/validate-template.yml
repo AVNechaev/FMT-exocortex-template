@@ -340,6 +340,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0  # WP-529 Ф2: check-delivery-route-label.sh нужна полная история для git diff/show против base
 
       # C1 fix (0.28.6): CI source-of-truth = local validator (setup/validate-template.sh).
       # Раньше CI имел собственный inline blacklist, который расходился с local — например,
@@ -451,6 +453,29 @@ jobs:
         run: |
           bash scripts/verify-manifest.sh
 
+      # WP-529 Ф1: docs/critical-files-map.yaml должна оставаться согласованной
+      # с живой классификацией generate-manifest.sh — та же гарантия, что B2
+      # выше даёт для update-manifest.json, только для карты категорий.
+      - name: Check critical-files-map consistency
+        run: bash scripts/check-critical-files-map.sh
+
+      # WP-529 Ф2: изменение состава ручно курируемой категории доставки
+      # (explicit-include/exclude списки, deprecated_files) обязано нести
+      # trailer Delivery-Route: <category-id> — иначе такое решение проходит
+      # без явного сигнала ревьюеру/CI. base определяется так же, как в
+      # release-sync выше (push → event.before, PR → base.sha).
+      - name: Check delivery-route label on curated category changes
+        run: |
+          EVENT="${{ github.event_name }}"
+          if [ "$EVENT" = "push" ]; then
+            BASE="${{ github.event.before }}"
+          elif [ "$EVENT" = "pull_request" ]; then
+            BASE="${{ github.event.pull_request.base.sha }}"
+          else
+            BASE=""
+          fi
+          bash scripts/check-delivery-route-label.sh "$BASE"
+
       # setup.sh ↔ update.sh parity. Root (29 июня, peer-session 2026-06-29-03):
       # rules-lazy доставлялся через update.sh, но отсутствовал в setup.sh for-loop —
       # fresh install терял компонент. check-setup-update-parity существовал (WP-315),
@@ -479,6 +504,13 @@ jobs:
       # при TOTAL_CHANGES=0) — сторожит именно тот класс регрессии, что уже был.
       - name: Run update.sh issue #226 regression test
         run: bash setup/test-update-issue-226.sh
+
+      # WP-529 Ф2 acceptance criterion: пропуск критичного файла и неверная
+      # метка маршрута обязаны давать детерминированный отказ с понятной
+      # причиной. Прогоняет реальный scripts/check-delivery-route-label.sh на
+      # throwaway git-фикстуре — не переписывает его логику вторым разом.
+      - name: Run delivery-route-label acceptance test
+        run: bash setup/test-delivery-route-label.sh
 
       # PR #385: cloud install paths may occur legitimately in old tracked text;
       # only additions made by the current updater run are publication blockers.

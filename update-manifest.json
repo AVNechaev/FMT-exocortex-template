@@ -1868,6 +1868,10 @@
       "sha256": "9af2c1bd756e2bbd6d0ebdceb549f15a5c94dd546dbc705e2e27de105ba23bce"
     },
     {
+      "path": "scripts/check-delivery-route-label.sh",
+      "sha256": "514f957947b593bd30c542bbced6d133c3722415b064842bbb7ef73eec322ce0"
+    },
+    {
       "path": "scripts/check-dirty-repos.sh",
       "sha256": "e4678b0fc4493e569e2ba95d6269619e5771d1e638a79587de2f074af42ade8a"
     },
