@@ -249,7 +249,7 @@
     },
     {
       "path": ".claude/scripts/memory-drift-scan.py",
-      "sha256": "3a6b84fe9753a6c134afdf057dd005bfbcc6f6863e8d2022cc808b0fca82065c"
+      "sha256": "8c0b5d81add179ca03aa3e590a33a9b92c36b97b49d9030f0c2eba808a29fea0"
     },
     {
       "path": ".claude/scripts/settings-merge-apply.sh",
@@ -257,11 +257,11 @@
     },
     {
       "path": ".claude/scripts/settings-merge-preview.py",
-      "sha256": "85cc623ab22dbc311de1b892c22cd5e2d2ce9edc9b46cbaf97b38dc7a4cff453"
+      "sha256": "1736fa40d7229ad26c5b7a61ba5fdbb5b7b5844f6288a2e927c7f67137281dfb"
     },
     {
       "path": ".claude/scripts/wp-sync-bundle.sh",
-      "sha256": "6b5babc08bd705b10a11fcf60b333199cb05031d3cef37330fb86a2bd217cb89"
+      "sha256": "431bed387ac29e09d5e568de3f308815b3def0d23a8e6d566c0b1df0fee29266"
     },
     {
       "path": ".claude/settings.json",
@@ -1377,7 +1377,7 @@
     },
     {
       "path": "memory/roles.md",
-      "sha256": "622d760028ee78a7b86078134dc440a79cdbc444e1825db18dccdbadfcdeebd9"
+      "sha256": "5a71b49f62edc756de3a52dc6ab707e0945d318f35dd9fe2d94cab703a7754f4"
     },
     {
       "path": "memory/routing-vocab.md",
@@ -1438,6 +1438,10 @@
     {
       "path": "pack-templates/digital-platform/08-service-clauses/DP.SC.NNN-external-session-request.md",
       "sha256": "8076866fe2eddc7b4276c3a147d93c02c8792b24f48bbe05a4617248cc85d0f7"
+    },
+    {
+      "path": "requirements.txt",
+      "sha256": "3f600705020e1fc7781453ca3cb45be9c1e122673cab8fa48bfe846368e63017"
     },
     {
       "path": "roles/README.md",
@@ -1845,7 +1849,7 @@
     },
     {
       "path": "scripts/build-active-wp.py",
-      "sha256": "f53e30cdac9f5e5431ab0e6080fcd717514f17ee5cc907026cb9feff8aefc117"
+      "sha256": "548934ec48e1c9b257cd6dee9ff30018d5d83f309054140c0d474c6bbd51165c"
     },
     {
       "path": "scripts/changelog-append.sh",
@@ -1961,7 +1965,7 @@
     },
     {
       "path": "scripts/day-close.sh",
-      "sha256": "c6dabf44b699019f939d7e7094bc6ace2dd5def9b00eee62463ca0833fc16d00"
+      "sha256": "8083e50dd8528ce0130ffbd3622b0639fa5f1a01d5d0b4edbb59a9d00ea4006a"
     },
     {
       "path": "scripts/day-open-budget-patch.py",
@@ -1977,7 +1981,7 @@
     },
     {
       "path": "scripts/day-open-pipeline.sh",
-      "sha256": "cbd5b60230db40e2f0c24c88a5f5dc2cf26725ad0a7de0dd47b683441e87ecfc"
+      "sha256": "c7b176ea6e05d2382f702e366a565ef6e3e6498a8b70e80295b63f02c8b18a4c"
     },
     {
       "path": "scripts/day-open-preflight.sh",
@@ -1985,7 +1989,7 @@
     },
     {
       "path": "scripts/day-open-scaffold.sh",
-      "sha256": "830ac941393c1029bd9593476928cc9c296d95b0cd84565cec442730a375619b"
+      "sha256": "3913003b9fafd108571d895d57d7b7ca87873f882353fd25befb650a16ad34de"
     },
     {
       "path": "scripts/day-open-smoke-extended.sh",
@@ -2233,7 +2237,7 @@
     },
     {
       "path": "scripts/server-calendar.sh",
-      "sha256": "27e1c8f6c2a2d7b35f2a025d56f0f488132746f4fe79c7db7e0a5f53a3e4fa33"
+      "sha256": "2fa9d4e61c38320150fc262806a87dc8ca56d3eed25f625d3a4a50e39539b9ff"
     },
     {
       "path": "scripts/server-news.sh",
@@ -2497,7 +2501,7 @@
     },
     {
       "path": "update.sh",
-      "sha256": "b6671f02b3ebb87b166711ecebc3f3af991681831ea64e20456071dfc088c495"
+      "sha256": "18b48aabbf229798821209040dda4989e5da6749184dd8413c5a8fc1b8ead99f"
     }
   ],
   "excluded_paths": [
@@ -2530,6 +2534,14 @@
     "scripts/tests/test_delivery_formal.py",
     "scripts/tests/test_dry_run_gate.py",
     "scripts/tests/test_install_hooks.py",
+    "scripts/tests/test_issue_434_pipeline_scaffold_only.sh",
+    "scripts/tests/test_issue_453_calendar_private_visibility.sh",
+    "scripts/tests/test_issue_455_scaffold_missing_lib_fatal.sh",
+    "scripts/tests/test_issue_463_pyyaml_explicit_diagnostics.sh",
+    "scripts/tests/test_issue_469_settings_merge_hook_identity.py",
+    "scripts/tests/test_issue_471_drift_scan_status_boundary.py",
+    "scripts/tests/test_issue_473_build_active_wp_columns.py",
+    "scripts/tests/test_issue_473_wp_sync_bundle_status.sh",
     "scripts/tests/test_manifest_coverage_local.py",
     "scripts/tests/test_pending_phases_sweep.sh",
     "scripts/tests/test_release_receipt.sh",
