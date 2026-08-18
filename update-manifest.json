@@ -776,6 +776,10 @@
       "sha256": "f12a5ba4cbacffa2d7aa5bfe7148c43273195e8276173de5007c0658efe01b1a"
     },
     {
+      "path": "docs/critical-files-map.yaml",
+      "sha256": "417999bef5bbb2d311ad740c7e2c8a1a187cf1992e68e114b58b5be75e2dcce3"
+    },
+    {
       "path": "docs/hindsight-setup.md",
       "sha256": "db3f6ba15eb8d45871cb772dfef40fa670107445cf4bac80084ae9764a1f2f36"
     },
@@ -1858,6 +1862,10 @@
     {
       "path": "scripts/check-claude-md-links.py",
       "sha256": "f3f6fb6080291f4a36d48fed4167a872df8996154f04f8ab22802c388295be04"
+    },
+    {
+      "path": "scripts/check-critical-files-map.sh",
+      "sha256": "9af2c1bd756e2bbd6d0ebdceb549f15a5c94dd546dbc705e2e27de105ba23bce"
     },
     {
       "path": "scripts/check-dirty-repos.sh",
