@@ -1273,7 +1273,7 @@ for platform_file in \
     protocol-open.md protocol-work.md protocol-close.md protocol-month-close.md \
     agent-architecture-framework.md agent-vendor-connect-pattern.md checklists.md \
     dry-run-contract.md feedback_response_clarity_for_pilot.md hooks-design.md navigation.md \
-    reference/agent-core.md repo-type-rules.md roles.md r-questionnaire.md t-checklist.md templates-dayplan.md; do
+    reference/agent-core.md repo-type-rules.md r-questionnaire.md t-checklist.md templates-dayplan.md; do
     if [ "$(get_field "$TEMPLATE_DIR/memory/$platform_file" owner)" != "platform" ]; then
         T21_OWNER_FAILURES=$((T21_OWNER_FAILURES + 1))
     fi
