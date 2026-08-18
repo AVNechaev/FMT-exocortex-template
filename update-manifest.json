@@ -1981,7 +1981,7 @@
     },
     {
       "path": "scripts/day-open-preflight.sh",
-      "sha256": "30d1bec3a1fa0cdba68ffd067cd7db918897ee541c3072d067c5f92f59839977"
+      "sha256": "ff38d44cfb2aad74a7b4b675443a630234eb0fe12cbcceacca1ae8ce47f564d1"
     },
     {
       "path": "scripts/day-open-scaffold.sh",
@@ -2520,6 +2520,7 @@
     "scripts/tests/test_agent_dashboard.py",
     "scripts/tests/test_copy_to_aisystant.py",
     "scripts/tests/test_day_close_prepare.py",
+    "scripts/tests/test_day_open_preflight_calendar_path.sh",
     "scripts/tests/test_delivery_content.py",
     "scripts/tests/test_delivery_formal.py",
     "scripts/tests/test_dry_run_gate.py",
