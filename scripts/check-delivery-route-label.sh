@@ -23,6 +23,9 @@ MANIFEST="$SCRIPT_DIR/update-manifest.json"
 MAP="$SCRIPT_DIR/docs/critical-files-map.yaml"
 BASE="${1:-}"
 
+[ -f "$MANIFEST" ] || { echo "ERROR: $MANIFEST не найден"; exit 2; }
+[ -f "$MAP" ] || { echo "ERROR: $MAP не найден"; exit 2; }
+
 if [[ -z "$BASE" || "$BASE" == "0000000000000000000000000000000000000000" ]]; then
     echo "  ℹ нет валидной base-ревизии (первый push/новая ветка) — проверка меток пропущена"
     exit 0
@@ -58,9 +61,7 @@ dump_arrays() {
 }
 
 TMP_BASE_GEN=$(mktemp)
-TMP_MANIFEST_BACKUP=$(mktemp)
-trap 'cp "$TMP_MANIFEST_BACKUP" "$MANIFEST" 2>/dev/null; rm -f "$TMP_BASE_GEN" "$TMP_MANIFEST_BACKUP"' EXIT
-cp "$MANIFEST" "$TMP_MANIFEST_BACKUP"
+trap 'rm -f "$TMP_BASE_GEN"' EXIT
 
 if ! git -C "$SCRIPT_DIR" show "$BASE:generate-manifest.sh" > "$TMP_BASE_GEN" 2>/dev/null; then
     echo "  ℹ generate-manifest.sh не существовал на base-ревизии — проверка меток пропущена"
