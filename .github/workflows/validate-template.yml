@@ -517,6 +517,13 @@ jobs:
       - name: Test staged install-path guard
         run: bash scripts/tests/test_update_install_path_guard.sh
 
+      # WP-529 Ф3: release-receipt.sh (the release-receipt job below) must
+      # fail closed — success/skipped on every mandatory check to publish,
+      # anything else blocks. Tested here the same way every other guard in
+      # this job is: run against synthetic scenarios, not just imported.
+      - name: Test release-receipt fail-closed logic
+        run: bash scripts/tests/test_release_receipt.sh
+
       # issue #310/#323: хук-страж, не зарегистрированный ни в одном событии, не
       # срабатывает никогда — и «не сработал» неотличимо от «нарушений не было».
       - name: Check every hook is actually wired (orphan-hook guard)
@@ -543,3 +550,47 @@ jobs:
           else
             echo "PASS: All placeholders are valid"
           fi
+
+  # WP-529 Ф3: single fail-closed receipt for this commit, built from the
+  # results of THIS workflow run (needs.<job>.result — same trigger, same
+  # SHA), not from querying job status elsewhere. `if: always()` so a
+  # failure upstream still produces a receipt recording that failure,
+  # instead of the receipt job itself being skipped and leaving no artifact
+  # to show why the commit isn't publishable. integration-contract-macos is
+  # included even though it only runs on pull_request/schedule (see its own
+  # `if:` above) — on a plain push its result is "skipped", which
+  # release-receipt.sh already treats as pass; on the triggers where it DOES
+  # run, this receipt actually gates on it instead of silently ignoring it.
+  release-receipt:
+    needs:
+      - release-sync
+      - integration-contract-ubuntu
+      - integration-contract-macos
+      - shellcheck
+      - platform-compat
+      - validate
+      - upgrade-test
+      - guide-kit-drift
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0  # release-receipt.sh needs full update-manifest.json history to resolve base_sha
+      - name: Build release receipt
+        env:
+          RESULT_RELEASE_SYNC: ${{ needs.release-sync.result }}
+          RESULT_INTEGRATION_CONTRACT_UBUNTU: ${{ needs.integration-contract-ubuntu.result }}
+          RESULT_INTEGRATION_CONTRACT_MACOS: ${{ needs.integration-contract-macos.result }}
+          RESULT_SHELLCHECK: ${{ needs.shellcheck.result }}
+          RESULT_PLATFORM_COMPAT: ${{ needs.platform-compat.result }}
+          RESULT_VALIDATE: ${{ needs.validate.result }}
+          RESULT_UPGRADE_TEST: ${{ needs.upgrade-test.result }}
+          RESULT_GUIDE_KIT_DRIFT: ${{ needs.guide-kit-drift.result }}
+        run: bash scripts/release-receipt.sh
+      - name: Upload release receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-receipt
+          path: release-receipt.json
