@@ -65,7 +65,7 @@
     },
     {
       "path": ".claude/hooks/dry-run-gate.sh",
-      "sha256": "b8c9f3c62e7201a23a11db71ea7370815b8e1312734d8f763d0012b77ce04019"
+      "sha256": "b4db8952fe634387388dfa59acf04bde612bc918291fbeba642b35dcb78547fe"
     },
     {
       "path": ".claude/hooks/extensions-gate.sh",
@@ -113,7 +113,7 @@
     },
     {
       "path": ".claude/hooks/protocol-stop-gate.sh",
-      "sha256": "802b88b8f370ae7c1797d6dc2357b1fa0934bffafb48895130116c800f746c97"
+      "sha256": "e6dee756c37e45edf95849f2fa083657eb28832b87c29ebc116c88ac5bc2fe2d"
     },
     {
       "path": ".claude/hooks/pull-on-touch.sh",
@@ -261,7 +261,7 @@
     },
     {
       "path": ".claude/scripts/wp-sync-bundle.sh",
-      "sha256": "7881aab93ca6f0d8a20d10f587b5faa731a5445244b950a02abe9e79fe3a0f10"
+      "sha256": "6b5babc08bd705b10a11fcf60b333199cb05031d3cef37330fb86a2bd217cb89"
     },
     {
       "path": ".claude/settings.json",
@@ -1301,7 +1301,7 @@
     },
     {
       "path": "memory/dry-run-contract.md",
-      "sha256": "44a64c28daf8f784d3deda3009db1a710f92bdf77e26b1f3ca6ed560d4afaf32"
+      "sha256": "50b328a36c8ccda742ce45452c657e16e849f2d027bf96cdee971534458277cc"
     },
     {
       "path": "memory/feedback_community_communication_style.md",
@@ -1969,7 +1969,7 @@
     },
     {
       "path": "scripts/day-open-checks-runner.sh",
-      "sha256": "de169b7e1ea590fc7fa0df9bda9fd15afacd005909f344cdf38e84b9534b64e0"
+      "sha256": "81bbf1810e8e34c710d9bc9b28a93d5cbae7640feb66ded888bfdae1c20b0abd"
     },
     {
       "path": "scripts/day-open-llm-fill.py",
@@ -2136,12 +2136,36 @@
       "sha256": "d9f1e1815ac9001efd185d10e5905cec1f3424c3cae77a33a16798cead6d88be"
     },
     {
+      "path": "scripts/ledger-append.sh",
+      "sha256": "84ea37467e5198c792187ed2c4b6d6a617de86a53e0766ef3c07fc67920f4323"
+    },
+    {
       "path": "scripts/lesson-close.sh",
       "sha256": "d72de2cacb39ec6205c4ab410a031d57df1aee7009f8b97a3778bd6cbebc6df1"
     },
     {
       "path": "scripts/lib/common.sh",
       "sha256": "a2c08644cb85a947671ac6e2f61bb293af4ed67bc6af2ecabdb85a992d0a6515"
+    },
+    {
+      "path": "scripts/lib/ledger-path.sh",
+      "sha256": "725d8de49c7c0d04645521ba646ff7ba952e412574e87d2514b3769464fbf48c"
+    },
+    {
+      "path": "scripts/lib/ledger-publish-kick.sh",
+      "sha256": "0e4ebc302e7a8819af2e71c8643887bdc887fb87d06d865d27258c7c5482fece"
+    },
+    {
+      "path": "scripts/lib/network-wait.sh",
+      "sha256": "beefa7845cd7d386a0b272bc147a01c0223211cf574dfc95054533461d191ea4"
+    },
+    {
+      "path": "scripts/lib/notification-render.sh",
+      "sha256": "ac1c9e55dd710e4d62d05b2fae19157c012dba0688c178475cf5f047ba909a38"
+    },
+    {
+      "path": "scripts/lib/telegram.sh",
+      "sha256": "4c5c0546b87a7bbe6dbff6af7ca011c561a1c2f5a2e5db4c4fedcd183bc9de3e"
     },
     {
       "path": "scripts/llm-proxy-launcher.sh",
@@ -2446,6 +2470,10 @@
     {
       "path": "scripts/wp-list.py",
       "sha256": "5814dcdcee11fad443aa1cb48a2518ac43cf0c52fa07f9e2f48d0bb950569b4f"
+    },
+    {
+      "path": "scripts/wp-pool-cascade.sh",
+      "sha256": "d1b82a9f4866ce0d546d493eb6b078026ee0b94450851c628707c23a47973039"
     },
     {
       "path": "scripts/wp499-agent-coordination-test.sh",
