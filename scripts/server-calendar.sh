@@ -234,6 +234,7 @@ for cid in calendar_ids:
         end = item.get("end", {})
         visibility = item.get("visibility", "")
         if visibility == "private":
+            errors.append(f"skipped private event: {summary}")
             continue
 
         start_dt = parse_dt(start.get("dateTime"))
@@ -341,13 +342,15 @@ if week_mode:
         print("| 🚦 | Время | Событие | Длит. | Тип |")
         print("|----|-------|---------|-------|-----|")
         for e in evs:
-            s = e["summary"].replace("|", "\\|")
+            s = e["summary"].replace("|", "\\\\|")
             t = "встреча" if e["type"] == "meeting" else "задача"
             print(f"| {e['status_emoji']} | {e['start_time']} | {s} | {e['duration']} | {t} |")
         print()
 
     if errors:
-        print(f"> ⚠️ Пропущено календарей: {len(errors)} (нет доступа или ошибка)")
+        print(f"> ⚠️ Пропущено при разборе: {len(errors)}")
+        for err in errors:
+            print(f">   - {err}")
     sys.exit(0)
 
 # ============ РЕЖИМ ДНЯ ============
@@ -361,7 +364,7 @@ if meetings:
     print("| 🚦 | Время | Событие | Длит. | Связь с РП |")
     print("|----|-------|---------|-------|------------|")
     for e in meetings:
-        s = e["summary"].replace("|", "\\|")
+        s = e["summary"].replace("|", "\\\\|")
         print(f"| {e['status_emoji']} | {e['start_time']} | {s} | {e['duration']} | — |")
     print()
 else:
@@ -373,7 +376,7 @@ if tasks:
     print("| 🚦 | Время | Что | Длит. | Результат |")
     print("|----|-------|-----|-------|-----------|")
     for e in tasks:
-        s = e["summary"].replace("|", "\\|")
+        s = e["summary"].replace("|", "\\\\|")
         print(f"| {e['status_emoji']} | {e['start_time']} | {s} | {e['duration']} | — |")
     print()
 else:
@@ -431,5 +434,7 @@ else:
 
 if errors:
     print()
-    print(f"> ⚠️ Пропущено календарей: {len(errors)} (нет доступа или ошибка)")
+    print(f"> ⚠️ Пропущено при разборе: {len(errors)}")
+    for err in errors:
+        print(f">   - {err}")
 PYEOF
