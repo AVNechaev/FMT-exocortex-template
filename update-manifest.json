@@ -633,7 +633,7 @@
     },
     {
       "path": ".gitignore",
-      "sha256": "5faf5868c204662a671ab1f4696ed8f06323b646fba12f18cf37a7c28a04c08f"
+      "sha256": "482fc43c3a96dcd12cfafc9e5aaf2937629a152a3c29095e06adace8f2dfc6a8"
     },
     {
       "path": ".mcp.json",
@@ -2212,6 +2212,10 @@
       "sha256": "09f091dc35474ca700060f0bd5a717f3617118d41ead190b3607a4aa0db015ad"
     },
     {
+      "path": "scripts/release-receipt.sh",
+      "sha256": "e70fac071cbe4731e21be3363c2fd29a9a4a66e13ef851f94d5c33bb6815dd06"
+    },
+    {
       "path": "scripts/restore-from-exocortex.sh",
       "sha256": "a296645184942d004e28921ea8d734c163729bcc148de5372e4fc39721ceaf39"
     },
@@ -2526,6 +2530,7 @@
     "scripts/tests/test_install_hooks.py",
     "scripts/tests/test_manifest_coverage_local.py",
     "scripts/tests/test_pending_phases_sweep.sh",
+    "scripts/tests/test_release_receipt.sh",
     "scripts/tests/test_residency_gate_skill_adapter.py",
     "scripts/tests/test_skill_promote.py",
     "scripts/tests/test_translate_delta.py",
