@@ -231,7 +231,7 @@ is_migrated_platform_memory_path() {
         memory/protocol-open.md|memory/protocol-work.md|memory/protocol-close.md|memory/protocol-month-close.md|\
         memory/agent-architecture-framework.md|memory/agent-vendor-connect-pattern.md|memory/checklists.md|\
         memory/dry-run-contract.md|memory/feedback_response_clarity_for_pilot.md|memory/hooks-design.md|\
-        memory/navigation.md|memory/reference/agent-core.md|memory/repo-type-rules.md|memory/roles.md|\
+        memory/navigation.md|memory/reference/agent-core.md|memory/repo-type-rules.md|\
         memory/r-questionnaire.md|memory/t-checklist.md|memory/templates-dayplan.md) return 0 ;;
         *) return 1 ;;
     esac
