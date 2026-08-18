@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "version": "0.38.4",
+  "version": "0.38.5",
   "description": "Манифест платформенных файлов FMT-exocortex-template. Используется update.sh для доставки обновлений.",
   "files": [
     {
@@ -653,7 +653,7 @@
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "f6d88e3bc47a30d9f561b68934078bf7e286de880cc5926e02864a161b137b4d"
+      "sha256": "c0a2e824f0c22ccf7afddc4f1147ec715d47397b366df577cfcf1fcc48923f95"
     },
     {
       "path": "CLAUDE.md",
@@ -1329,7 +1329,7 @@
     },
     {
       "path": "memory/lpf-hypothesis-log.md",
-      "sha256": "37acffc3e21f22dc6b60661680187f19a3fc95c30c3881c3ed7fd3829b9f5c3c"
+      "sha256": "058bb2a0adbeee41a5512a572c82f78b24325814e1b3244fd69e10bcd823e8ff"
     },
     {
       "path": "memory/memory-lifecycle-spec.md",
@@ -2061,7 +2061,7 @@
     },
     {
       "path": "scripts/iwe-audit.sh",
-      "sha256": "e51beb3db2c34c0660171c0ec87ab4d0004fa59f17255a89bb9f84eebeb86f45"
+      "sha256": "0863c2f389fd4a734528470aa1296f87b5097cc40d0165de020e3f543f24fa1f"
     },
     {
       "path": "scripts/iwe-backup-check.sh",
@@ -2197,7 +2197,7 @@
     },
     {
       "path": "scripts/pending-phases-sweep.sh",
-      "sha256": "9e2434ef4b64154fc15cb3874588b086670c89d74993ecdb778fbd8a4e5e42b2"
+      "sha256": "503709e24f6e191c571bd7adb407866dabe0ee596ea14c79368d8bcf4a43c3b2"
     },
     {
       "path": "scripts/post-update-check-skills.sh",
@@ -2393,7 +2393,7 @@
     },
     {
       "path": "scripts/tests/test_update_install_path_guard.sh",
-      "sha256": "d3dd4ac16d5351d21d2e13e49c2d62cf73675aa88bee1f52ae2f750073afedcb"
+      "sha256": "cbbc95ee8ae7a24a3dadb6fe851320c25c94510f4a0d7d83aca6e67c4ab30ac6"
     },
     {
       "path": "scripts/tests/test_update_settings_merge_drift.sh",
@@ -2414,6 +2414,10 @@
     {
       "path": "scripts/validate-fmt-scripts.sh",
       "sha256": "92f14a84bbca323c9cc7ca5cdec55ecfd48dd54be7db855e969662682bd3075a"
+    },
+    {
+      "path": "scripts/validate-hypothesis-priority.sh",
+      "sha256": "4d8209a0abcf6294bd93a13dcc9c74df91b90d865d1c7b9a52a3140fe2289c20"
     },
     {
       "path": "scripts/validate-skill.sh",
@@ -2489,7 +2493,7 @@
     },
     {
       "path": "update.sh",
-      "sha256": "42704ff66dcef0887676d6fd1f1d44d1b081ea5d7044368a4e732be5c8fa2597"
+      "sha256": "b6671f02b3ebb87b166711ecebc3f3af991681831ea64e20456071dfc088c495"
     }
   ],
   "excluded_paths": [
@@ -2521,10 +2525,13 @@
     "scripts/tests/test_dry_run_gate.py",
     "scripts/tests/test_install_hooks.py",
     "scripts/tests/test_manifest_coverage_local.py",
+    "scripts/tests/test_pending_phases_sweep.sh",
     "scripts/tests/test_residency_gate_skill_adapter.py",
     "scripts/tests/test_skill_promote.py",
     "scripts/tests/test_translate_delta.py",
     "scripts/tests/test_translate_parse.py",
+    "scripts/tests/test_update_install_path_guard_provenance.sh",
+    "scripts/tests/test_validate_hypothesis_priority.sh",
     "scripts/translate.py",
     "scripts/verify-template-integrity.sh",
     "sessions/2026-06/2026-06-17-01-kimi-setup/00-writer.md",
