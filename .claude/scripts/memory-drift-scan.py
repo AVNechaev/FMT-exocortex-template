@@ -38,7 +38,10 @@ import re
 import sys
 from pathlib import Path
 
-import yaml
+try:
+    import yaml
+except ImportError:
+    sys.exit("pyyaml не найден. Установите: pip3 install --user pyyaml")
 
 # Строка таблицы РП: `| 1 | Название | Бюджет | Статус | ... |` — берём
 # первую числовую ячейку (номер РП) и ячейку под заголовком «Статус».
