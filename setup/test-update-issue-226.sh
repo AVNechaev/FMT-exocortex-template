@@ -346,6 +346,65 @@ else
     fail "D: owner:user drift remained silent outside the changed-files list"
 fi
 
+# ------------------------------------------------------------------
+# Scenario E: a genuine change (memo v2 → v3) lands alongside a manifest
+# entry whose fetch fails (WP-529 Ф2). Before this fix, TOTAL_CHANGES>0
+# meant the run applied the fetched files and stamped the local manifest as
+# fully updated, leaving the failed file silently on the old version.
+# ------------------------------------------------------------------
+echo "--- Scenario E: partial fetch failure must abort, not partially apply (WP-529) ---"
+printf '# Dummy memo v3\n' > "$UPSTREAM/memory/dummy-memo.md"
+python3 - "$UPSTREAM/update-manifest.json" "$UPSTREAM" <<'PY'
+import hashlib
+import json
+import pathlib
+import sys
+manifest_path, root = sys.argv[1:]
+with open(manifest_path, encoding="utf-8") as handle:
+    manifest = json.load(handle)
+for entry in manifest["files"]:
+    if entry["path"] == "memory/dummy-memo.md":
+        entry["sha256"] = hashlib.sha256(
+            (pathlib.Path(root) / entry["path"]).read_bytes()
+        ).hexdigest()
+# A manifest entry with no matching file under $UPSTREAM — the curl shim
+# exits 22 for it, landing it in SKIPPED_DOWNLOAD.
+manifest["files"].append({"path": "memory/never-fetched.md", "sha256": "0" * 64})
+with open(manifest_path, "w", encoding="utf-8") as handle:
+    json.dump(manifest, handle)
+PY
+MEMO_BEFORE=$(cat "$SCRIPT_DIR/memory/dummy-memo.md")
+MANIFEST_HASH_BEFORE=$(sha256sum "$SCRIPT_DIR/update-manifest.json" | cut -d' ' -f1)
+
+set +e
+PATH="$SHIM_DIR:$PATH" HOME="$FAKE_HOME" bash "$SCRIPT_DIR/update.sh" --yes > "$TEST_ROOT/out-e.log" 2>&1
+RC_E=$?
+set -e
+
+if [ "$RC_E" -eq 2 ]; then
+    pass "E: update.sh exits with EXIT_NETWORK(2) on a partial fetch failure"
+else
+    fail "E: expected exit 2, got $RC_E"
+fi
+
+if grep -q "Обновление остановлено" "$TEST_ROOT/out-e.log"; then
+    pass "E: abort is reported to the user with a clear reason"
+else
+    fail "E: no abort message found in output"
+fi
+
+if [ "$(cat "$SCRIPT_DIR/memory/dummy-memo.md")" = "$MEMO_BEFORE" ]; then
+    pass "E: the file that WOULD have changed was left untouched (no partial apply)"
+else
+    fail "E: dummy-memo.md was updated despite the aborted run — partial apply regression"
+fi
+
+if [ "$(sha256sum "$SCRIPT_DIR/update-manifest.json" | cut -d' ' -f1)" = "$MANIFEST_HASH_BEFORE" ]; then
+    pass "E: local update-manifest.json was not stamped as updated"
+else
+    fail "E: local manifest changed despite the aborted run"
+fi
+
 echo ""
 echo "============================================"
 echo "  Results: $PASS_COUNT PASS, $FAIL_COUNT FAIL"

@@ -1132,6 +1132,20 @@ if [ ${#SKIPPED_DOWNLOAD[@]} -gt 0 ]; then
     echo ""
 fi
 
+# WP-529 Ф2: TOTAL_CHANGES=0 branch below already refuses to apply anything and
+# leaves the local manifest version untouched when a download/integrity check
+# failed. But when OTHER files genuinely changed (TOTAL_CHANGES>0), nothing
+# used to stop Step 5 from applying those and then Step 6e replacing the local
+# manifest wholesale — stamping the run as "updated to vX" while the files in
+# SKIPPED_DOWNLOAD silently stayed on the old version. Abort here, before Step 4
+# confirmation/Step 5 apply, so a partial fetch never produces a partial write.
+if [ "$TOTAL_CHANGES" -gt 0 ] && [ ${#SKIPPED_DOWNLOAD[@]} -gt 0 ] && ! $CHECK_ONLY; then
+    echo "✗ Обновление остановлено: ${#SKIPPED_DOWNLOAD[@]} файл(ов) не скачались или не прошли проверку целостности (список выше)."
+    echo "  Применение остальных ${TOTAL_CHANGES} изменений отменено — иначе локальный манифест пометил бы обновление как завершённое, а эти файлы остались бы старыми."
+    echo "  Ничего не изменено. Повторите запуск, когда сеть будет доступна."
+    exit "$EXIT_NETWORK"
+fi
+
 if [ "$TOTAL_CHANGES" -eq 0 ] && [ ${#SKIPPED_DOWNLOAD[@]} -gt 0 ]; then
     # Not "up to date" — merely "no differences among the files we managed to fetch".
     # The local manifest version is deliberately NOT synced here: bumping it would make
