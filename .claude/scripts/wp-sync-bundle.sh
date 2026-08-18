@@ -380,11 +380,19 @@ main() {
   local wp_path
   wp_path=$(wp_path_label "$wp_file")
 
-  local status name spawned updated
+  local status name spawned updated created last_session
   status=$(extract_fm_field "$wp_file" "status")
   name=$(extract_fm_field "$wp_file" "name")
   spawned=$(extract_fm_field "$wp_file" "spawned")
   updated=$(extract_fm_field "$wp_file" "updated")
+  # F19 (REVIEW-ARCHITECTURE.md, WP-503 Ф6.6 план): карточки без `updated:` в
+  # frontmatter (created вручную, не auto-touched) молча выключали drift-детектор
+  # №2 ("коммиты завершения после ref_date") — сам ref_date оставался пустым для
+  # них, включая WP-503. `created`/`last_session` расширяют цепочку без изменения
+  # приоритета уже используемых полей (updated по-прежнему первый — самый свежий
+  # признак реальной активности карточки).
+  created=$(extract_fm_field "$wp_file" "created")
+  last_session=$(extract_fm_field "$wp_file" "last_session")
 
   [[ -z "$status" ]] && status="_не указан_"
   [[ -z "$name" ]] && name="_не указано_"
@@ -417,7 +425,7 @@ main() {
   local _df="$drift_file"
   trap 'rm -f "${_df:-}"' EXIT
 
-  local ref_date="${updated:-$spawned}"
+  local ref_date="${updated:-${last_session:-${spawned:-$created}}}"
 
   # ---------------------------------------------------------------------------
   # Output header
