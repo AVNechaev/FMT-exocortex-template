@@ -48,6 +48,7 @@ echo "  snapshot refresh pid=$SNAPSHOT_PID (background, non-blocking)"
 # --- CLI args ---
 FORCE=false
 PROBE=false
+SCAFFOLD_ONLY=false
 DATE=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -56,6 +57,12 @@ while [[ $# -gt 0 ]]; do
     # writes to a "(probe)" suffixed file (never the real DayPlan), skips commit/push/
     # archive-move/TG. Implies --force (guards are about real-file state, irrelevant here).
     --probe)         PROBE=true; FORCE=true; shift ;;
+    # --scaffold-only (issue #434): the deterministic skeleton (step 3) needs
+    # no LLM Proxy at all — only step 4 (LLM Fill) does. Before this flag,
+    # an unreachable/unprovisioned proxy made step 2's healthcheck abort the
+    # whole run, so an install without a proxy could never get even the
+    # skeleton. Skips steps 2 and 4; still runs 1, 3, 4.2-4.6, 5, 6.
+    --scaffold-only) SCAFFOLD_ONLY=true; shift ;;
     --date|-d)       DATE="$2"; shift 2 ;;
     *)               DATE="$1"; shift ;;
   esac
@@ -565,6 +572,9 @@ done
 # ============================================
 # 2. Ensure LLM Proxy available
 # ============================================
+# issue #434: skipped entirely under --scaffold-only — only step 4 (LLM Fill)
+# below actually needs the proxy; the deterministic scaffold (step 3) does not.
+if [ "$SCAFFOLD_ONLY" != "true" ]; then
 echo "=== 2. LLM Proxy healthcheck ==="
 PROXY_HEALTH=$(curl -s "${LLM_PROXY_URL}/v1/health" 2>/dev/null | grep -q "ok" && echo "ok" || echo "fail")
 if [ "$PROXY_HEALTH" != "ok" ]; then
@@ -660,6 +670,9 @@ if [ "$AUTH_CODE" != "200" ]; then
 else
   echo "  Proxy authorized probe OK"
 fi
+else
+  echo "=== 2. LLM Proxy healthcheck — SKIPPED (--scaffold-only) ==="
+fi
 
 # ============================================
 # 3. Scaffold
@@ -725,6 +738,7 @@ echo "  Scaffold OK: $DAYPLAN_PATH"
 # ============================================
 # 4. LLM Fill (per-section)
 # ============================================
+if [ "$SCAFFOLD_ONLY" != "true" ]; then
 echo "=== 4. LLM Fill ==="
 # Fill stderr is duplicated into a per-day file next to the night-cycle logs: on
 # the morning path (scheduler → strategist → this script) the per-chunk failure
@@ -767,6 +781,9 @@ $FILL_ERRS"
 fi
 rm -f "$FILL_ERR_TMP"
 echo "  LLM Fill OK"
+else
+  echo "=== 4. LLM Fill — SKIPPED (--scaffold-only) ==="
+fi
 
 # ============================================
 # 4.2. Bottleneck patch (deterministic, AFTER LLM Fill — WP-484, moved 2026-07-14)
