@@ -127,12 +127,30 @@ class TestSentinelActive:
 
 class TestSentinelInactive:
     def test_no_sentinel_allows_everything(self):
+        """No sentinel AND no owner-file: nothing claims a rehearsal is active."""
         if SENTINEL.exists():
             pytest.skip("живой dry-run sentinel активен")
+        assert not OWNER.exists(), "test owner-file leaked from a prior test"
         r = _run_hook("git commit -m x")
         assert r.returncode == 0, r.stderr
 
+    def test_no_sentinel_with_owner_file_blocks(self):
+        """issue #460 path 2: sentinel gone but owner-file still claims an
+        active rehearsal — fail-CLOSED instead of the old silent allow."""
+        if SENTINEL.exists():
+            pytest.skip("живой dry-run sentinel активен")
+        OWNER.write_text("pytest-capability", encoding="utf-8")
+        try:
+            r = _run_hook("git commit -m x")
+            assert r.returncode == 2, r.stderr
+            assert "BLOCKED" in r.stderr
+        finally:
+            OWNER.unlink(missing_ok=True)
+
     def test_stale_sentinel_removed_and_allows(self):
+        """TTL expiry (path 3) is untouched by this fix — still allow+cleanup,
+        not fail-closed. See issue #460 path 3: fixing this one requires an
+        owner-lifecycle decision, deliberately out of scope here."""
         if SENTINEL.exists():
             pytest.skip("живой dry-run sentinel активен")
         SENTINEL.write_text("{}", encoding="utf-8")
@@ -144,6 +162,41 @@ class TestSentinelInactive:
             assert not SENTINEL.exists(), "протухший sentinel должен быть удалён хуком"
         finally:
             SENTINEL.unlink(missing_ok=True)
+
+
+class TestJqMissing:
+    """issue #460 path 1: a gate that can't parse its own payload must
+    fail-CLOSED, not silently allow every write while jq is absent."""
+
+    def test_jq_missing_blocks(self):
+        # The hook hardcodes its own PATH (export PATH=... near the top) to
+        # standard install locations, so an empty $PATH in the parent shell
+        # can't hide jq from it — and using that same empty $PATH to invoke
+        # `bash` itself just makes bash unfindable instead. Point the hook's
+        # own hardcoded PATH at an empty directory via a stubbed copy, and
+        # invoke that copy with an absolute `bash` binary so bash-the-runner
+        # is never affected by the PATH we're hiding jq behind.
+        empty_bin = Path("/tmp/iwe-drg-test-empty-bin")
+        empty_bin.mkdir(exist_ok=True)
+        stub_hook = Path("/tmp/iwe-drg-test-stub-hook.sh")
+        original = HOOK.read_text(encoding="utf-8")
+        patched = original.replace(
+            'export PATH="/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin:${PATH:-}"',
+            f'export PATH="{empty_bin}"',
+        )
+        assert patched != original, "hook's PATH export line changed shape — update this stub"
+        stub_hook.write_text(patched, encoding="utf-8")
+        try:
+            payload = json.dumps({"tool_name": "Bash", "tool_input": {"command": "git commit -m x"}})
+            r = subprocess.run(
+                ["/bin/bash", str(stub_hook)], input=payload, capture_output=True, text=True, timeout=10
+            )
+            assert r.returncode == 2, r.stderr
+            assert "FAIL-CLOSED" in r.stderr
+            assert "jq" in r.stderr
+        finally:
+            stub_hook.unlink(missing_ok=True)
+            empty_bin.rmdir()
 
 
 class TestStopOwnership:
