@@ -27,7 +27,14 @@ set -uo pipefail
 # Load unified environment: WORKSPACE_DIR, IWE_ROOT, IWE_SCRIPTS, etc.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TEMPLATE_SCRIPTS_DIR="$SCRIPT_DIR"
-source "$TEMPLATE_SCRIPTS_DIR/lib/common.sh"
+# issue #455: a stale promoted copy without lib/ next to it used to degrade
+# silently (set -uo pipefail, no -e) — every path resolved to root, and the
+# scheduler-state check quietly took the wrong branch for three weeks before
+# anyone noticed. Missing the library is fatal now, not a silent no-op.
+source "$TEMPLATE_SCRIPTS_DIR/lib/common.sh" || {
+    echo "FATAL: lib/common.sh not found next to $0 — промотированная копия устарела, обновите её вместе с шаблоном" >&2
+    exit 1
+}
 # issue #329: old fallback assumed $SCRIPT_DIR/.. is always the workspace root —
 # false for a promoted copy at <governance-repo>/scripts/, which doubled the repo
 # name into every path. iwe_resolve_root() uses env-var precedence instead of
