@@ -13,9 +13,11 @@
 # TTL: 600 секунд (10 минут) от mtime.
 #
 # Принципы:
-# - jq отсутствует → skip с явной диагностикой (setup должен ставить jq; см. issue #192)
-# - exit 0 = allow (sentinel отсутствует / TTL истёк / gate skipped из-за missing jq)
-# - exit 2 = block (с диагностикой в stderr)
+# - jq отсутствует / owner-файл сиротеет без sentinel → fail-CLOSED, не skip
+#   (memory/dry-run-contract.md §Fail-safe; issue #460 paths 1-2: a gate that
+#   can't see its own state has no basis to allow).
+# - exit 0 = allow (sentinel отсутствует и никакой репетиции не объявлено / TTL истёк)
+# - exit 2 = block (с диагностикой в stderr; включает jq missing и sentinel_missing-with-owner)
 
 set -uo pipefail
 export PATH="/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin:${PATH:-}"
@@ -25,22 +27,33 @@ HOOK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 IWE_ROOT_GUESS="$(cd "$HOOK_DIR/../.." 2>/dev/null && pwd -P)"
 GATE_LOG="$IWE_ROOT_GUESS/.claude/logs/gate_log.jsonl"
 
-# jq нужен для разбора payload. Если его нет, не брикуем все write-tools:
-# setup/requirements должны установить jq, а gate явно сообщает, что проверка пропущена.
+# jq нужен для разбора payload. Per contract (memory/dry-run-contract.md
+# §Fail-safe): a broken gate must fail-CLOSED, not open — a gate that can't
+# see its own state has no basis to allow (issue #460 path 1; this used to
+# exit 0, contradicting the fail-CLOSED example already documented in the
+# contract).
 if ! command -v jq >/dev/null 2>&1; then
-    echo "[dry-run-gate] SKIPPED: jq missing; install jq to enable dry-run protection" >&2
-    exit 0
+    echo "[dry-run-gate] FAIL-CLOSED: jq missing, blocking by default (install jq to restore normal operation)" >&2
+    exit 2
 fi
 
 # Sentinel отсутствует — dry-run неактивен. Если capability-файл владельца
-# остался, защита исчезла неожиданно или была снята явно до Stop: оставляем
-# наблюдаемый след вместо прежнего бесшумного allow (#369).
+# остался, защита исчезла неожиданно или была снята явно до Stop: раньше
+# это только писалось в лог и всё равно allow'илось (#369) — тот же класс
+# fail-open, что путь 1 выше (issue #460 path 2). Owner-файл — прямое
+# доказательство, что репетиция ещё объявлена активной; блокируем вместо
+# молчаливого прохода записи мимо потерянной защиты.
 if [ ! -f "$SENTINEL" ]; then
-    OWNER_FILE=$(find /tmp -maxdepth 1 -name 'iwe-dry-run-owner-*.token' -type f -print -quit 2>/dev/null || true)
+    OWNER_FILE=$(find -L /tmp -maxdepth 1 -name 'iwe-dry-run-owner-*.token' -type f -print -quit 2>/dev/null || true)
     if [ -n "$OWNER_FILE" ]; then
         mkdir -p "$(dirname "$GATE_LOG")" 2>/dev/null || true
         printf '{"ts":"%s","gate":"dry-run-gate","event":"sentinel_missing","owner_file":"%s"}\n' \
             "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$(basename "$OWNER_FILE")" >> "$GATE_LOG" 2>/dev/null || true
+        {
+            echo "[dry-run-gate] BLOCKED: dry-run sentinel missing while owner file $(basename "$OWNER_FILE") still present"
+            echo "Reason: protection lost mid-rehearsal (TTL/crash/race) — fail-closed per contract"
+        } >&2
+        exit 2
     fi
     exit 0
 fi
