@@ -2473,7 +2473,7 @@
     },
     {
       "path": "scripts/wp-pool-cascade.sh",
-      "sha256": "10822ba3e0631af1c7bf33ab418cc6d8f5a44b86d507d5ba51708a653b84c78c"
+      "sha256": "d1b82a9f4866ce0d546d493eb6b078026ee0b94450851c628707c23a47973039"
     },
     {
       "path": "scripts/wp499-agent-coordination-test.sh",
