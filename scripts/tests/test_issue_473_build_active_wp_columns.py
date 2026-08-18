@@ -81,3 +81,25 @@ def test_missing_header_fails_loudly_not_silently():
         assert False, "missing header must raise, not silently guess column positions"
     except ValueError as exc:
         assert "status" in str(exc) or "name" in str(exc)
+
+
+def test_header_lookalike_without_separator_is_not_mistaken_for_real_header():
+    # Codex code review (turn 3, this same session): find_header_columns()
+    # takes the FIRST "| # | ... |"-shaped line — a legend/details block
+    # could in principle contain one before the real table header. A real
+    # markdown table header is always followed by a "|---|---|" separator;
+    # anything else is not accepted as the header.
+    module = load_module()
+    text = (
+        "> см. легенду ниже\n"
+        "| # | Что-то не то | Тут нет разделителя следующей строкой |\n"
+        "не разделитель, обычный текст\n"
+        "\n"
+        "| # | Название | Статус | Репо | Бюджет |\n"
+        "|---|---|---|---|---|\n"
+        "| 47 | Тест | ✅ | repo/ | 4h |\n"
+    )
+    rows, problems = module.parse_registry(text)
+    assert problems == []
+    assert rows[0]["name"] == "Тест"
+    assert rows[0]["status"] == "✅"

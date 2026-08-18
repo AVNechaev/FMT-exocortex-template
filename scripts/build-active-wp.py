@@ -77,19 +77,32 @@ _COLUMN_ALIASES = {
 _REQUIRED_COLUMNS = {"name", "status"}
 
 
+_TABLE_SEPARATOR_RE = re.compile(r"^\|[\s:-]+\|[\s:-]*\|?")
+
+
 def find_header_columns(text: str) -> dict[str, int]:
     """Индекс {роль: позиция} по строке-заголовку `| # | ... |`. Пустой словарь,
     если заголовок не найден - вызывающий код обязан явно на это отреагировать,
-    не подставлять позиции по умолчанию."""
-    for line in text.splitlines():
+    не подставлять позиции по умолчанию.
+
+    Найдено пир-сессией с Codex (ход 3): берём только ПЕРВУЮ строку вида
+    "| # | ... |" в файле, а такая строка теоретически может встретиться и
+    в легенде статусов внутри <details> раньше настоящей шапки таблицы.
+    Кандидат принимается, только если следующая строка - markdown-разделитель
+    (`|---|---|...`), как и положено настоящей шапке таблицы."""
+    lines = text.splitlines()
+    for i, line in enumerate(lines):
         if not HEADER_RE.match(line):
+            continue
+        next_line = lines[i + 1] if i + 1 < len(lines) else ""
+        if not _TABLE_SEPARATOR_RE.match(next_line):
             continue
         cells = [c.strip().lower() for c in line.strip("|").split("|")]
         idx: dict[str, int] = {}
-        for i, cell in enumerate(cells):
+        for j, cell in enumerate(cells):
             for role, aliases in _COLUMN_ALIASES.items():
                 if cell in aliases and role not in idx:
-                    idx[role] = i
+                    idx[role] = j
         return idx
     return {}
 

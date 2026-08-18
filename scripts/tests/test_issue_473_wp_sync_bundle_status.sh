@@ -42,6 +42,10 @@ fi
     echo 'echo "26:$(registry_status 26)"'
     echo 'echo "25:$(registry_status 25)"'
     echo 'echo "999:$(registry_status 999)"'
+    # Codex code review (ход 3, эта же сессия): $num раньше подставлялся в
+    # grep без нормализации/валидации — "WP-47" тихо не находил бы строку.
+    echo 'echo "WPPREFIX:$(registry_status WP-47)"'
+    echo 'echo "BOGUS:$(registry_status abc)"'
 } > "$TMP/driver.sh"
 
 OUTPUT=$(bash "$TMP/driver.sh")
@@ -65,3 +69,5 @@ check 49 "pending"
 check 26 "снят"
 check 25 "спринт"
 check 999 "не в реестре"
+check WPPREFIX "done"
+check BOGUS "некорректный номер"
