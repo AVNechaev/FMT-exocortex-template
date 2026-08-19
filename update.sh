@@ -1195,7 +1195,18 @@ if [ "$TOTAL_CHANGES" -eq 0 ] && [ ${#SKIPPED_DOWNLOAD[@]} -gt 0 ]; then
     if $CHECK_ONLY; then
         assert_self_unmutated
     else
+        # Evgenii Red Team review 2026-08-19 (defect #3 continued, found on the
+        # sibling branch below): the TOTAL_CHANGES=0 branch two if-blocks down
+        # got the transaction/build-runtime fail-closed contract in this same
+        # F6 commit — this branch, with the identical TOTAL_CHANGES=0 condition
+        # plus a download hiccup, was left with the pre-fix behavior: repair_pass
+        # writes to disk with no open transaction, so a build-runtime failure
+        # here would exit EXIT_RUNTIME with no .update-incomplete marker at all.
+        # Same three calls, same order, as the branch below.
+        begin_update_transaction
         repair_pass
+        run_build_runtime_or_die
+        finish_update_transaction
         report_settings_merge_drift
     fi
     exit 0

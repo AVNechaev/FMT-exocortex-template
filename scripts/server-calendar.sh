@@ -223,6 +223,23 @@ for cid in calendar_ids:
         continue
 
     if "error" in data:
+        # Evgenii Red Team review 2026-08-19 (defect #4): this continue was
+        # silent — no cid, no error code, unlike the curl/json branches two
+        # steps up. issue #453 (below) fixed the same class of drop for a
+        # single event's visibility, not for a whole calendar's API error
+        # (403 on a calendar the token lacks access to, 404 on a deleted
+        # calendar, etc.) — that one stayed silent.
+        #
+        # Cold review 2026-08-19: Google's error envelope is normally
+        # {"error": {"code": ...}}, but a malformed/truncated response body
+        # (or a non-standard error shape from a proxy) could put a string or
+        # null there instead of a dict — calling .get() on a non-dict raises
+        # AttributeError and would crash the whole calendar loop on one bad
+        # response instead of recording it as an error like every other item
+        # here.
+        error_field = data.get("error")
+        err_code = error_field.get("code", "?") if isinstance(error_field, dict) else "?"
+        errors.append(f"calendar API error for {cid}: code={err_code}")
         continue
 
     for item in data.get("items", []):
@@ -303,6 +320,21 @@ errors = data.get("errors", [])
 date_str = "${DATE}"
 week_mode = True if "${WEEK_MODE}" == "true" else False
 
+# Cold review 2026-08-19 (Codex, WP-529 Red Team round 2): this script always
+# exited 0 regardless of errors[] — the current caller (day-open-pipeline.sh)
+# runs it with a trailing "|| true" and reads errors from this JSON, so a
+# non-zero exit would not break it — but the script had no exit-status
+# signal at all for interactive runs, cron/monitoring, or future callers.
+# Only the "calendar API error" class (defect #4 above: 403/5xx-style
+# Google API errors on a
+# whole calendar, not a single event) counts as degraded — curl/json parse
+# errors and skipped-private-event notices are the same partial-result class
+# this script already tolerated before this fix and stay non-fatal, matching
+# Codex's "не следует превращать любой непустой errors[] в fatal" concern
+# from turn 1. String-prefix match, not a new typed error field: the errors[]
+# list stays flat strings, only this one class has a distinguishing prefix.
+has_calendar_api_error = any(e.startswith("calendar API error for") for e in errors)
+
 months = ["","января","февраля","марта","апреля","мая","июня","июля","августа","сентября","октября","ноября","декабря"]
 try:
     dt = datetime.strptime(date_str, "%Y-%m-%d")
@@ -352,7 +384,7 @@ if week_mode:
         print(f"> ⚠️ Пропущено при разборе: {len(errors)}")
         for err in errors:
             print(f">   - {err}")
-    sys.exit(0)
+    sys.exit(1 if has_calendar_api_error else 0)
 
 # ============ РЕЖИМ ДНЯ ============
 n = len(events)
@@ -438,4 +470,6 @@ if errors:
     print(f"> ⚠️ Пропущено при разборе: {len(errors)}")
     for err in errors:
         print(f">   - {err}")
+
+sys.exit(1 if has_calendar_api_error else 0)
 PYEOF

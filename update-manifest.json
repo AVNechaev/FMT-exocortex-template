@@ -1969,7 +1969,7 @@
     },
     {
       "path": "scripts/day-close.sh",
-      "sha256": "8083e50dd8528ce0130ffbd3622b0639fa5f1a01d5d0b4edbb59a9d00ea4006a"
+      "sha256": "1356efd3881354be0417024145922259752c741a6445531d24a73c24a2ecb333"
     },
     {
       "path": "scripts/day-open-budget-patch.py",
@@ -2145,7 +2145,7 @@
     },
     {
       "path": "scripts/ledger-append.sh",
-      "sha256": "84ea37467e5198c792187ed2c4b6d6a617de86a53e0766ef3c07fc67920f4323"
+      "sha256": "a502981e45fa7589f0093e9ea9949da89a270108b1bb4fce00642c3647dac951"
     },
     {
       "path": "scripts/lesson-close.sh",
@@ -2257,7 +2257,7 @@
     },
     {
       "path": "scripts/route-task.sh",
-      "sha256": "d6a8a42e3607992570b1f684f6bfaa1ed97a6f985e2dc0c57b55752a9da67335"
+      "sha256": "59e065c3eb4e37b873cd52849c8562468f9ac95c0feccdd05e5b3bb4869b0333"
     },
     {
       "path": "scripts/run-regression-tests.sh",
@@ -2269,7 +2269,7 @@
     },
     {
       "path": "scripts/server-calendar.sh",
-      "sha256": "9856e7b2ce136c4f6e19e44ce70b486bab701e93819b7025d8e6e4dfcffc6509"
+      "sha256": "5e06f201a6657d434ee7886101258ba609e3f9454e19307946f5e26aa2897434"
     },
     {
       "path": "scripts/server-news.sh",
@@ -2565,7 +2565,7 @@
     },
     {
       "path": "setup/validate-template.sh",
-      "sha256": "e0534e4c5f7b6a985ddb813ec9480dbbd89821a74be62a62750d8711cccc84e8"
+      "sha256": "16e556c6ca58ef0bcd138f71a76569c161e498278cd649c58113dddf95163d64"
     },
     {
       "path": "shared/rubrics/form-089.yaml",
@@ -2585,7 +2585,7 @@
     },
     {
       "path": "update.sh",
-      "sha256": "053cecfa633a9f58b9cc278cccf0f497ae9782708419342b3c0433f2b5f99433"
+      "sha256": "9940a3b11d1cdb6240a4b3d4e70cb9f7da69b8884e22b52451ba22c492410b50"
     }
   ],
   "excluded_paths": [
@@ -2618,11 +2618,12 @@
     "scripts/tests/test_delivery_formal.py",
     "scripts/tests/test_dry_run_gate.py",
     "scripts/tests/test_install_hooks.py",
+    "scripts/tests/test_issue_463_setup_reuses_resolved_python3.sh",
+    "scripts/tests/test_issue_calendar_api_error_named.sh",
     "scripts/tests/test_manifest_coverage_local.py",
     "scripts/tests/test_pending_phases_sweep.sh",
     "scripts/tests/test_release_receipt.sh",
     "scripts/tests/test_residency_gate_skill_adapter.py",
-    "scripts/tests/test_setup_reuses_resolved_python3.sh",
     "scripts/tests/test_skill_promote.py",
     "scripts/tests/test_translate_delta.py",
     "scripts/tests/test_translate_parse.py",
