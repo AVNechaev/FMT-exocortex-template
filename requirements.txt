@@ -2,4 +2,9 @@
 # day-close.sh, active-wp-sweep.sh, server-calendar.sh, ...) without ever
 # being declared. On a clean interpreter (Homebrew python3, PEP 668) this
 # failed with a bare ModuleNotFoundError and no install hint.
-pyyaml
+pyyaml>=6.0
+httpx>=0.28
+pytest>=9.0
+
+# Опционально — только для extensions/local-llm/:
+# ruamel.yaml>=0.18

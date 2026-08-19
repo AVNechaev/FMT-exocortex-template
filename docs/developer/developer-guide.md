@@ -24,6 +24,18 @@
 3. Пройди 6 станций (карточка = вход для станции 1)
 4. Закрытие: PR в репо + capture в distinctions/memory
 
+## Python-окружение
+
+Скрипты IWE используют сторонние библиотеки (`httpx`, `pyyaml`, `pytest` — полный список в [`requirements.txt`](../../requirements.txt)). Не устанавливай их в системный Python — создай отдельное окружение под этот репозиторий:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate       # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+```
+
+Активируй `.venv` в начале каждой рабочей сессии. `extensions/local-llm/` требует ещё одну библиотеку (`ruamel.yaml`) — она не в основном списке, ставь отдельно только если работаешь с этим расширением.
+
 ## WP Gate — как открыть задачу
 
 См. [CLAUDE.md §2 Pre-action Gates](../../CLAUDE.md). Обязательно объяви: роль, работу, РП, класс верификации, метод, оценку, модель. Дождись согласования пилота.
