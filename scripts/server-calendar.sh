@@ -43,21 +43,18 @@ IWE="${IWE_ROOT:-$HOME/IWE}"
 CONFIG="${CONFIG_ARG:-$IWE/DS-strategy/exocortex/day-rhythm-config.yaml}"
 SECRETS_FILE="${HOME}/.secrets/google-calendar"
 
-# --- Выбираем python3 с PyYAML ---
-_find_python3() {
-  if python3 -c "import yaml" 2>/dev/null; then echo "python3"; return; fi
-  local p
-  for p in \
-    /nix/store/aj1smkrsnv16lbz9g8qancb04b3kv0va-python3-3.12.8-env/bin/python3 \
-    /usr/bin/python3 /usr/local/bin/python3; do
-    [[ -x "$p" ]] && "$p" -c "import yaml" 2>/dev/null && { echo "$p"; return; }
-  done
-  find /nix/store -maxdepth 3 -name "python3" -path "*env*/bin/*" 2>/dev/null | while read -r p; do
-    "$p" -c "import yaml" 2>/dev/null && { echo "$p"; return; }
-  done
-  echo "python3"
-}
-PYTHON3=$(_find_python3)
+# --- Выбираем python3 с PyYAML (общий резолвер, WP-529 F6 / #453 #463) ---
+RESOLVER="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/find-python3.sh"
+if ! PYTHON3=$("$RESOLVER"); then
+  # Explicit dependency error instead of the old lie: a yaml-less interpreter
+  # used to surface later as "calendar_ids не найдены в конфиге" (Evgenii,
+  # 18.08). Same PENDING+exit 0 contract as the credentials branch below —
+  # the section must always render.
+  echo "📅 **Календарь ($DATE):** ⚠️ PENDING — не найден python3 с библиотекой PyYAML. Установить: pip3 install pyyaml (или sudo apt install python3-yaml); см. requirements.txt"
+  echo ""
+  echo "⏱ Свободных блоков ≥1h: **не определено**"
+  exit 0
+fi
 
 # --- Загружаем credentials ---
 if [[ -f "$SECRETS_FILE" ]]; then
@@ -101,11 +98,11 @@ try:
     for cid in (ids or []):
         print(cid)
 except Exception as e:
-    pass
-" 2>/dev/null)
+    print(f'server-calendar: config read failed: {e}', file=sys.stderr)
+")
 
 if [[ -z "$CALENDAR_IDS" ]]; then
-  echo "📅 **Календарь ($DATE):** ⚠️ PENDING — calendar_ids не найдены в конфиге"
+  echo "📅 **Календарь ($DATE):** ⚠️ PENDING — calendar_ids не найдены в конфиге ($CONFIG)"
   echo ""
   echo "⏱ Свободных блоков ≥1h: **не определено**"
   exit 0
@@ -234,6 +231,11 @@ for cid in calendar_ids:
         end = item.get("end", {})
         visibility = item.get("visibility", "")
         if visibility == "private":
+            # issue #453: record the drop — a silently vanished event is
+            # indistinguishable from a consistent count downstream. Re-applied
+            # after the 2026-08-19 template-sync reverted commit 4744cb1
+            # (root↔template drift; see WP-529 F6 / WP-485).
+            errors.append(f"skipped private event: {summary}")
             continue
 
         start_dt = parse_dt(start.get("dateTime"))
@@ -341,13 +343,15 @@ if week_mode:
         print("| 🚦 | Время | Событие | Длит. | Тип |")
         print("|----|-------|---------|-------|-----|")
         for e in evs:
-            s = e["summary"].replace("|", "\\|")
+            s = e["summary"].replace("|", "\\\\|")
             t = "встреча" if e["type"] == "meeting" else "задача"
             print(f"| {e['status_emoji']} | {e['start_time']} | {s} | {e['duration']} | {t} |")
         print()
 
     if errors:
-        print(f"> ⚠️ Пропущено календарей: {len(errors)} (нет доступа или ошибка)")
+        print(f"> ⚠️ Пропущено при разборе: {len(errors)}")
+        for err in errors:
+            print(f">   - {err}")
     sys.exit(0)
 
 # ============ РЕЖИМ ДНЯ ============
@@ -361,7 +365,7 @@ if meetings:
     print("| 🚦 | Время | Событие | Длит. | Связь с РП |")
     print("|----|-------|---------|-------|------------|")
     for e in meetings:
-        s = e["summary"].replace("|", "\\|")
+        s = e["summary"].replace("|", "\\\\|")
         print(f"| {e['status_emoji']} | {e['start_time']} | {s} | {e['duration']} | — |")
     print()
 else:
@@ -373,7 +377,7 @@ if tasks:
     print("| 🚦 | Время | Что | Длит. | Результат |")
     print("|----|-------|-----|-------|-----------|")
     for e in tasks:
-        s = e["summary"].replace("|", "\\|")
+        s = e["summary"].replace("|", "\\\\|")
         print(f"| {e['status_emoji']} | {e['start_time']} | {s} | {e['duration']} | — |")
     print()
 else:
@@ -431,5 +435,7 @@ else:
 
 if errors:
     print()
-    print(f"> ⚠️ Пропущено календарей: {len(errors)} (нет доступа или ошибка)")
+    print(f"> ⚠️ Пропущено при разборе: {len(errors)}")
+    for err in errors:
+        print(f">   - {err}")
 PYEOF

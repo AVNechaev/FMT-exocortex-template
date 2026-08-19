@@ -23,7 +23,10 @@ SKIP_PATTERNS=(
     ".github/"
     ".backups/"
     ".DS_Store"
-    "generate-manifest.sh"
+    # generate-manifest.sh is DELIVERED since WP-529 F6 (Evgenii defect #4,
+    # 18.08): the shipped scripts/verify-manifest.sh hard-depends on the
+    # repo-root generator, so an update-only install kept a stale copy and
+    # the B2 completeness check exited 1 on the user's machine.
     "update-manifest.json"
     "update-manifest.local.json"
     "seed/"
@@ -155,6 +158,21 @@ SCRIPT_CONTRACT_EXPLICIT_INCLUDE=(
     "scripts/tests/test_hindsight_docs_contract.sh"
     "scripts/tests/test_launchd_identity_runtime.sh"
     "scripts/tests/test_session_guard_hypothesis_gate.sh"
+    # WP-529 F6 (Evgenii 18.08): the whole test_issue_* family plus its runner
+    # ship with the template — a user's copy must be able to run its own
+    # issue-regression gate (same rationale as the 03.08 block above).
+    "scripts/tests/run-issue-tests.sh"
+    "scripts/tests/test_issue_434_pipeline_scaffold_only.sh"
+    "scripts/tests/test_issue_453_calendar_private_visibility.sh"
+    "scripts/tests/test_issue_455_scaffold_missing_lib_fatal.sh"
+    "scripts/tests/test_issue_463_pyyaml_explicit_diagnostics.sh"
+    "scripts/tests/test_issue_469_settings_merge_hook_identity.py"
+    "scripts/tests/test_issue_471_drift_scan_status_boundary.py"
+    "scripts/tests/test_issue_473_build_active_wp_columns.py"
+    "scripts/tests/test_issue_473_wp_sync_bundle_status.sh"
+    "scripts/tests/test_update_build_runtime_fail_closed.sh"
+    "scripts/tests/test_update_delivers_python_resolver_before_roles.sh"
+    "scripts/tests/test_role_runner_update_marker_guard.sh"
 )
 
 is_explicit_include() {
