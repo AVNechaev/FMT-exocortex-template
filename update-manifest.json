@@ -105,7 +105,7 @@
     },
     {
       "path": ".claude/hooks/protocol-artifact-validate.sh",
-      "sha256": "d5adce307641920198d9cea922697ee8c0befef9588f120aca9c6ad93f4160f7"
+      "sha256": "64f250446dacc1967e722313f52a063bbb9feb02c79cf5f21d00b3b12fb67f15"
     },
     {
       "path": ".claude/hooks/protocol-completion-reminder.sh",
@@ -137,7 +137,7 @@
     },
     {
       "path": ".claude/hooks/rule-engine.sh",
-      "sha256": "cd4ed9ae116a0abe4155a9f1736c953524d5a334ed73a6472a931d85dabf885a"
+      "sha256": "fad98a4ff583ef53ab7a11e752d6dd792869fcbb6d55e9555a91719dc504c5e9"
     },
     {
       "path": ".claude/hooks/session-end-status.sh",
@@ -1873,11 +1873,11 @@
     },
     {
       "path": "scripts/check-critical-files-map.sh",
-      "sha256": "9af2c1bd756e2bbd6d0ebdceb549f15a5c94dd546dbc705e2e27de105ba23bce"
+      "sha256": "21644640c579969f8f3c85e3ddc5f08139658977e93c1450eed48a8e866024b7"
     },
     {
       "path": "scripts/check-delivery-route-label.sh",
-      "sha256": "514f957947b593bd30c542bbced6d133c3722415b064842bbb7ef73eec322ce0"
+      "sha256": "6f6940a4c18e6995c25bf09eb256b9d1bf4ae17abf8d91365ad5e08917b0c31f"
     },
     {
       "path": "scripts/check-dirty-repos.sh",
@@ -1985,7 +1985,7 @@
     },
     {
       "path": "scripts/day-open-pipeline.sh",
-      "sha256": "c7b176ea6e05d2382f702e366a565ef6e3e6498a8b70e80295b63f02c8b18a4c"
+      "sha256": "94dbb4cae8ca368d640d66f3f429ede706229f951fe6f9cbb4cd9891825c4b4c"
     },
     {
       "path": "scripts/day-open-preflight.sh",
@@ -1993,7 +1993,7 @@
     },
     {
       "path": "scripts/day-open-scaffold.sh",
-      "sha256": "3913003b9fafd108571d895d57d7b7ca87873f882353fd25befb650a16ad34de"
+      "sha256": "4b0dc785fd1dd45071b8e6e3091070e1434488fb67ac2ed42947fab398a986ec"
     },
     {
       "path": "scripts/day-open-smoke-extended.sh",
@@ -2149,7 +2149,7 @@
     },
     {
       "path": "scripts/lesson-close.sh",
-      "sha256": "d72de2cacb39ec6205c4ab410a031d57df1aee7009f8b97a3778bd6cbebc6df1"
+      "sha256": "202440eae8e614d2f2e8675af63efb0a0b053b5b3832083aec8f6e64f1324023"
     },
     {
       "path": "scripts/lib/common.sh",

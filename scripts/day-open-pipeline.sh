@@ -114,11 +114,19 @@ ledger_ref_has_digest_for_date() {
   local target="$2"
   local allow_legacy="$3"
   local ref content
+  # WP-529 (continuation, 19.08): resolved once per function call, not at
+  # script top-level — this function only runs on the checks-runner path, and
+  # a script-wide resolve would run PyYAML detection even for invocations
+  # that never reach it. No bare-python3 fallback: the resolver's own first
+  # candidate is already bare `python3` from PATH.
+  local _resolved_python3
+  _resolved_python3=$("$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/find-python3.sh" 2>/dev/null) || _resolved_python3=""
+  [ -n "$_resolved_python3" ] || return 1
 
   for ref in HEAD origin/main; do
     content=$(cd "$DS_STRATEGY" && git show "$ref:$ledger_rel" 2>/dev/null) || content=""
     [ -n "$content" ] || continue
-    if printf '%s' "$content" | python3 -c '
+    if printf '%s' "$content" | "$_resolved_python3" -c '
 import sys
 
 import yaml
@@ -751,18 +759,32 @@ fi
 mkdir -p "$(dirname "$DAY_OPEN_LOG")"
 FILL_ERR_TMP=$(mktemp)
 FILL_EXIT=0
-python3 "$DS_STRATEGY/scripts/day-open-llm-fill.py" \
-  --scaffold "$DAYPLAN_PATH" \
-  --weekplan "$WEEKPLAN_PATH" \
-  --wp-registry "$WP_REGISTRY" \
-  --wp-dir "$DS_STRATEGY/inbox" \
-  --cp-profile "$CP_PROFILE" \
-  --calendar "$CALENDAR_OUT" \
-  --fleeting-notes "$DS_STRATEGY/inbox/fleeting-notes.md" \
-  --priorities "$DS_STRATEGY/current/priorities.yaml" \
-  --out "$DAYPLAN_PATH" \
-  --proxy-url "$LLM_PROXY_URL" \
-  --proxy-secret "$LLM_PROXY_SECRET" 2> "$FILL_ERR_TMP" || FILL_EXIT=$?
+# WP-529 (continuation, 19.08): day-open-llm-fill.py imports yaml — resolved
+# here via the F6 shared resolver instead of bare `python3`, same class of
+# defect as route-task.sh (Evgenii's finding #5): bare python3 can be a
+# different, yaml-less interpreter than the resolver would find. Unlike the
+# earlier best-effort skip sites in this migration, this call IS the pipeline
+# stage's core work — a missing interpreter has to surface through the
+# existing FILL_EXIT!=0 error path below (Telegram + log diagnostics), not a
+# silent skip.
+_RESOLVED_PYTHON3=$("$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/find-python3.sh" 2>/dev/null) || _RESOLVED_PYTHON3=""
+if [ -z "$_RESOLVED_PYTHON3" ]; then
+  echo "[ERROR] no python3 with PyYAML found (checked PATH and the resolver's standard candidate list, see scripts/lib/find-python3.sh)" > "$FILL_ERR_TMP"
+  FILL_EXIT=1
+else
+  "$_RESOLVED_PYTHON3" "$DS_STRATEGY/scripts/day-open-llm-fill.py" \
+    --scaffold "$DAYPLAN_PATH" \
+    --weekplan "$WEEKPLAN_PATH" \
+    --wp-registry "$WP_REGISTRY" \
+    --wp-dir "$DS_STRATEGY/inbox" \
+    --cp-profile "$CP_PROFILE" \
+    --calendar "$CALENDAR_OUT" \
+    --fleeting-notes "$DS_STRATEGY/inbox/fleeting-notes.md" \
+    --priorities "$DS_STRATEGY/current/priorities.yaml" \
+    --out "$DAYPLAN_PATH" \
+    --proxy-url "$LLM_PROXY_URL" \
+    --proxy-secret "$LLM_PROXY_SECRET" 2> "$FILL_ERR_TMP" || FILL_EXIT=$?
+fi
 cat "$FILL_ERR_TMP" >&2
 { echo "=== LLM Fill $(date '+%H:%M:%S') exit=$FILL_EXIT ==="; cat "$FILL_ERR_TMP"; } >> "$DAY_OPEN_LOG"
 if [ "$FILL_EXIT" -eq 2 ]; then

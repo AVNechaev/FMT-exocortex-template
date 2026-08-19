@@ -83,10 +83,17 @@ done
 
 # category-id → derived_from_block, from docs/critical-files-map.yaml — a
 # rename in the yaml is picked up automatically, no hardcoded second copy.
+# WP-529 (continuation, 19.08, peer-session 2026-08-19-29 turn 7): resolved
+# via the shared F6 resolver instead of bare python3, same defect class
+# Evgenii found elsewhere. Explicit failure on resolver miss (this file
+# already fails hard on missing MANIFEST/MAP above -- same convention, not a
+# soft skip like day-open-scaffold.sh's best-effort sites).
+RESOLVED_PYTHON3=$("$SCRIPT_DIR/scripts/lib/find-python3.sh" 2>/dev/null) || RESOLVED_PYTHON3=""
+[ -n "$RESOLVED_PYTHON3" ] || { echo "ERROR: python3 с библиотекой PyYAML не найден (pip install pyyaml)"; exit 2; }
 declare -A ARRAY_TO_CATEGORY
 while IFS=$'\t' read -r cat_id array_name; do
     ARRAY_TO_CATEGORY["$array_name"]="$cat_id"
-done < <(python3 - "$MAP" <<'PY'
+done < <("$RESOLVED_PYTHON3" - "$MAP" <<'PY'
 import re
 import sys
 import yaml
