@@ -633,7 +633,7 @@
     },
     {
       "path": ".gitignore",
-      "sha256": "482fc43c3a96dcd12cfafc9e5aaf2937629a152a3c29095e06adace8f2dfc6a8"
+      "sha256": "af6d4f4f3b7b4b07faef627856bd77c28ac0a957b42fcb9c8b68ff7f460094d4"
     },
     {
       "path": ".mcp.json",
@@ -1441,7 +1441,7 @@
     },
     {
       "path": "requirements.txt",
-      "sha256": "3f600705020e1fc7781453ca3cb45be9c1e122673cab8fa48bfe846368e63017"
+      "sha256": "43a454364b88c54582a022a8969f2326d84ef892f927d532816c7ab18bdcb184"
     },
     {
       "path": "roles/README.md",
@@ -2225,7 +2225,7 @@
     },
     {
       "path": "scripts/pending-phases-sweep.sh",
-      "sha256": "503709e24f6e191c571bd7adb407866dabe0ee596ea14c79368d8bcf4a43c3b2"
+      "sha256": "9e2434ef4b64154fc15cb3874588b086670c89d74993ecdb778fbd8a4e5e42b2"
     },
     {
       "path": "scripts/post-update-check-skills.sh",
@@ -2261,7 +2261,7 @@
     },
     {
       "path": "scripts/server-calendar.sh",
-      "sha256": "2fa9d4e61c38320150fc262806a87dc8ca56d3eed25f625d3a4a50e39539b9ff"
+      "sha256": "27e1c8f6c2a2d7b35f2a025d56f0f488132746f4fe79c7db7e0a5f53a3e4fa33"
     },
     {
       "path": "scripts/server-news.sh",
@@ -2538,6 +2538,7 @@
     "docs/developer/card-template.md",
     "docs/developer/code-style.md",
     "docs/developer/developer-guide.md",
+    "docs/developer/proposal-process.md",
     "docs/developer/testing-as-spec.md",
     "docs/developer/working-with-claude.md",
     "promotion-status.yaml",
