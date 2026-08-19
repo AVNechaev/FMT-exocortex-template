@@ -453,6 +453,16 @@ jobs:
         run: |
           bash scripts/verify-manifest.sh
 
+      # Evgenii Red Team review 2026-08-19: B2 above only checks that files
+      # ALREADY IN the manifest have correct hashes — it says nothing about a
+      # tracked file that is in neither manifest.files nor
+      # manifest.excluded_paths (a silent delivery-coverage gap, as opposed
+      # to a delivered-but-stale hash). check-manifest-coverage.py already
+      # existed but was never wired into CI as its own gate.
+      - name: Check manifest coverage (no silent delivery gaps)
+        run: |
+          git ls-files | python3 scripts/check-manifest-coverage.py update-manifest.json
+
       # WP-529 Ф1: docs/critical-files-map.yaml должна оставаться согласованной
       # с живой классификацией generate-manifest.sh — та же гарантия, что B2
       # выше даёт для update-manifest.json, только для карты категорий.

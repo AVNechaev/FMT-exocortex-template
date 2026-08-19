@@ -2225,7 +2225,7 @@
     },
     {
       "path": "scripts/pending-phases-sweep.sh",
-      "sha256": "503709e24f6e191c571bd7adb407866dabe0ee596ea14c79368d8bcf4a43c3b2"
+      "sha256": "9e2434ef4b64154fc15cb3874588b086670c89d74993ecdb778fbd8a4e5e42b2"
     },
     {
       "path": "scripts/post-update-check-skills.sh",
@@ -2261,7 +2261,7 @@
     },
     {
       "path": "scripts/server-calendar.sh",
-      "sha256": "2fa9d4e61c38320150fc262806a87dc8ca56d3eed25f625d3a4a50e39539b9ff"
+      "sha256": "27e1c8f6c2a2d7b35f2a025d56f0f488132746f4fe79c7db7e0a5f53a3e4fa33"
     },
     {
       "path": "scripts/server-news.sh",
@@ -2561,6 +2561,7 @@
     "scripts/tests/test_delivery_content.py",
     "scripts/tests/test_delivery_formal.py",
     "scripts/tests/test_dry_run_gate.py",
+    "scripts/tests/test_generate_manifest_registers_setup_exclusions.sh",
     "scripts/tests/test_install_hooks.py",
     "scripts/tests/test_issue_434_pipeline_scaffold_only.sh",
     "scripts/tests/test_issue_453_calendar_private_visibility.sh",
@@ -2586,7 +2587,31 @@
     "sessions/2026-06/2026-06-17-01-kimi-setup/02-writer.md",
     "sessions/2026-06/2026-06-17-01-kimi-setup/03-peer.md",
     "sessions/2026-06/2026-06-17-01-kimi-setup/meta.yaml",
-    "sessions/2026-06/2026-06-17-01-kimi-setup/report.md"
+    "sessions/2026-06/2026-06-17-01-kimi-setup/report.md",
+    "setup/detector-fixtures/README.md",
+    "setup/detector-fixtures/detector_07/positive_backtick_slash.md",
+    "setup/detector-regex.sh",
+    "setup/integration-contract-validator.sh",
+    "setup/optional/COVER-IMAGES.md",
+    "setup/optional/README.md",
+    "setup/optional/generate-post-image.py",
+    "setup/optional/pomodoro-alert.plist",
+    "setup/optional/pomodoro-alert.py",
+    "setup/optional/setup-agent-workspace.sh",
+    "setup/optional/setup-calendar.sh",
+    "setup/promote-fixtures/README.md",
+    "setup/promote-fixtures/sample-hook.sh",
+    "setup/promote-fixtures/sample-script.sh",
+    "setup/promote-fixtures/sample-settings.json",
+    "setup/promote-fixtures/sample-skill/SKILL.md",
+    "setup/promote-fixtures/sample-skill/scripts/sample-tool.sh",
+    "setup/release-audit-prompt.md",
+    "setup/smoke-test-fresh-install.sh",
+    "setup/test-delivery-route-label.sh",
+    "setup/test-detectors.sh",
+    "setup/test-update-edge-cases.sh",
+    "setup/test-update-issue-226.sh",
+    "setup/ux-walkthrough-prompt.md"
   ],
   "deprecated_files": [
     {

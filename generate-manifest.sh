@@ -196,7 +196,14 @@ while IFS= read -r rel; do
     # setup/ contains install-time scripts; skip all except explicit includes
     # (validate-template.sh referenced by .githooks/pre-commit and update.sh
     # after delivery; setup-cloud-scheduler.sh — see SETUP_EXPLICIT_INCLUDE above).
+    # Register in EXCLUDED_PATHS same as .github/ above (#423) — Evgenii's
+    # Red Team review 2026-08-19 found setup/test-delivery-route-label.sh
+    # (and every other setup/test-*.sh) as a silent manifest-coverage gap:
+    # this branch's bare `continue` never recorded WHY the file was skipped,
+    # so check-manifest-coverage.py had no way to distinguish it from a
+    # forgotten delivery.
     if [[ "$rel" == setup/* ]] && ! is_explicit_include "$rel" "${SETUP_EXPLICIT_INCLUDE[@]}"; then
+        EXCLUDED_PATHS+=("$rel")
         continue
     fi
 
