@@ -170,12 +170,12 @@ if [ -n "\$cfgfile" ]; then
     # anything in it didn't make it, same as real curl's own exit code.
     had_error=0
     pending_url=""
-    # `|| [ -n "\$line" ]`: read returns non-zero on the final line of a
-    # file with no trailing newline, which would otherwise skip that line's
-    # pair entirely and silently under-report a failure — today's config
-    # always ends in \n (download_batch's own printf appends it, update.sh)
-    # so this doesn't currently fire, but the loop shouldn't quietly depend
-    # on that (cold-context review).
+    # The '|| [ -n LINE ]' guard below: read returns non-zero on the
+    # final line of a file with no trailing newline, which would otherwise
+    # skip that line's pair entirely and silently under-report a failure —
+    # today's config always ends in \n (download_batch's own printf appends
+    # it, update.sh) so this doesn't currently fire, but the loop shouldn't
+    # quietly depend on that (cold-context review).
     while IFS= read -r line || [ -n "\$line" ]; do
         case "\$line" in
             'url = '*)
