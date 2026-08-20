@@ -2593,7 +2593,7 @@
     },
     {
       "path": "update.sh",
-      "sha256": "34df7d06aee88ae398ce8e74a049ea5a6e68595b62077dc4142db6a3b182d97d"
+      "sha256": "de3d87a13283ced41756fe21c65a2c66a685c5037a952d88411c67a56777444e"
     }
   ],
   "excluded_paths": [
@@ -2618,6 +2618,7 @@
     "scripts/iwe-trace.py",
     "scripts/session-dispatcher-tsekh.py",
     "scripts/tests/conftest.py",
+    "scripts/tests/lib/extract-update-download-batch.sh",
     "scripts/tests/test_agent_dashboard.py",
     "scripts/tests/test_copy_to_aisystant.py",
     "scripts/tests/test_day_close_prepare.py",
@@ -2635,7 +2636,10 @@
     "scripts/tests/test_skill_promote.py",
     "scripts/tests/test_translate_delta.py",
     "scripts/tests/test_translate_parse.py",
+    "scripts/tests/test_update_download_batch_network_failure_failclosed.sh",
     "scripts/tests/test_update_install_path_guard_provenance.sh",
+    "scripts/tests/test_update_retry_and_classify_undeliverable_file.sh",
+    "scripts/tests/test_update_verify_batch_integrity_hash_mismatch_failclosed.sh",
     "scripts/tests/test_validate_hypothesis_priority.sh",
     "scripts/translate.py",
     "scripts/verify-template-integrity.sh",
