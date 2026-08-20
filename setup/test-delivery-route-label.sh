@@ -59,6 +59,12 @@ EOF
 cp "$CHECK_SCRIPT_REAL" "$FIXTURE/scripts/check-delivery-route-label.sh"
 chmod +x "$FIXTURE/scripts/check-delivery-route-label.sh"
 
+# check-delivery-route-label.sh resolves scripts/lib/find-python3.sh relative
+# to its own BASH_SOURCE location — since the line above copies it into the
+# fixture, the resolver must live at the same relative path here too.
+mkdir -p "$FIXTURE/scripts/lib"
+cp "$REPO_ROOT/scripts/lib/find-python3.sh" "$FIXTURE/scripts/lib/find-python3.sh"
+
 git -C "$FIXTURE" init -q
 git -C "$FIXTURE" config user.email t@t
 git -C "$FIXTURE" config user.name t

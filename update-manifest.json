@@ -105,7 +105,7 @@
     },
     {
       "path": ".claude/hooks/protocol-artifact-validate.sh",
-      "sha256": "d5adce307641920198d9cea922697ee8c0befef9588f120aca9c6ad93f4160f7"
+      "sha256": "64f250446dacc1967e722313f52a063bbb9feb02c79cf5f21d00b3b12fb67f15"
     },
     {
       "path": ".claude/hooks/protocol-completion-reminder.sh",
@@ -137,7 +137,7 @@
     },
     {
       "path": ".claude/hooks/rule-engine.sh",
-      "sha256": "cd4ed9ae116a0abe4155a9f1736c953524d5a334ed73a6472a931d85dabf885a"
+      "sha256": "fad98a4ff583ef53ab7a11e752d6dd792869fcbb6d55e9555a91719dc504c5e9"
     },
     {
       "path": ".claude/hooks/session-end-status.sh",
@@ -976,6 +976,10 @@
       "sha256": "6a201fdbf5149798f6843d1c1bcce820eb4dc82b695c9044ee33b606fecd0a69"
     },
     {
+      "path": "generate-manifest.sh",
+      "sha256": "92ed910e48a67b657ccac70d60644bb9d7c3762a0dde6bf0c6aee16c0f0df2cc"
+    },
+    {
       "path": "guide-kit/.gitignore",
       "sha256": "15ed85cf9b54eb982fc6e54d0177aa1e2516f839fa0de00c19387cf6f196817a"
     },
@@ -1689,7 +1693,7 @@
     },
     {
       "path": "roles/strategist/scripts/strategist.sh",
-      "sha256": "f8dda04ae17b71b7315cf0cef2932df978b9e1c6f6ae391b9409605b564bfd80"
+      "sha256": "6757b6f6c139250ed446adf84785742a009113a156ec6cfcae92d1384e72318d"
     },
     {
       "path": "roles/strategist/scripts/systemd/iwe-strategist-morning.service",
@@ -1809,7 +1813,7 @@
     },
     {
       "path": "scripts/active-wp-sweep.sh",
-      "sha256": "1281f3e11cbe68393e92afd286189a9a428d657559cc2dbf9f61b11a89ac936d"
+      "sha256": "cf3618f6b03741dd5de333a80a277c322212d5235c9fbf117588e1cfba92f621"
     },
     {
       "path": "scripts/add-secret.sh",
@@ -1869,11 +1873,11 @@
     },
     {
       "path": "scripts/check-critical-files-map.sh",
-      "sha256": "9af2c1bd756e2bbd6d0ebdceb549f15a5c94dd546dbc705e2e27de105ba23bce"
+      "sha256": "21644640c579969f8f3c85e3ddc5f08139658977e93c1450eed48a8e866024b7"
     },
     {
       "path": "scripts/check-delivery-route-label.sh",
-      "sha256": "514f957947b593bd30c542bbced6d133c3722415b064842bbb7ef73eec322ce0"
+      "sha256": "6f6940a4c18e6995c25bf09eb256b9d1bf4ae17abf8d91365ad5e08917b0c31f"
     },
     {
       "path": "scripts/check-dirty-repos.sh",
@@ -1965,7 +1969,7 @@
     },
     {
       "path": "scripts/day-close.sh",
-      "sha256": "8083e50dd8528ce0130ffbd3622b0639fa5f1a01d5d0b4edbb59a9d00ea4006a"
+      "sha256": "1356efd3881354be0417024145922259752c741a6445531d24a73c24a2ecb333"
     },
     {
       "path": "scripts/day-open-budget-patch.py",
@@ -1981,7 +1985,7 @@
     },
     {
       "path": "scripts/day-open-pipeline.sh",
-      "sha256": "c7b176ea6e05d2382f702e366a565ef6e3e6498a8b70e80295b63f02c8b18a4c"
+      "sha256": "94dbb4cae8ca368d640d66f3f429ede706229f951fe6f9cbb4cd9891825c4b4c"
     },
     {
       "path": "scripts/day-open-preflight.sh",
@@ -1989,7 +1993,7 @@
     },
     {
       "path": "scripts/day-open-scaffold.sh",
-      "sha256": "3913003b9fafd108571d895d57d7b7ca87873f882353fd25befb650a16ad34de"
+      "sha256": "4b0dc785fd1dd45071b8e6e3091070e1434488fb67ac2ed42947fab398a986ec"
     },
     {
       "path": "scripts/day-open-smoke-extended.sh",
@@ -2141,15 +2145,19 @@
     },
     {
       "path": "scripts/ledger-append.sh",
-      "sha256": "84ea37467e5198c792187ed2c4b6d6a617de86a53e0766ef3c07fc67920f4323"
+      "sha256": "a502981e45fa7589f0093e9ea9949da89a270108b1bb4fce00642c3647dac951"
     },
     {
       "path": "scripts/lesson-close.sh",
-      "sha256": "d72de2cacb39ec6205c4ab410a031d57df1aee7009f8b97a3778bd6cbebc6df1"
+      "sha256": "202440eae8e614d2f2e8675af63efb0a0b053b5b3832083aec8f6e64f1324023"
     },
     {
       "path": "scripts/lib/common.sh",
       "sha256": "a2c08644cb85a947671ac6e2f61bb293af4ed67bc6af2ecabdb85a992d0a6515"
+    },
+    {
+      "path": "scripts/lib/find-python3.sh",
+      "sha256": "b938fca2780186b9383f3174a6d21b218f3b5f3a50e5d411a38179d584689cdd"
     },
     {
       "path": "scripts/lib/ledger-path.sh",
@@ -2249,7 +2257,7 @@
     },
     {
       "path": "scripts/route-task.sh",
-      "sha256": "d6a8a42e3607992570b1f684f6bfaa1ed97a6f985e2dc0c57b55752a9da67335"
+      "sha256": "59e065c3eb4e37b873cd52849c8562468f9ac95c0feccdd05e5b3bb4869b0333"
     },
     {
       "path": "scripts/run-regression-tests.sh",
@@ -2261,11 +2269,11 @@
     },
     {
       "path": "scripts/server-calendar.sh",
-      "sha256": "27e1c8f6c2a2d7b35f2a025d56f0f488132746f4fe79c7db7e0a5f53a3e4fa33"
+      "sha256": "5e06f201a6657d434ee7886101258ba609e3f9454e19307946f5e26aa2897434"
     },
     {
       "path": "scripts/server-news.sh",
-      "sha256": "beddb2e90b3bf45f4e36088e5c0ddef4721f24ffa0a68c16edd2af822a529819"
+      "sha256": "28be1a113884e4f747e43ee659221201456837a49258e645d8342426163f2b1c"
     },
     {
       "path": "scripts/session-guard.sh",
@@ -2340,6 +2348,10 @@
       "sha256": "68354ecd9583fcf1e02f1570c28552fd495f4a5da7bf58c99e43f86a879bf17e"
     },
     {
+      "path": "scripts/tests/run-issue-tests.sh",
+      "sha256": "96ee1fd55ea3739a3ad337f83bb9df3c1087d961b32e843afae9401dee04b5a2"
+    },
+    {
       "path": "scripts/tests/test_capture_bus_contract.sh",
       "sha256": "41afdb00139193c82c34626884407018c2c76f5ad1adf6e908a726101c6788ba"
     },
@@ -2404,6 +2416,38 @@
       "sha256": "99c99c821223e70a8a0b1cb89ce9a72f2bd1e5eebd011c2f42eadde056125491"
     },
     {
+      "path": "scripts/tests/test_issue_434_pipeline_scaffold_only.sh",
+      "sha256": "2f6bf87b5911bf84c2ae392bf89df55e98f28ffde3a1998c043cdff0e8db2f71"
+    },
+    {
+      "path": "scripts/tests/test_issue_453_calendar_private_visibility.sh",
+      "sha256": "a9866e9c48e44f1728e04e19a9ea9bcfd86943d280927adf1c7ee867a8ede903"
+    },
+    {
+      "path": "scripts/tests/test_issue_455_scaffold_missing_lib_fatal.sh",
+      "sha256": "83e6af367398aefb93c042769f95ee0a471fb47e388c2eda31ddb24d45da6cfb"
+    },
+    {
+      "path": "scripts/tests/test_issue_463_pyyaml_explicit_diagnostics.sh",
+      "sha256": "c059fc7f7b7fc7ce22d555fca8a8dec0a48ff8c0caed0c8de5a18b50a4e9c027"
+    },
+    {
+      "path": "scripts/tests/test_issue_469_settings_merge_hook_identity.py",
+      "sha256": "e9d5384908b54c80d52d95aaba5e4220bbe82d8c86ca4c8a6f748b1d37e42276"
+    },
+    {
+      "path": "scripts/tests/test_issue_471_drift_scan_status_boundary.py",
+      "sha256": "7c04d98dfe74469b43ee725295f3f3aaebfb42f0730356a14f08b4120c5f8587"
+    },
+    {
+      "path": "scripts/tests/test_issue_473_build_active_wp_columns.py",
+      "sha256": "c315bcc73c7ec5ea5a6b97cfd49439978c67507930bebaea0ff061c176e743b3"
+    },
+    {
+      "path": "scripts/tests/test_issue_473_wp_sync_bundle_status.sh",
+      "sha256": "d0089cbef011707d4ac4a04a302dd7285d49ed55d57355b975a2d30aa00738ce"
+    },
+    {
       "path": "scripts/tests/test_issues_413_418.py",
       "sha256": "bec574712bb6c776c2c3b0f571b87b152c33745214fe9dd7788b2a2dbff6fedd"
     },
@@ -2412,8 +2456,20 @@
       "sha256": "b17a1aad7203e700583f3a08c45a42244c8e552f8cf590975e95ab3925f4dada"
     },
     {
+      "path": "scripts/tests/test_role_runner_update_marker_guard.sh",
+      "sha256": "d5f39a5aa6e485b019a7ad53152a7f9377f7a9d43f45583cd0d599b8273a32dc"
+    },
+    {
       "path": "scripts/tests/test_session_guard_hypothesis_gate.sh",
       "sha256": "45d241902da232578652c576f3240088936fb165a4ada29917089e802df61edb"
+    },
+    {
+      "path": "scripts/tests/test_update_build_runtime_fail_closed.sh",
+      "sha256": "cf3d6a0132c4265691f22adfb49f405e378161ee3029c41d5ce59d2d7139fc73"
+    },
+    {
+      "path": "scripts/tests/test_update_delivers_python_resolver_before_roles.sh",
+      "sha256": "99a25fe6d1c65c13afd8201e8b4b8b37869fe4cadd983c64a1f9bd258b28d52b"
     },
     {
       "path": "scripts/tests/test_update_delivery_ref.sh",
@@ -2489,7 +2545,7 @@
     },
     {
       "path": "setup.sh",
-      "sha256": "6fb5583d98534b0aecc0f2c36f68da9784f1934975463ef6c29c79fd40d1fbec"
+      "sha256": "e73a22e88b5f4150a43938d48e6b5024fddfb7fa7e9c640e9d9dee02c42c1a70"
     },
     {
       "path": "setup/build-runtime.sh",
@@ -2509,7 +2565,7 @@
     },
     {
       "path": "setup/validate-template.sh",
-      "sha256": "b20cd35e65205ccd4fe426f8dc03ded24e860589662fb02a09e4d95889dee270"
+      "sha256": "16e556c6ca58ef0bcd138f71a76569c161e498278cd649c58113dddf95163d64"
     },
     {
       "path": "shared/rubrics/form-089.yaml",
@@ -2529,7 +2585,7 @@
     },
     {
       "path": "update.sh",
-      "sha256": "18b48aabbf229798821209040dda4989e5da6749184dd8413c5a8fc1b8ead99f"
+      "sha256": "9940a3b11d1cdb6240a4b3d4e70cb9f7da69b8884e22b52451ba22c492410b50"
     }
   ],
   "excluded_paths": [
@@ -2563,14 +2619,8 @@
     "scripts/tests/test_delivery_formal.py",
     "scripts/tests/test_dry_run_gate.py",
     "scripts/tests/test_install_hooks.py",
-    "scripts/tests/test_issue_434_pipeline_scaffold_only.sh",
-    "scripts/tests/test_issue_453_calendar_private_visibility.sh",
-    "scripts/tests/test_issue_455_scaffold_missing_lib_fatal.sh",
-    "scripts/tests/test_issue_463_pyyaml_explicit_diagnostics.sh",
-    "scripts/tests/test_issue_469_settings_merge_hook_identity.py",
-    "scripts/tests/test_issue_471_drift_scan_status_boundary.py",
-    "scripts/tests/test_issue_473_build_active_wp_columns.py",
-    "scripts/tests/test_issue_473_wp_sync_bundle_status.sh",
+    "scripts/tests/test_issue_463_setup_reuses_resolved_python3.sh",
+    "scripts/tests/test_issue_calendar_api_error_named.sh",
     "scripts/tests/test_manifest_coverage_local.py",
     "scripts/tests/test_pending_phases_sweep.sh",
     "scripts/tests/test_release_receipt.sh",
