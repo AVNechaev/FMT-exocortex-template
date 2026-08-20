@@ -1127,7 +1127,17 @@ verify_batch_integrity() {
         [ -n "$expected_hash" ] || continue
         remote_file="$TMPDIR_UPDATE/files/$fpath"
         [ -s "$remote_file" ] || continue
-        [ "$(hash_file "$remote_file")" = "$expected_hash" ] || rm -f "$remote_file"
+        if [ "$(hash_file "$remote_file")" != "$expected_hash" ]; then
+            # A retry can still recover this file from a different CDN edge
+            # (see the retry-pass comment below), so this isn't necessarily
+            # its final fate — but the specific reason (integrity, not a
+            # network failure) matters for diagnosis and was silently lost
+            # when this check moved out of the old per-file loop, which did
+            # print it (setup/test-update-issue-226.sh Scenario C caught the
+            # regression).
+            echo "  ⚠ $fpath: sha256 не совпадает с манифестом" >&2
+            rm -f "$remote_file"
+        fi
     done
 }
 
