@@ -61,7 +61,11 @@
     },
     {
       "path": ".claude/hooks/destructive-guard.sh",
-      "sha256": "3fd94e91db31347513df92e1070fe09a48fce4b8db0b321f7bc67e3ffcc1829c"
+      "sha256": "6bedcfdbf461cee9059c235e60815d3cdbb3650e5f82a9449903552a7aac4a5d"
+    },
+    {
+      "path": ".claude/hooks/destructive-mcp-guard.sh",
+      "sha256": "9012de5deeaae4c6fdbbbbc5c955e5554d5d20f374fb8c1c7fbfeaf2a939b068"
     },
     {
       "path": ".claude/hooks/dry-run-gate.sh",
@@ -265,7 +269,7 @@
     },
     {
       "path": ".claude/settings.json",
-      "sha256": "c2d350e46293eaad3a390858be3c3d5ff8260f10ec288af411512be1611fc0e8"
+      "sha256": "3540ae0f183610eb87f987c20d13b4262078b5c5f2454f598c5ee22f501aaf0b"
     },
     {
       "path": ".claude/skills-catalog.yaml",
@@ -2281,7 +2285,7 @@
     },
     {
       "path": "scripts/session-guard.sh",
-      "sha256": "37f0b652ac6e3fcdc64dc5ce3f1b31892e05f28e73e545a418cb5e123b6a6c2a"
+      "sha256": "b6789de0192b4fa57030e2e0f1308dac2c436aece13f2cb72e0430ba8abef76c"
     },
     {
       "path": "scripts/settings-promote.sh",
