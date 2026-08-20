@@ -1014,19 +1014,26 @@ CLAUDE_CONFLICT_FILES=()
 # doesn't tell the pilot to look for markers that were never written.
 CLAUDE_BASE_MISSING_FILES=()
 
-# Count total files for progress display
-TOTAL_FILES="?"
-if py_available; then
-    TOTAL_FILES=$($PY_BIN -c "
-import json, sys
-with open(sys.argv[1]) as f:
-    data = json.load(f)
-print(len(data.get('files', [])))
-" "$MANIFEST" 2>/dev/null || echo "?")
-fi
-DOWNLOAD_IDX=0
+# WP-546 (peer-session 2026-08-20-11, WP-546 Ф2 consensus with Codex): the
+# manifest loop used to run one `curl` per file, sequentially — 632 files at
+# ~0.65s/file (measured) means ~7min on an ordinary network, and users on
+# slower/higher-latency connections reported 40+ minutes. Split into two
+# phases: (1) a network-free pass builds a download worklist (three parallel
+# indexed arrays, not `declare -A` — that needs bash 4.0+, but this script's
+# #!/bin/bash shebang resolves to the system bash on macOS, which is 3.2;
+# same reasoning as download_batch's positional-args choice below), skipping
+# protected files and files whose local sha256 already matches the manifest
+# (no network call for either); (2) a single `curl --parallel` call downloads
+# the worklist, followed by one retry pass (network failures AND integrity
+# failures — GitHub's raw CDN edges can briefly disagree after a fresh push,
+# so a retry can succeed where the first attempt didn't). Per-file
+# classification (NEW/UPDATED/UNCHANGED, the issue #254 merge-base detector)
+# runs unchanged after download, just reading from $TMPDIR_UPDATE/files/
+# instead of a variable populated file-by-file.
+DOWNLOAD_QUEUE=()
+DOWNLOAD_DESCS=()
+DOWNLOAD_HASHES=()
 
-# Parse manifest: extract path and desc for each file entry
 while IFS='|' read -r fpath fdesc expected_hash; do
     [ -z "$fpath" ] && continue
     # issue #402 (defect 3): native Windows Python prints \r\n even inside a
@@ -1042,30 +1049,134 @@ while IFS='|' read -r fpath fdesc expected_hash; do
         UNCHANGED=$((UNCHANGED + 1))
         continue
     fi
-    DOWNLOAD_IDX=$((DOWNLOAD_IDX + 1))
-    printf "  (%s/%s) %s\r" "$DOWNLOAD_IDX" "$TOTAL_FILES" "$fpath"
+    # skip-if-hash-matches (WP-546 Ф2): a manifest sha256 that already matches
+    # the local file needs no network round-trip at all — this is the other
+    # half of the speedup alongside parallel download, since a typical update
+    # leaves most files unchanged.
+    if [ -n "$expected_hash" ] && [ -f "$SCRIPT_DIR/$fpath" ] && [ "$(hash_file "$SCRIPT_DIR/$fpath")" = "$expected_hash" ]; then
+        UNCHANGED=$((UNCHANGED + 1))
+        continue
+    fi
+    DOWNLOAD_QUEUE+=("$fpath")
+    DOWNLOAD_DESCS+=("$fdesc")
+    DOWNLOAD_HASHES+=("$expected_hash")
+done < <(
+    # Parse JSON: extract path|desc|sha256 lines. Path via argv (issue #402,
+    # defect 2), not interpolated into the -c string — see FILES_MATCH above.
+    if py_available; then
+        $PY_BIN -c "
+import json, sys
+with open(sys.argv[1]) as f:
+    data = json.load(f)
+for entry in data.get('files', []):
+    print(entry['path'] + '|' + entry.get('desc', '') + '|' + entry.get('sha256', ''))
+" "$MANIFEST" 2>/dev/null
+    else
+        # Fallback: basic grep parsing if no working python interpreter.
+        # No sha256 in this path — integrity check below is skipped (already
+        # documented via SKIPPED_DOWNLOAD, not silently trusted).
+        grep '"path"' "$MANIFEST" | while read -r line; do
+            fpath=$(echo "$line" | sed 's/.*"path"[[:space:]]*:[[:space:]]*"//;s/".*//')
+            echo "$fpath|"
+        done
+    fi
+)
 
-    # Download remote file
+# download_batch FPATH... — one curl --parallel call for the given fpaths
+# (positional args, not a nameref: `local -n` needs bash 4.3+, but this
+# script's #!/bin/bash shebang resolves to the system bash on macOS, which is
+# 3.2 — a nameref there fails "local: -n: invalid option" and silently no-ops
+# the whole download instead of erroring, since `local`'s exit status doesn't
+# trip `set -e`. Found live testing this exact function). Writes each file to
+# $TMPDIR_UPDATE/files/$fpath. -f makes curl treat an HTTP error page (404)
+# as a failure instead of writing it to disk as if it were the real file —
+# without it a missing manifest entry silently "downloads" successfully.
+# --remove-on-error then deletes that failed transfer's partial/error output
+# so a plain `[ -s ... ]` elsewhere is a reliable "did this file actually
+# arrive" check. `|| true`: a batch failing outright (e.g. every URL in it
+# unreachable) must not trip `set -e` and abort the whole update — the
+# per-file presence check right after this call is what actually decides
+# success per file, same as the old code's per-file `if curl ...` (Ф2
+# peer-session review; all found live testing this exact function).
+download_batch() {
+    [ $# -eq 0 ] && return 0
+    local cfg p dst
+    cfg=$(mktemp)
+    for p in "$@"; do
+        dst="$TMPDIR_UPDATE/files/$p"
+        mkdir -p "$(dirname "$dst")"
+        printf 'url = "%s/%s"\noutput = "%s"\n' "$RAW_BASE" "$p" "$dst" >> "$cfg"
+    done
+    # shellcheck disable=SC2086  # CURL_BASE_OPTS/_CURL_SSL_OPT intentionally unquoted (multi-token flags)
+    curl $CURL_BASE_OPTS $_CURL_SSL_OPT -f --remove-on-error --parallel --parallel-max 8 -K "$cfg" 2>/dev/null || true
+    rm -f "$cfg"
+}
+
+# verify_batch_integrity — removes any downloaded file whose sha256 doesn't
+# match its manifest hash, so it reads as "missing" to whatever retry logic
+# runs next. Index-based (not a linear scan for each fpath against
+# DOWNLOAD_QUEUE — that's O(n²) over a 600+ file manifest and was called
+# twice): DOWNLOAD_QUEUE/DOWNLOAD_DESCS/DOWNLOAD_HASHES are parallel arrays,
+# so the caller's index into DOWNLOAD_QUEUE is also the index into
+# DOWNLOAD_HASHES, no lookup needed.
+verify_batch_integrity() {
+    local i fpath expected_hash remote_file
+    for i in "${!DOWNLOAD_QUEUE[@]}"; do
+        fpath="${DOWNLOAD_QUEUE[$i]}"
+        expected_hash="${DOWNLOAD_HASHES[$i]}"
+        [ -n "$expected_hash" ] || continue
+        remote_file="$TMPDIR_UPDATE/files/$fpath"
+        [ -s "$remote_file" ] || continue
+        [ "$(hash_file "$remote_file")" = "$expected_hash" ] || rm -f "$remote_file"
+    done
+}
+
+if [ ${#DOWNLOAD_QUEUE[@]} -gt 0 ]; then
+    printf "  Скачиваю %s файлов (до 8 параллельно)...\n" "${#DOWNLOAD_QUEUE[@]}"
+    download_batch "${DOWNLOAD_QUEUE[@]}"
+
+    # Integrity check BEFORE building the retry queue (Ф2 peer-session
+    # review: the original version checked integrity only in the final loop,
+    # after retry — so a hash mismatch could never actually get retried
+    # despite the comment below promising it).
+    verify_batch_integrity
+
+    # Retry pass: anything not present now — network failure on the first
+    # attempt, or an integrity mismatch just removed above — gets one more
+    # attempt. Integrity failures are retried too (not just network
+    # failures): a stale CDN edge can disagree with the manifest briefly
+    # after a fresh push, and a second attempt can land on a different edge
+    # that already has the current content.
+    RETRY_QUEUE=()
+    for fpath in "${DOWNLOAD_QUEUE[@]}"; do
+        [ -s "$TMPDIR_UPDATE/files/$fpath" ] || RETRY_QUEUE+=("$fpath")
+    done
+    if [ ${#RETRY_QUEUE[@]} -gt 0 ]; then
+        download_batch "${RETRY_QUEUE[@]}"
+        verify_batch_integrity
+    fi
+fi
+
+DOWNLOAD_IDX=0
+for _dq_i in "${!DOWNLOAD_QUEUE[@]}"; do
+    fpath="${DOWNLOAD_QUEUE[$_dq_i]}"
+    fdesc="${DOWNLOAD_DESCS[$_dq_i]}"
+    DOWNLOAD_IDX=$((DOWNLOAD_IDX + 1))
+    printf "  (%s/%s) %s\r" "$DOWNLOAD_IDX" "${#DOWNLOAD_QUEUE[@]}" "$fpath"
+
     REMOTE_FILE="$TMPDIR_UPDATE/files/$fpath"
-    mkdir -p "$(dirname "$REMOTE_FILE")"
 
     # issue #350: a failed download used to `continue` silently — the file landed in
     # no list at all, not even the UNCHANGED counter, so the preview said nothing about
     # it while a later run (network back) applied it. "Could not check" is not "up to
-    # date"; it now gets its own list and taints the verdict below.
-    if ! curl $CURL_BASE_OPTS $_CURL_SSL_OPT -sSfL "$RAW_BASE/$fpath" -o "$REMOTE_FILE" 2>/dev/null; then
+    # date"; it now gets its own list and taints the verdict below. Integrity
+    # failures already removed the file above (both passes), so a missing
+    # file here covers both causes — the category split (network vs.
+    # integrity) that the old per-file loop reported is no longer knowable
+    # after two retry rounds have run, so both land in the same list.
+    if [ ! -s "$REMOTE_FILE" ]; then
         SKIPPED_DOWNLOAD+=("$fpath")
         continue
-    fi
-
-    if [ -n "$expected_hash" ]; then
-        REMOTE_HASH=$(hash_file "$REMOTE_FILE")
-        if [ "$REMOTE_HASH" != "$expected_hash" ]; then
-            echo "  ⚠ $fpath: sha256 не совпадает с манифестом" >&2
-            SKIPPED_DOWNLOAD+=("$fpath (ошибка целостности)")
-            rm -f "$REMOTE_FILE"
-            continue
-        fi
     fi
 
     if [ ! -f "$SCRIPT_DIR/$fpath" ]; then
@@ -1096,27 +1207,7 @@ while IFS='|' read -r fpath fdesc expected_hash; do
             UNCHANGED=$((UNCHANGED + 1))
         fi
     fi
-done < <(
-    # Parse JSON: extract path|desc|sha256 lines. Path via argv (issue #402,
-    # defect 2), not interpolated into the -c string — see FILES_MATCH above.
-    if py_available; then
-        $PY_BIN -c "
-import json, sys
-with open(sys.argv[1]) as f:
-    data = json.load(f)
-for entry in data.get('files', []):
-    print(entry['path'] + '|' + entry.get('desc', '') + '|' + entry.get('sha256', ''))
-" "$MANIFEST" 2>/dev/null
-    else
-        # Fallback: basic grep parsing if no working python interpreter.
-        # No sha256 in this path — integrity check below is skipped (already
-        # documented via SKIPPED_DOWNLOAD, not silently trusted).
-        grep '"path"' "$MANIFEST" | while read -r line; do
-            fpath=$(echo "$line" | sed 's/.*"path"[[:space:]]*:[[:space:]]*"//;s/".*//')
-            echo "$fpath|"
-        done
-    fi
-)
+done
 printf "\n"
 
 # === Step 2b: Deprecated files (устаревшие L1-файлы к удалению) ===
