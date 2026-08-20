@@ -977,7 +977,7 @@
     },
     {
       "path": "generate-manifest.sh",
-      "sha256": "0062f96ffe8c2b9fd7ad04d2c513ffa28de86931062f56a26dcf307170cc6f96"
+      "sha256": "fa5b37637ba1c5af0e544134e08184e69245073e6aaef545fd9e93d1b46d8e4d"
     },
     {
       "path": "guide-kit/.gitignore",
@@ -2432,6 +2432,10 @@
       "sha256": "c059fc7f7b7fc7ce22d555fca8a8dec0a48ff8c0caed0c8de5a18b50a4e9c027"
     },
     {
+      "path": "scripts/tests/test_issue_463_setup_reuses_resolved_python3.sh",
+      "sha256": "7e746b3b75b89bc503016a6d86a916527459bc2e5f0c46f02b8d4558eb96dbee"
+    },
+    {
       "path": "scripts/tests/test_issue_469_settings_merge_hook_identity.py",
       "sha256": "e9d5384908b54c80d52d95aaba5e4220bbe82d8c86ca4c8a6f748b1d37e42276"
     },
@@ -2446,6 +2450,10 @@
     {
       "path": "scripts/tests/test_issue_473_wp_sync_bundle_status.sh",
       "sha256": "d0089cbef011707d4ac4a04a302dd7285d49ed55d57355b975a2d30aa00738ce"
+    },
+    {
+      "path": "scripts/tests/test_issue_calendar_api_error_named.sh",
+      "sha256": "4b44a9bbcb4eb3247e10bea7c133ce8ea0f866421445f6e539c42dc48617ecd6"
     },
     {
       "path": "scripts/tests/test_issues_413_418.py",
@@ -2620,8 +2628,6 @@
     "scripts/tests/test_dry_run_gate.py",
     "scripts/tests/test_generate_manifest_registers_setup_exclusions.sh",
     "scripts/tests/test_install_hooks.py",
-    "scripts/tests/test_issue_463_setup_reuses_resolved_python3.sh",
-    "scripts/tests/test_issue_calendar_api_error_named.sh",
     "scripts/tests/test_manifest_coverage_local.py",
     "scripts/tests/test_pending_phases_sweep.sh",
     "scripts/tests/test_release_receipt.sh",
