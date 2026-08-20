@@ -534,6 +534,23 @@ jobs:
       - name: Test release-receipt fail-closed logic
         run: bash scripts/tests/test_release_receipt.sh
 
+      # WP-529 Ф4 (peer-session 2026-08-20-06-wp546-wp529-update-parallel,
+      # rewritten against the merged WP-546 Ф2 implementation — commit
+      # 8112b1a, curl --parallel — after an earlier draft of these three
+      # tests targeted a since-abandoned parallel xargs/worker draft): three
+      # negative delivery scenarios for update.sh Step 2's parallel fetch —
+      # a network failure, a sha256 mismatch, and a file that never becomes
+      # deliverable through the retry pass. Each must land in
+      # SKIPPED_DOWNLOAD, never silently pass as delivered — if any of them
+      # regressed, this job (RESULT_VALIDATE) goes red, which
+      # release-receipt.sh (Ф3, tested above) turns into publishable=false.
+      - name: Test update.sh download_batch — network failure is fail-closed
+        run: bash scripts/tests/test_update_download_batch_network_failure_failclosed.sh
+      - name: Test update.sh verify_batch_integrity — sha256 mismatch is fail-closed
+        run: bash scripts/tests/test_update_verify_batch_integrity_hash_mismatch_failclosed.sh
+      - name: Test update.sh retry+classify — undeliverable file is fail-closed
+        run: bash scripts/tests/test_update_retry_and_classify_undeliverable_file.sh
+
       # issue #310/#323: хук-страж, не зарегистрированный ни в одном событии, не
       # срабатывает никогда — и «не сработал» неотличимо от «нарушений не было».
       - name: Check every hook is actually wired (orphan-hook guard)
