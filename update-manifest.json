@@ -1993,7 +1993,7 @@
     },
     {
       "path": "scripts/day-open-scaffold.sh",
-      "sha256": "4b0dc785fd1dd45071b8e6e3091070e1434488fb67ac2ed42947fab398a986ec"
+      "sha256": "1babd5159e9e7474f7a42d9aa4cff8fc54665172526119f17a10efd26455ae4d"
     },
     {
       "path": "scripts/day-open-smoke-extended.sh",
@@ -2269,7 +2269,7 @@
     },
     {
       "path": "scripts/server-calendar.sh",
-      "sha256": "5e06f201a6657d434ee7886101258ba609e3f9454e19307946f5e26aa2897434"
+      "sha256": "e6293844d736a01853d429eea4f367411bff414bf9154ab7ecd01f7ea1093c40"
     },
     {
       "path": "scripts/server-news.sh",
@@ -2593,7 +2593,7 @@
     },
     {
       "path": "update.sh",
-      "sha256": "9940a3b11d1cdb6240a4b3d4e70cb9f7da69b8884e22b52451ba22c492410b50"
+      "sha256": "34df7d06aee88ae398ce8e74a049ea5a6e68595b62077dc4142db6a3b182d97d"
     }
   ],
   "excluded_paths": [
@@ -2671,6 +2671,10 @@
     "setup/ux-walkthrough-prompt.md"
   ],
   "deprecated_files": [
+    {
+      "path": "scripts/template-sync.sh",
+      "reason": "removed 2026-07-17 (e9cf822): functionality fully covered by the protected author-side sync pipeline (not shipped to the template). Forks that updated before removal keep an orphaned copy on disk without this entry (issue #486)."
+    },
     {
       "path": "scripts/safe-pull.sh",
       "reason": "zero callers (WP-5 audit), logic folded into scripts/lib/common.sh iwe_safe_pull(), removed in v0.36.2"
