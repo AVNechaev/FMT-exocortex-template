@@ -977,7 +977,7 @@
     },
     {
       "path": "generate-manifest.sh",
-      "sha256": "92ed910e48a67b657ccac70d60644bb9d7c3762a0dde6bf0c6aee16c0f0df2cc"
+      "sha256": "0062f96ffe8c2b9fd7ad04d2c513ffa28de86931062f56a26dcf307170cc6f96"
     },
     {
       "path": "guide-kit/.gitignore",
@@ -1849,7 +1849,7 @@
     },
     {
       "path": "scripts/backup-icloud.sh",
-      "sha256": "cca548a861b9bbcac683c54acf281f1729a5c802401a5f45148459108304bebe"
+      "sha256": "952484d862c8b6975656d21362d59dd43ce9ea280a20611e6b4fd277d1de7bd4"
     },
     {
       "path": "scripts/build-active-wp.py",
