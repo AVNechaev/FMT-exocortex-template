@@ -25,6 +25,13 @@ MANIFEST="$SCRIPT_DIR/update-manifest.json"
 [ -f "$MAP" ] || { echo "ERROR: $MAP не найден"; exit 2; }
 [ -f "$GENERATOR" ] || { echo "ERROR: $GENERATOR не найден"; exit 2; }
 
+# WP-529 (continuation, 19.08, peer-session 2026-08-19-29 turn 7): resolved
+# once here for both PyYAML consumers below, instead of each calling bare
+# python3 -- same defect class Evgenii found elsewhere. Explicit failure on
+# resolver miss, same convention as the MAP/GENERATOR checks just above.
+RESOLVED_PYTHON3=$("$SCRIPT_DIR/scripts/lib/find-python3.sh" 2>/dev/null) || RESOLVED_PYTHON3=""
+[ -n "$RESOLVED_PYTHON3" ] || { echo "ERROR: python3 с библиотекой PyYAML не найден (pip install pyyaml)"; exit 2; }
+
 # generate-manifest.sh regenerates $MANIFEST as a side effect — same
 # technique scripts/verify-manifest.sh already uses safely in CI.
 BACKUP=$(mktemp)
@@ -49,7 +56,7 @@ fail() { echo "  ❌ $*" >&2; FAIL=1; }
 ok() { echo "  ✅ $*"; }
 
 echo "[1/3] Блоки generate-manifest.sh, на которые ссылается карта..."
-python3 - "$MAP" > "$WORKDIR/referenced_blocks.txt" <<'PY'
+"$RESOLVED_PYTHON3" - "$MAP" > "$WORKDIR/referenced_blocks.txt" <<'PY'
 import re
 import sys
 import yaml
@@ -137,7 +144,7 @@ else
 fi
 
 echo "[3/3] owner + proof_of_delivery непустые для каждой категории/special_route..."
-if python3 - "$MAP" <<'PY'
+if "$RESOLVED_PYTHON3" - "$MAP" <<'PY'
 import sys
 import yaml
 

@@ -627,8 +627,9 @@ else
     # Case A: default installation (mandatory_daily_wps commented out in the
     # template default), DayPlan uses the real pilot phrasing from issue #328.
     T11_DIR="$TEST_WS/t11-dayplan"
-    mkdir -p "$T11_DIR/memory" "$T11_DIR/current"
+    mkdir -p "$T11_DIR/memory" "$T11_DIR/current" "$T11_DIR/scripts/lib"
     cp "$TEMPLATE_DIR/memory/day-rhythm-config.yaml" "$T11_DIR/memory/day-rhythm-config.yaml"
+    cp "$TEMPLATE_DIR/scripts/lib/find-python3.sh" "$T11_DIR/scripts/lib/find-python3.sh"
     cat > "$T11_DIR/current/DayPlan.md" <<'HEREDOC'
 ## Бюджет
 ~1.25 ч РП всего / 0 ч физической работы. Мультипликатор не считаю.
@@ -649,7 +650,8 @@ HEREDOC
     # section — must still fail. Proves Case A isn't passing because the
     # checks were silently disabled, not because the config was honored.
     T11_DIR_B="$TEST_WS/t11-dayplan-b"
-    mkdir -p "$T11_DIR_B/memory" "$T11_DIR_B/current"
+    mkdir -p "$T11_DIR_B/memory" "$T11_DIR_B/current" "$T11_DIR_B/scripts/lib"
+    cp "$TEMPLATE_DIR/scripts/lib/find-python3.sh" "$T11_DIR_B/scripts/lib/find-python3.sh"
     cat > "$T11_DIR_B/memory/day-rhythm-config.yaml" <<'HEREDOC'
 mandatory_daily_wps:
   - wp: 7

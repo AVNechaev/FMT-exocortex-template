@@ -453,6 +453,16 @@ jobs:
         run: |
           bash scripts/verify-manifest.sh
 
+      # Evgenii Red Team review 2026-08-19: B2 above only checks that files
+      # ALREADY IN the manifest have correct hashes — it says nothing about a
+      # tracked file that is in neither manifest.files nor
+      # manifest.excluded_paths (a silent delivery-coverage gap, as opposed
+      # to a delivered-but-stale hash). check-manifest-coverage.py already
+      # existed but was never wired into CI as its own gate.
+      - name: Check manifest coverage (no silent delivery gaps)
+        run: |
+          git ls-files | python3 scripts/check-manifest-coverage.py update-manifest.json
+
       # WP-529 Ф1: docs/critical-files-map.yaml должна оставаться согласованной
       # с живой классификацией generate-manifest.sh — та же гарантия, что B2
       # выше даёт для update-manifest.json, только для карты категорий.
@@ -533,6 +543,44 @@ jobs:
       # и .orphan-allowlist) плюс гарантия, что настоящая сирота всё ещё валит проверку.
       - name: Test the orphan-hook guard itself (marker + allowlist + real orphan)
         run: bash scripts/tests/test_check_orphan_hooks.sh
+
+      # WP-529 Ф6 (находки Евгения 18.08): PyYAML — заявленная зависимость
+      # (requirements.txt, #463), но CI её не гарантировал, а вся семья
+      # scripts/tests/test_issue_*.sh лежала в репо не подключённой — тот же
+      # класс «тест есть, CI о нём не знает», что issue #226 выше.
+      - name: Ensure PyYAML available for issue-regression tests (#463)
+        run: |
+          python3 -c "import yaml" 2>/dev/null && exit 0
+          python3 -m pip install --user pyyaml 2>/dev/null && python3 -c "import yaml" 2>/dev/null && exit 0
+          sudo apt-get update -qq && sudo apt-get install -y -qq python3-yaml
+
+      # Единый версионируемый раннер: новый test_issue_*.sh подключается самим
+      # фактом появления файла, забыть подключить к CI больше нельзя.
+      - name: Run issue-regression tests (single runner, WP-529 Ф6)
+        run: bash scripts/tests/run-issue-tests.sh
+
+      # Cold review 2026-08-19 (Medium): раннер выше гоняет только .sh — три
+      # python-регрессии семьи иначе не исполняются нигде (тот же класс
+      # «тест есть, CI о нём не знает»).
+      - name: Run issue-regression python tests (pytest, WP-529 Ф6)
+        run: |
+          python3 -m pytest --version >/dev/null 2>&1 || python3 -m pip install --user pytest
+          python3 -m pytest -q scripts/tests/test_issue_*.py
+
+      # Сбой build-runtime обязан оставлять .update-incomplete и валить update.sh
+      # ненулевым кодом; recovery-ветка TOTAL_CHANGES=0 обязана его выполнять.
+      - name: Test update.sh build-runtime fail-closed contract (WP-529 Ф6)
+        run: bash scripts/tests/test_update_build_runtime_fail_closed.sh
+
+      # Инвариант порядка доставки: резолвер python синхронизируется раньше
+      # любой перезагрузки ролей; consumers ходят только через общий резолвер.
+      - name: Test python-resolver delivery order invariant (WP-529 Ф6)
+        run: bash scripts/tests/test_update_delivers_python_resolver_before_roles.sh
+
+      # Мутирующий runner роли обязан пропускать запуск, пока открыт маркер
+      # незавершённого обновления (RunAtLoad-выстрел при переустановке ролей).
+      - name: Test role-runner update-marker guard (WP-529 Ф6)
+        run: bash scripts/tests/test_role_runner_update_marker_guard.sh
 
       # 7. Только допустимые placeholders
       - name: Check placeholders are valid

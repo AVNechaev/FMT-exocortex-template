@@ -114,14 +114,21 @@ case "$SCALE" in
 esac
 
 # --- pyyaml availability check ---
-python3 -c "import yaml" 2>/dev/null || {
+# Evgenii Red Team review 2026-08-19 (defect #5 class): the F6 shared resolver
+# (scripts/lib/find-python3.sh, #453/#463) knows the Homebrew python3 path on
+# Apple Silicon; a bare `python3 -c "import yaml"` probe here only sees
+# whatever PATH's own python3 is, which can lack PyYAML on the same machine.
+# Resolve once, reuse for every python3 call below (yaml AND json/stdlib —
+# same interpreter, stdlib is always present once yaml import succeeds).
+RESOLVER="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/find-python3.sh"
+if ! RESOLVED_PYTHON3=$("$RESOLVER"); then
   echo "ERROR: python3 module 'yaml' not found (pip install pyyaml)" >&2
   exit 1
-}
+fi
 
 # --- JSON validation BEFORE lock acquisition (Kimi fix #2) ---
 JSON_ERR=$(mktemp)
-echo "$DATA_JSON" | python3 -c "import json,sys; json.load(sys.stdin)" 2>"$JSON_ERR" || {
+echo "$DATA_JSON" | "$RESOLVED_PYTHON3" -c "import json,sys; json.load(sys.stdin)" 2>"$JSON_ERR" || {
   echo "ERROR: invalid JSON data: $(cat "$JSON_ERR")" >&2
   rm -f "$JSON_ERR"
   exit 1
@@ -142,7 +149,7 @@ rm -f "$JSON_ERR"
 # being fixed, so an unrecognized value degrades to a greppable "unknown" with the
 # original kept in wp_raw.
 if [ "$KIND" = "session_closed" ]; then
-  NORMALIZED=$(echo "$DATA_JSON" | python3 -c '
+  NORMALIZED=$(echo "$DATA_JSON" | "$RESOLVED_PYTHON3" -c '
 import json, re, sys
 
 WP_RE = re.compile(r"WP-\d+")
@@ -205,7 +212,7 @@ json.dump(data, sys.stdout, ensure_ascii=False)
   DATA_JSON="$NORMALIZED"
 fi
 
-if [ "$DEDUP_BY_KIND_AND_DATE" = "true" ] && ! echo "$DATA_JSON" | python3 -c '
+if [ "$DEDUP_BY_KIND_AND_DATE" = "true" ] && ! echo "$DATA_JSON" | "$RESOLVED_PYTHON3" -c '
 import json, sys
 data = json.load(sys.stdin)
 if not isinstance(data, dict) or not isinstance(data.get("for_date"), str) or not data["for_date"]:
@@ -250,7 +257,7 @@ EOF
   OUT_TMP="${LEDGER_FILE}.tmp.$$"
 
   set +e
-  python3 <<PYEOF
+  "$RESOLVED_PYTHON3" <<PYEOF
 import json, sys, yaml
 
 with open("$DATA_TMP", "r", encoding="utf-8") as f:
