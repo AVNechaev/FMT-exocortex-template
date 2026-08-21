@@ -1369,7 +1369,7 @@
     },
     {
       "path": "memory/r-questionnaire.md",
-      "sha256": "7dc7097e816e65ee559aa2c13853c95ab98a710331a5fdb6191dc2d8b44b4f91"
+      "sha256": "38391245c46cee1b5cef87190bb28aded29d635d4bb8a0a63dee6d273c7b7744"
     },
     {
       "path": "memory/reference/agent-core.md",
@@ -2609,7 +2609,7 @@
     },
     {
       "path": "update.sh",
-      "sha256": "ee0655fcf4cff6d789c81fbf06ae3dedbd70da5c49601d8d50dfa3ffad8a6df6"
+      "sha256": "a0e1a18ef40ca37c54b9897bff7cd83475232e2abd6b5ea808d14cee486bcd99"
     }
   ],
   "excluded_paths": [
