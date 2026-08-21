@@ -1100,10 +1100,126 @@ else
     # "checked composition only" as the old comment claimed).
     INTEGRITY_TAINTED=true
     echo "⚠ Python недоступен — только состав файлов сверяется, содержимое НЕ проверяется по контрольной сумме." >&2
-    grep '"path"' "$MANIFEST" | while read -r line; do
-        fpath=$(echo "$line" | sed 's/.*"path"[[:space:]]*:[[:space:]]*"//;s/".*//')
-        echo "$fpath|"
-    done > "$MANIFEST_PARSED"
+
+    # High 2 fail-closed guard (peer-session 2026-08-21-12, Codex, revised
+    # after cold-context review found the first version tautological — the
+    # extracted-count and found-count were both built from the same grep, so
+    # they were always equal even when sed extracted garbage). The fallback
+    # assumes one "path" key per line — a compact/minified manifest (several
+    # entries on one line) silently breaks that assumption, and the old code
+    # just extracted the FIRST match per line instead of failing, losing
+    # every other entry with no signal. A line-count heuristic
+    # (`wc -l == 1`) was considered and rejected: a trailing-newline-less
+    # minified file gives 0, and a compact multi-line manifest can still
+    # pack several "path" keys onto one physical line. Check the actual
+    # assumption — how many "path" occurrences share a line — not a proxy
+    # for it.
+    #
+    # Scope decision (same peer-session, second round): this fallback
+    # supports ONLY the line-per-field layout this repo's own manifest
+    # generator produces — "path" preceded solely by whitespace on its
+    # line, per PATH_LINE_RE below. A compact single-file manifest like
+    # {"files":[{"path":"x.md"}]} is valid JSON but NOT supported here and
+    # correctly hits EXIT_RUNTIME (test-update-issue-226.sh Scenario H) —
+    # a looser prefix (^.*"path") was considered and rejected: it would
+    # let arbitrary text ahead of the real key mask corruption or a "path"
+    # match inside an unrelated string value, undermining the whole-line
+    # grammar match's actual guarantee.
+    #
+    # Every grep below has an explicit 0/1/>1 status check (peer-session
+    # 2026-08-21-12, High 2): this script has `set -e` but not `pipefail`,
+    # so a grep failing inside a pipe or process substitution would
+    # otherwise be silently absorbed by the next command in the chain —
+    # exactly the "fail-open under error" this guard exists to prevent.
+    # grep_or_die PATTERN FILE DEST-VAR — runs "grep -c PATTERN FILE",
+    # writes stdout to DEST-VAR (a file path), returns 0. Aborts the script
+    # on any grep exit status other than 0 (matches found) or 1 (no
+    # matches) — status >1 means grep itself failed to read/execute.
+    grep_or_die() {
+        local pattern="$1" file="$2" dest="$3" rc=0
+        grep -c -- "$pattern" "$file" > "$dest" 2>/dev/null || rc=$?
+        if [ "$rc" -gt 1 ]; then
+            echo "✗ Не удалось прочитать манифест обновлений для резервного разбора (grep вернул код ${rc})." >&2
+            exit "$EXIT_RUNTIME"
+        fi
+        return 0
+    }
+
+    # -c counts MATCHING LINES; that's exactly what both guards need — the
+    # multi-path check cares whether ANY line has 2+ occurrences (a line
+    # either qualifies as a violation or doesn't), and once that guard has
+    # passed, "at most one path per line" makes line-count and
+    # occurrence-count the same number for the total.
+    MULTI_PATH_COUNT_FILE=$(mktemp)
+    grep_or_die '"path".*"path"' "$MANIFEST" "$MULTI_PATH_COUNT_FILE"
+    MULTI_PATH_LINES=$(cat "$MULTI_PATH_COUNT_FILE")
+    rm -f "$MULTI_PATH_COUNT_FILE"
+    if [ "$MULTI_PATH_LINES" -gt 0 ]; then
+        echo "✗ Манифест обновлений в компактном/минифицированном формате (несколько записей на одной строке) — резервный разбор без Python это не поддерживает." >&2
+        echo "  Обновление остановлено: обычная извлечённая запись отбросила бы соседние записи на той же строке без предупреждения." >&2
+        exit "$EXIT_RUNTIME"
+    fi
+
+    PATH_KEY_COUNT_FILE=$(mktemp)
+    grep_or_die '"path"' "$MANIFEST" "$PATH_KEY_COUNT_FILE"
+    PATH_KEY_TOTAL=$(cat "$PATH_KEY_COUNT_FILE")
+    rm -f "$PATH_KEY_COUNT_FILE"
+
+    # grep_or_die's -c count above already confirms whether "path" occurs;
+    # the actual matching lines still need a second, non-counting pass
+    # (grep without -c) to feed the per-line grammar check below. Same
+    # explicit-status contract as grep_or_die: status 1 (no matches) can't
+    # happen here (PATH_KEY_TOTAL already proved matches exist above), so
+    # >0 is unconditionally a read error, not "no matches." The `|| grep_rc=$?`
+    # form (not a bare `grep ...; grep_rc=$?`, found by cold-context review)
+    # matters under `set -e`: a plain non-zero exit from an unguarded
+    # command aborts the script on that line — the following `grep_rc=$?`
+    # would never run, so a failing grep would kill the script with a raw
+    # exit 1/2 instead of this guard's own EXIT_RUNTIME.
+    PATH_LINES_FILE=$(mktemp)
+    grep_rc=0
+    grep -- '"path"' "$MANIFEST" > "$PATH_LINES_FILE" 2>/dev/null || grep_rc=$?
+    if [ "$grep_rc" -gt 0 ]; then
+        echo "✗ Не удалось прочитать манифест обновлений для резервного разбора (grep вернул код ${grep_rc})." >&2
+        exit "$EXIT_RUNTIME"
+    fi
+
+    # Whole-line grammar match (peer-session 2026-08-21-12, Codex: validate
+    # the full line belongs to the supported form BEFORE extracting, not
+    # just eyeball what sed happened to return). Supported form only:
+    # optional leading whitespace, "path", optional whitespace, colon,
+    # optional whitespace, a double-quoted value with no embedded '"' or
+    # '\' (this fallback cannot decode JSON escapes), then anything after
+    # the closing quote (comma, more keys) is accepted without further
+    # constraint since it isn't part of the path value itself.
+    PATH_LINE_RE='^[[:space:]]*"path"[[:space:]]*:[[:space:]]*"[^"\\]+".*$'
+    PATH_ENTRIES_FOUND=0
+    : > "$MANIFEST_PARSED"
+    while IFS= read -r line; do
+        [ -z "$line" ] && continue
+        case "$line" in
+            *'"path"'*)
+                if ! printf '%s\n' "$line" | grep -Eq -- "$PATH_LINE_RE"; then
+                    echo "✗ Резервный разбор манифеста: строка с ключом \"path\" не в поддерживаемой форме (строка $((PATH_ENTRIES_FOUND + 1)) среди найденных совпадений)." >&2
+                    echo "  Поддерживается только: \"path\": \"значение_без_кавычек_и_обратных_слэшей\" на одной строке." >&2
+                    exit "$EXIT_RUNTIME"
+                fi
+                fpath=$(printf '%s\n' "$line" | sed -E 's/^[[:space:]]*"path"[[:space:]]*:[[:space:]]*"([^"\\]+)".*$/\1/')
+                if [ -z "$fpath" ]; then
+                    echo "✗ Резервный разбор манифеста: строка совпала с формой, но извлечённое значение пути пустое." >&2
+                    exit "$EXIT_RUNTIME"
+                fi
+                PATH_ENTRIES_FOUND=$((PATH_ENTRIES_FOUND + 1))
+                echo "$fpath|" >> "$MANIFEST_PARSED"
+                ;;
+        esac
+    done < "$PATH_LINES_FILE"
+    rm -f "$PATH_LINES_FILE"
+
+    if [ "$PATH_ENTRIES_FOUND" -ne "$PATH_KEY_TOTAL" ]; then
+        echo "✗ Резервный разбор манифеста нашёл ${PATH_KEY_TOTAL} ключ(ей) \"path\", но подтверждённо извлёк только ${PATH_ENTRIES_FOUND} запись(ей) — формат манифеста не полностью соответствует ожиданиям этого разбора." >&2
+        exit "$EXIT_RUNTIME"
+    fi
 fi
 
 # Duplicate-path check (peer-session 2026-08-21-09, Codex: must run on every
