@@ -333,7 +333,7 @@
     },
     {
       "path": ".claude/skills/day-close/SKILL.md",
-      "sha256": "9479853a82f984e398861583b2fccc607265b302a63dc3896cfa13ff5456aa0c"
+      "sha256": "cee825b58e29923b49a50b7ea981c766a1d90cd9e3dad37df506f7139f23675c"
     },
     {
       "path": ".claude/skills/day-close/day-close-details.md",
@@ -1401,7 +1401,7 @@
     },
     {
       "path": "memory/t-checklist.md",
-      "sha256": "3933e19bfa75d2a31cbe2010f2506fb46ad3a93390f37fd4e30784845fc693a3"
+      "sha256": "b67f5f17d6855956294a3f4b457d9d3a39caa5d212d3064d891b69b9d733c1b6"
     },
     {
       "path": "memory/templates-dayplan.md",
