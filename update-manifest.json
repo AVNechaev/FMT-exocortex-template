@@ -333,7 +333,7 @@
     },
     {
       "path": ".claude/skills/day-close/SKILL.md",
-      "sha256": "52bca39831b23a800d5a390212eedd79f4d6a81f455ca252290cdac683f784b2"
+      "sha256": "9479853a82f984e398861583b2fccc607265b302a63dc3896cfa13ff5456aa0c"
     },
     {
       "path": ".claude/skills/day-close/day-close-details.md",
@@ -581,7 +581,7 @@
     },
     {
       "path": ".claude/skills/week-close/SKILL.md",
-      "sha256": "938b8500dd36bb962d0ecac85fb0d9c7521d7aadcd831edc4686c5831f9745c6"
+      "sha256": "a60053d31c430ea1924b31c003f9c23b05cdd8fb8aaa6b9611c59bdf4986767f"
     },
     {
       "path": ".claude/skills/week-close/week-close/SKILL.md",
@@ -1844,6 +1844,10 @@
       "sha256": "632ef75c7d1ed5d3bbb5546c279edf58b730a15706ee8e47ee5240bbe4b17cc3"
     },
     {
+      "path": "scripts/archive-cadence-sweep.py",
+      "sha256": "63ee63324b124b43ecd87e365e99b656ae07ffaedffce3042db908c9a745aee1"
+    },
+    {
       "path": "scripts/archive-done-wp.sh",
       "sha256": "e9bc5bbfaf04d7e3a611060690679afb8641e301c5ffbae4c75950740aea4fa6"
     },
@@ -2344,6 +2348,10 @@
       "sha256": "a2c4efd4a82bc5b432a968a54918da7821b3357a442ed4be4e29c7e1070fccf0"
     },
     {
+      "path": "scripts/test_archive_cadence_sweep.py",
+      "sha256": "a2a648d4243c69a92b2f6cf4ba1ecb4697c585e3c028d682b353b1b0dbd660d0"
+    },
+    {
       "path": "scripts/test_external_tracker.py",
       "sha256": "f2ae015d394a447778e1ed75ecfa16d80fe98e1164655b3431940c7e783d206c"
     },
@@ -2601,7 +2609,7 @@
     },
     {
       "path": "update.sh",
-      "sha256": "de3d87a13283ced41756fe21c65a2c66a685c5037a952d88411c67a56777444e"
+      "sha256": "ee0655fcf4cff6d789c81fbf06ae3dedbd70da5c49601d8d50dfa3ffad8a6df6"
     }
   ],
   "excluded_paths": [
