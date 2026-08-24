@@ -531,6 +531,66 @@ def test_default_state_home_is_local_private_and_outside_iwe(monkeypatch, tmp_pa
     assert stat.S_IMODE((state_home / ".data-residency.lock").stat().st_mode) == 0o600
 
 
+def test_default_state_container_symlink_is_rejected(monkeypatch, tmp_path):
+    home = tmp_path / "symlinked-default-container-home"
+    state_home, _ = _configure_state_paths(monkeypatch, home)
+    outside = tmp_path / "outside-default-container"
+    outside.mkdir()
+    (home / ".iwe").symlink_to(outside, target_is_directory=True)
+
+    with pytest.raises(
+        ResidencyStateError,
+        match="default residency state container must not be a symlink",
+    ):
+        ResidencyState()
+
+    assert not (outside / "state").exists()
+    assert not state_home.exists()
+
+
+@pytest.mark.parametrize("creation_mask", [0o000, 0o777])
+def test_default_private_tree_is_umask_independent(
+    monkeypatch, tmp_path, creation_mask
+):
+    home = tmp_path / f"umask-{creation_mask:o}-home"
+    state_home, _ = _configure_state_paths(monkeypatch, home)
+
+    previous_mask = os.umask(creation_mask)
+    try:
+        state = ResidencyState()
+        state.grant_consent("umask-test", "2.1_inbound_profile")
+    finally:
+        os.umask(previous_mask)
+
+    assert stat.S_IMODE((home / ".iwe").stat().st_mode) == 0o700
+    assert stat.S_IMODE(state_home.stat().st_mode) == 0o700
+    assert stat.S_IMODE(state.state_file.stat().st_mode) == 0o600
+    assert stat.S_IMODE(state.lock_file.stat().st_mode) == 0o600
+
+
+def test_existing_default_private_tree_permissions_are_repaired(
+    monkeypatch, tmp_path
+):
+    home = tmp_path / "repair-private-tree-home"
+    state_home, _ = _configure_state_paths(monkeypatch, home)
+    state_home.mkdir(parents=True)
+    (home / ".iwe").chmod(0o777)
+    state_home.chmod(0o777)
+    target = state_home / ResidencyState.STATE_FILE_NAME
+    target.write_bytes(_consent_document())
+    target.chmod(0o666)
+    lock = state_home / ResidencyState.LOCK_FILE_NAME
+    lock.write_bytes(b"")
+    lock.chmod(0o666)
+
+    state = ResidencyState()
+
+    assert stat.S_IMODE((home / ".iwe").stat().st_mode) == 0o700
+    assert stat.S_IMODE(state_home.stat().st_mode) == 0o700
+    assert stat.S_IMODE(state.state_file.stat().st_mode) == 0o600
+    assert stat.S_IMODE(state.lock_file.stat().st_mode) == 0o600
+
+
 def test_state_home_override_wins_and_legacy_root_is_independent(
     monkeypatch, tmp_path
 ):
@@ -836,6 +896,31 @@ def test_long_lived_reader_rejects_replaced_workspace_root(monkeypatch, tmp_path
     assert outside_legacy.read_bytes() == content
     assert state.state_file == state_home / "data-residency.yaml"
     assert not (state_home / "migration-backups").exists()
+
+
+def test_long_lived_state_rejects_state_directory_symlink_swap(
+    monkeypatch, tmp_path
+):
+    home = tmp_path / "replaced-state-directory-home"
+    state_home, _ = _configure_state_paths(monkeypatch, home)
+    state = ResidencyState()
+    original_state = state.state_file.read_bytes()
+    saved_state_home = state_home.with_name("saved-state")
+    state_home.rename(saved_state_home)
+
+    outside = tmp_path / "replacement-outside-state"
+    outside.mkdir()
+    outside_state = outside / ResidencyState.STATE_FILE_NAME
+    outside_state.write_bytes(_consent_document("denied"))
+    outside_before = outside_state.read_bytes()
+    state_home.symlink_to(outside, target_is_directory=True)
+
+    with pytest.raises(ResidencyStateError, match="directory must not be a symlink"):
+        state.grant_consent("migration-test", "2.1_inbound_profile")
+
+    assert outside_state.read_bytes() == outside_before
+    saved_state = saved_state_home / ResidencyState.STATE_FILE_NAME
+    assert saved_state.read_bytes() == original_state
 
 
 def test_hardlinked_state_is_rejected_without_touching_peer(monkeypatch, tmp_path):

@@ -51,6 +51,13 @@ fail() { echo "  ❌ FAIL: $*" >&2; FAIL_COUNT=$((FAIL_COUNT + 1)); }
 pass() { echo "  ✅ PASS: $*"; PASS_COUNT=$((PASS_COUNT + 1)); }
 warn() { echo "  ⚠️  WARN: $*" >&2; }
 
+portable_mode() {
+    # GNU stat accepts -c, while BSD/macOS stat accepts -f. Try the
+    # GNU form first because GNU `stat -f` can emit filesystem output before
+    # rejecting the BSD format argument, contaminating fallback output.
+    stat -c '%a' "$1" 2>/dev/null || stat -f '%Lp' "$1" 2>/dev/null
+}
+
 echo "=========================================="
 echo "  Smoke Test: Fresh Install (WP-273 F)"
 echo "=========================================="
@@ -440,8 +447,8 @@ EOF
     else
         fail "e2e workspace: ResidencyGate state path is not isolated"
     fi
-    if [ "$(stat -f '%Lp' "$E2E_STATE_HOME" 2>/dev/null || stat -c '%a' "$E2E_STATE_HOME" 2>/dev/null)" = "700" ] && \
-       [ "$(stat -f '%Lp' "$E2E_STATE_FILE" 2>/dev/null || stat -c '%a' "$E2E_STATE_FILE" 2>/dev/null)" = "600" ]; then
+    if [ "$(portable_mode "$E2E_STATE_HOME")" = "700" ] && \
+       [ "$(portable_mode "$E2E_STATE_FILE")" = "600" ]; then
         pass "e2e workspace: ResidencyGate state permissions are private"
     else
         fail "e2e workspace: ResidencyGate state permissions are not 0700/0600"

@@ -485,7 +485,7 @@
     },
     {
       "path": ".claude/skills/residency-gate/lib/state.py",
-      "sha256": "f3d30083fb83ad1acc9c6f181371319ff79d0a6a993d6cbf680ee206673bed04"
+      "sha256": "e873f1e865a7075fe4d27261d7e315c297ac363ee0b3971670c57a706759df8c"
     },
     {
       "path": ".claude/skills/residency-gate/pre-grant.yaml",

@@ -37,17 +37,28 @@ class ResidencyState:
                 ``${IWE_STATE_HOME:-$HOME/.iwe/state}/data-residency.yaml``.
         """
         self._uses_default_location = state_file is None
+        self._standard_state_container: Optional[Path] = None
         if self._uses_default_location:
-            state_home_value = os.environ.get("IWE_STATE_HOME") or str(
+            state_home_override = os.environ.get("IWE_STATE_HOME")
+            state_home_value = state_home_override or str(
                 Path.home() / ".iwe" / "state"
             )
-            state_home = self._absolute_path(
-                state_home_value, "IWE_STATE_HOME"
-            ).resolve(strict=False)
+            raw_state_home = self._absolute_path(state_home_value, "IWE_STATE_HOME")
+            if state_home_override is None:
+                self._reject_symlink(
+                    raw_state_home.parent, "default residency state container"
+                )
+            state_home = raw_state_home.resolve(strict=False)
+            if state_home_override is None:
+                self._standard_state_container = state_home.parent
             state_file = str(state_home / self.STATE_FILE_NAME)
         else:
+            explicit_state_file = self._absolute_path(
+                str(state_file), "explicit residency state path"
+            )
             state_file = str(
-                self._absolute_path(str(state_file), "explicit residency state path")
+                explicit_state_file.parent.resolve(strict=False)
+                / explicit_state_file.name
             )
 
         self.state_file = Path(state_file)
@@ -56,6 +67,8 @@ class ResidencyState:
         if self._uses_default_location:
             self._legacy_file_path = self._legacy_state_file()
             self._assert_default_location_is_private()
+        if self._standard_state_container is not None:
+            self._ensure_private_directory(self._standard_state_container)
         self._ensure_private_directory(self.state_file.parent)
         self.lock_file = self.state_file.parent / self.LOCK_FILE_NAME
         with self._state_lock(exclusive=True):
@@ -116,22 +129,90 @@ class ResidencyState:
                 )
 
     def _ensure_private_directory(self, directory: Path) -> None:
-        """Create a state directory and enforce owner-only access."""
-        self._reject_symlink(directory, "residency state directory")
+        """Create a directory tree without following links and make its leaf private."""
+        directory = self._absolute_path(
+            str(directory), "residency state directory"
+        )
+        root = Path(directory.anchor)
+        if directory == root:
+            raise ResidencyStateError(
+                "residency state directory must not be the filesystem root"
+            )
+
+        flags = os.O_RDONLY
+        if hasattr(os, "O_DIRECTORY"):
+            flags |= os.O_DIRECTORY
+        if hasattr(os, "O_NOFOLLOW"):
+            flags |= os.O_NOFOLLOW
+
+        descriptor: Optional[int] = None
         try:
-            directory.mkdir(parents=True, mode=0o700, exist_ok=True)
-            self._reject_symlink(directory, "residency state directory")
-            if not directory.is_dir():
-                raise ResidencyStateError(
-                    f"residency state directory is not a directory: {directory}"
-                )
-            directory.chmod(0o700)
+            descriptor = os.open(root, flags)
+            components = directory.relative_to(root).parts
+            current = root
+            for index, component in enumerate(components):
+                current = current / component
+                is_target = index == len(components) - 1
+                created = False
+                try:
+                    entry_stat = os.stat(
+                        component, dir_fd=descriptor, follow_symlinks=False
+                    )
+                except FileNotFoundError:
+                    try:
+                        os.mkdir(component, mode=0o700, dir_fd=descriptor)
+                    except FileExistsError:
+                        pass
+                    created = True
+                    entry_stat = os.stat(
+                        component, dir_fd=descriptor, follow_symlinks=False
+                    )
+
+                if stat.S_ISLNK(entry_stat.st_mode):
+                    raise ResidencyStateError(
+                        f"residency state directory must not be a symlink: {current}"
+                    )
+                if not stat.S_ISDIR(entry_stat.st_mode):
+                    raise ResidencyStateError(
+                        f"residency state directory is not a directory: {current}"
+                    )
+
+                # chmod through the pinned parent before open so a hostile
+                # umask such as 0777 cannot make a just-created child
+                # impossible to traverse.
+                if created or is_target:
+                    os.chmod(
+                        component,
+                        0o700,
+                        dir_fd=descriptor,
+                        follow_symlinks=False,
+                    )
+
+                child_descriptor = os.open(component, flags, dir_fd=descriptor)
+                child_adopted = False
+                try:
+                    child_stat = os.fstat(child_descriptor)
+                    if not stat.S_ISDIR(child_stat.st_mode):
+                        raise ResidencyStateError(
+                            f"residency state directory is not a directory: {current}"
+                        )
+                    if created or is_target:
+                        os.fchmod(child_descriptor, 0o700)
+                    os.close(descriptor)
+                    descriptor = child_descriptor
+                    child_adopted = True
+                finally:
+                    if not child_adopted:
+                        os.close(child_descriptor)
         except ResidencyStateError:
             raise
         except OSError as error:
             raise ResidencyStateError(
                 f"cannot secure residency state directory: {directory}: {error}"
             ) from error
+        finally:
+            if descriptor is not None:
+                os.close(descriptor)
 
     def _ensure_private_file(self, path: Path) -> None:
         """Require a regular state file and enforce owner-only access."""
@@ -163,6 +244,9 @@ class ResidencyState:
     @contextmanager
     def _state_lock(self, *, exclusive: bool) -> Iterator[None]:
         """Serialize migrations and read-modify-write consent updates."""
+        if self._standard_state_container is not None:
+            self._ensure_private_directory(self._standard_state_container)
+        self._ensure_private_directory(self.state_file.parent)
         flags = os.O_RDWR | os.O_CREAT
         descriptor: Optional[int] = None
         if hasattr(os, "O_NOFOLLOW"):
@@ -409,8 +493,11 @@ class ResidencyState:
 
     def _create_exclusive_private_file(self, path: Path, content: bytes) -> None:
         """Create a private file without overwriting a concurrent writer."""
+        flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+        if hasattr(os, "O_NOFOLLOW"):
+            flags |= os.O_NOFOLLOW
         try:
-            descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+            descriptor = os.open(path, flags, 0o600)
         except FileExistsError:
             existing = self._read_migration_candidate(path)
             if existing != content:
@@ -423,10 +510,10 @@ class ResidencyState:
 
         try:
             with os.fdopen(descriptor, "wb") as output:
+                os.fchmod(output.fileno(), 0o600)
                 output.write(content)
                 output.flush()
                 os.fsync(output.fileno())
-            path.chmod(0o600)
             self._fsync_directory(path.parent)
         except OSError as error:
             try:
