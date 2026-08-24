@@ -16,6 +16,7 @@ import sqlite3
 import stat
 import subprocess
 import sys
+from contextlib import closing
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -275,7 +276,7 @@ def _legacy_shim_snapshot(governance_dir: Path) -> tuple[object, ...]:
 
 
 def _db_rows(db_path: Path, sql: str, params: tuple[object, ...] = ()) -> list[tuple]:
-    with sqlite3.connect(db_path) as connection:
+    with closing(sqlite3.connect(db_path)) as connection, connection:
         return connection.execute(sql, params).fetchall()
 
 
@@ -300,7 +301,7 @@ def _create_legacy_database(
         sort_keys=True,
     )
     db_path = governance_dir / DB_REL
-    with sqlite3.connect(db_path) as connection:
+    with closing(sqlite3.connect(db_path)) as connection, connection:
         connection.execute(
             """
             CREATE TABLE facts (
@@ -1559,7 +1560,7 @@ def test_escalation_check_filters_active_rows_and_exact_subject(tmp_path: Path):
         assert _record(env, dormant_fault, subject_id="runtime-a").returncode == 0
     for _index in range(4):
         assert _record(env, other_fault, subject_id="runtime-b").returncode == 0
-    with sqlite3.connect(governance_dir / DB_REL) as connection:
+    with closing(sqlite3.connect(governance_dir / DB_REL)) as connection, connection:
         connection.execute(
             "UPDATE facts SET status='dormant' WHERE content=?",
             (dormant_fault,),
@@ -1617,7 +1618,7 @@ def test_public_read_faults_filters_subject_date_and_subtype_immutably(tmp_path:
     assert _record(env, tagged, subject_id="runtime-a").returncode == 0
     assert _record(env, untagged, subject_id="runtime-a").returncode == 0
     assert _record(env, other, subject_id="runtime-b").returncode == 0
-    with sqlite3.connect(governance_dir / DB_REL) as connection:
+    with closing(sqlite3.connect(governance_dir / DB_REL)) as connection, connection:
         connection.execute(
             "UPDATE facts SET fault_subtype='distinction-confusion', record_date='2026-08-03' "
             "WHERE content=?",
@@ -1709,7 +1710,7 @@ def test_lazy_record_then_remind_filters_exact_subject_and_dormant(tmp_path: Pat
         result = _record(env, fault, subject_id=subject_id)
         assert result.returncode == 0, result.stdout + result.stderr
 
-    with sqlite3.connect(db_path) as connection:
+    with closing(sqlite3.connect(db_path)) as connection, connection:
         connection.execute(
             "UPDATE facts SET status='dormant' WHERE content=?",
             ("уснувшая ошибка нужного runtime",),
@@ -1774,7 +1775,7 @@ def test_decay_uses_real_timestamps_and_valid_created_at_fallback(
     frozen_now = datetime(2026, 8, 24, 12, 0, tzinfo=timezone.utc)
     recent = frozen_now - timedelta(days=29, hours=20)
     old = frozen_now - timedelta(days=30, hours=4)
-    with sqlite3.connect(governance_dir / DB_REL) as connection:
+    with closing(sqlite3.connect(governance_dir / DB_REL)) as connection, connection:
         connection.execute(
             "UPDATE facts SET last_occurrence=?, created_at=? WHERE content=?",
             (recent.strftime("%Y-%m-%d %H:%M:%S"), "2000-01-01 00:00:00", contents[0]),
@@ -1989,7 +1990,7 @@ def test_lazy_migration_preserves_legacy_rows_and_unknown_columns(tmp_path: Path
         ensure_ascii=False,
         sort_keys=True,
     )
-    with sqlite3.connect(db_path) as connection:
+    with closing(sqlite3.connect(db_path)) as connection, connection:
         connection.execute(
             """INSERT INTO facts (
                    id, fact_type, content, context, trust_score, session_id,
@@ -2126,7 +2127,7 @@ def test_migration_never_rewrites_preexisting_semantic_columns(tmp_path: Path):
             "created": "2026-08-20",
         },
     )
-    with sqlite3.connect(db_path) as connection:
+    with closing(sqlite3.connect(db_path)) as connection, connection:
         connection.execute("ALTER TABLE facts ADD COLUMN occurrences_count INTEGER")
         connection.execute("ALTER TABLE facts ADD COLUMN severity TEXT")
         connection.execute("ALTER TABLE facts ADD COLUMN status TEXT")
@@ -2223,7 +2224,7 @@ def test_migration_validates_legacy_context_before_backfill(tmp_path: Path):
             "date": 20260821,
         },
     )
-    with sqlite3.connect(db_path) as connection:
+    with closing(sqlite3.connect(db_path)) as connection, connection:
         for fact_id, context in enumerate(invalid_contexts, start=38):
             connection.execute(
                 """INSERT INTO facts (
@@ -2298,7 +2299,7 @@ def test_migrated_recent_occurrence_wins_over_old_created_at_during_decay(
             "created": "2026-01-01",
         },
     )
-    with sqlite3.connect(db_path) as connection:
+    with closing(sqlite3.connect(db_path)) as connection, connection:
         connection.execute(
             "UPDATE facts SET created_at='2026-01-01 00:00:00' WHERE id=37"
         )
@@ -2332,7 +2333,7 @@ def test_migration_rolls_back_schema_and_backfill_together_on_failure(tmp_path: 
         },
     )
     original_columns = _db_rows(db_path, "PRAGMA table_info(facts)")
-    with sqlite3.connect(db_path) as connection:
+    with closing(sqlite3.connect(db_path)) as connection, connection:
         # SQLite rejects CREATE TABLE when an index already owns that schema
         # name. The failure happens after ALTER/backfill, so rollback must undo
         # the whole migration rather than leave a half-upgraded database.
@@ -2362,7 +2363,7 @@ def test_valid_json_non_object_context_uses_safe_runtime_fallback(tmp_path: Path
     )
     for fault in faults:
         assert _record(env, fault).returncode == 0
-    with sqlite3.connect(governance_dir / DB_REL) as connection:
+    with closing(sqlite3.connect(governance_dir / DB_REL)) as connection, connection:
         for fault, context in zip(faults, ("[]", '"string"', "null"), strict=True):
             connection.execute(
                 "UPDATE facts SET context=? WHERE content=?",
@@ -2465,7 +2466,7 @@ def test_stats_aggregates_legacy_and_canonical_severity_aliases(tmp_path: Path):
     severities = ("high", "major", "medium", "minor")
     for severity in severities:
         assert _record(env, f"severity alias {severity}").returncode == 0
-    with sqlite3.connect(governance_dir / DB_REL) as connection:
+    with closing(sqlite3.connect(governance_dir / DB_REL)) as connection, connection:
         for severity in severities:
             connection.execute(
                 "UPDATE facts SET severity=? WHERE content=?",
@@ -3298,7 +3299,7 @@ Use during work sessions.
             "severity": "major",
         },
     )
-    with sqlite3.connect(db_path) as connection:
+    with closing(sqlite3.connect(db_path)) as connection, connection:
         connection.execute(
             "UPDATE facts SET session_id='sync-feedback', personality_id=NULL WHERE id=37"
         )
@@ -3372,7 +3373,7 @@ Use during work sessions.
             "last_sync": "2026-08-05T12:00:00",
         },
     )
-    with sqlite3.connect(db_path) as connection:
+    with closing(sqlite3.connect(db_path)) as connection, connection:
         connection.execute(
             """UPDATE facts
                   SET session_id='sync-feedback', personality_id=NULL, trust_score=0.95
@@ -3467,7 +3468,7 @@ description: protocol conjunction fixture
             "protocols": [protocol],
         },
     )
-    with sqlite3.connect(db_path) as connection:
+    with closing(sqlite3.connect(db_path)) as connection, connection:
         connection.execute(
             "UPDATE facts SET session_id='sync-feedback', personality_id=NULL WHERE id=37"
         )
@@ -3512,7 +3513,7 @@ Use during work sessions.
             "rule_name": "Exact key",
         },
     )
-    with sqlite3.connect(db_path) as connection:
+    with closing(sqlite3.connect(db_path)) as connection, connection:
         connection.execute(
             "UPDATE facts SET session_id='sync-feedback', personality_id=NULL WHERE id=37"
         )
@@ -3559,7 +3560,7 @@ Use during work sessions.
             "rule_name": "Same key",
         },
     )
-    with sqlite3.connect(db_path) as connection:
+    with closing(sqlite3.connect(db_path)) as connection, connection:
         connection.execute(
             "UPDATE facts SET session_id='sync-feedback', personality_id=NULL WHERE id=37"
         )
