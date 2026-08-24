@@ -183,9 +183,22 @@ run_script() {
     local allow_fallback="${4:-true}"
     local routing_path="${5:-$skill_name → script}"
 
-    # Resolve relative path from IWE_DIR
+    # Resolve relative path from IWE_DIR. Agent-fault is a platform CLI: on a
+    # fully installed workspace it lives under $IWE_DIR/scripts, while a fresh
+    # checkout can execute the same release bytes directly from the template.
+    # Keep the fallback narrow so an unrelated missing catalog entry never
+    # searches or executes a second location implicitly.
     if [[ "$script_path" != /* ]]; then
-        script_path="$IWE_DIR/$script_path"
+        local relative_path="$script_path"
+        local workspace_path="$IWE_DIR/$relative_path"
+        script_path="$workspace_path"
+        if [[ ! -f "$script_path" && "$relative_path" == scripts/agent-fault/* ]]; then
+            local platform_scripts="${IWE_SCRIPTS:-$IWE_DIR/FMT-exocortex-template/scripts}"
+            local platform_path="$platform_scripts/${relative_path#scripts/}"
+            if [[ -f "$platform_path" ]]; then
+                script_path="$platform_path"
+            fi
+        fi
     fi
 
     if [[ ! -f "$script_path" ]]; then

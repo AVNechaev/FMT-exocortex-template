@@ -128,7 +128,21 @@ PLATFORM_HOOKS_EXPLICIT_INCLUDE=(
     "seed/strategy/.githooks/pre-commit"
     "seed/strategy/.githooks/pre-push"
     "seed/strategy/scripts/install-hooks.sh"
+    # #533: existing installations need the subject-scoped Day Open reader.
+    "seed/strategy/scripts/day-open-llm-fill.py"
     "seed/strategy/scripts/update-derived-snapshot.py"
+)
+# #533: unlike ordinary seed content, these are platform-owned delivery and
+# upgrade infrastructure.  Keep each path explicit so the blanket seed/
+# exclusion cannot silently remove the canonical privacy boundary or its four
+# compatibility entrypoints from an update payload.
+AGENT_FAULT_EXPLICIT_INCLUDE=(
+    "scripts/agent-fault/iwe_checklist_memory.py"
+    "seed/strategy/exocortex/agent-fault-profile/.gitignore"
+    "seed/strategy/scripts/iwe_checklist_memory.py"
+    "seed/strategy/scripts/sync_feedback_to_memory.py"
+    "seed/strategy/scripts/agent_fault_remind.py"
+    "seed/strategy/scripts/agent_fault_remind.sh"
 )
 # WP-7 Ф-script-contract-gate: EXCLUDED_PATTERNS below still blanket-excludes
 # scripts/tests/ (correct default — it's mostly the author's own pytest suite,
@@ -189,6 +203,9 @@ SCRIPT_CONTRACT_EXPLICIT_INCLUDE=(
     "scripts/tests/test_issue_473_build_active_wp_columns.py"
     "scripts/tests/test_issue_473_wp_sync_bundle_status.sh"
     "scripts/tests/test_issue_511_day_close_commit_guard.sh"
+    # #533/#536: ship the installed-delivery and crash-recovery regressions.
+    "scripts/tests/test_issue_533_agent_fault_delivery.py"
+    "scripts/tests/test_issue_536_day_close_backup.sh"
     "scripts/tests/test_issue_calendar_api_error_named.sh"
     "scripts/tests/test_update_build_runtime_fail_closed.sh"
     "scripts/tests/test_update_delivers_python_resolver_before_roles.sh"
@@ -212,7 +229,8 @@ while IFS= read -r rel; do
     if is_explicit_include "$rel" \
         "${GITHUB_EXPLICIT_INCLUDE[@]}" \
         "${SCRIPT_CONTRACT_EXPLICIT_INCLUDE[@]}" \
-        "${PLATFORM_HOOKS_EXPLICIT_INCLUDE[@]}"; then
+        "${PLATFORM_HOOKS_EXPLICIT_INCLUDE[@]}" \
+        "${AGENT_FAULT_EXPLICIT_INCLUDE[@]}"; then
         FILES+=("$rel")
         continue
     fi

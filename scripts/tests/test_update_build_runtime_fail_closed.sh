@@ -222,6 +222,7 @@ echo "--- Scenario D: post-backfill failure then zero-diff recovery on configure
 mkdir -p \
     "$SCRIPT_DIR/seed/strategy/scripts" \
     "$SCRIPT_DIR/seed/strategy/.githooks" \
+    "$SCRIPT_DIR/scripts/agent-fault" \
     "$SCRIPT_DIR/scripts" \
     "$WORKSPACE_DIR/.claude/skills/smoke-catalog" \
     "$WORKSPACE_DIR/custom-governance/scripts"
@@ -233,6 +234,18 @@ cp "$ROOT/seed/strategy/.githooks/pre-push" \
     "$SCRIPT_DIR/seed/strategy/.githooks/pre-push"
 cp "$ROOT/seed/strategy/scripts/update-derived-snapshot.py" \
     "$SCRIPT_DIR/seed/strategy/scripts/update-derived-snapshot.py"
+cp "$ROOT/seed/strategy/scripts/day-open-llm-fill.py" \
+    "$SCRIPT_DIR/seed/strategy/scripts/day-open-llm-fill.py"
+cp "$ROOT/seed/strategy/scripts/iwe_checklist_memory.py" \
+    "$SCRIPT_DIR/seed/strategy/scripts/iwe_checklist_memory.py"
+cp "$ROOT/seed/strategy/scripts/sync_feedback_to_memory.py" \
+    "$SCRIPT_DIR/seed/strategy/scripts/sync_feedback_to_memory.py"
+cp "$ROOT/seed/strategy/scripts/agent_fault_remind.py" \
+    "$SCRIPT_DIR/seed/strategy/scripts/agent_fault_remind.py"
+cp "$ROOT/seed/strategy/scripts/agent_fault_remind.sh" \
+    "$SCRIPT_DIR/seed/strategy/scripts/agent_fault_remind.sh"
+cp "$ROOT/scripts/agent-fault/iwe_checklist_memory.py" \
+    "$SCRIPT_DIR/scripts/agent-fault/iwe_checklist_memory.py"
 cp "$ROOT/scripts/lib/find-python3.sh" "$SCRIPT_DIR/scripts/lib/find-python3.sh"
 cp "$ROOT/scripts/generate-executor-catalog.py" \
     "$SCRIPT_DIR/scripts/generate-executor-catalog.py"
@@ -243,6 +256,12 @@ chmod +x \
     "$SCRIPT_DIR/seed/strategy/.githooks/pre-commit" \
     "$SCRIPT_DIR/seed/strategy/.githooks/pre-push" \
     "$SCRIPT_DIR/seed/strategy/scripts/update-derived-snapshot.py" \
+    "$SCRIPT_DIR/seed/strategy/scripts/day-open-llm-fill.py" \
+    "$SCRIPT_DIR/seed/strategy/scripts/iwe_checklist_memory.py" \
+    "$SCRIPT_DIR/seed/strategy/scripts/sync_feedback_to_memory.py" \
+    "$SCRIPT_DIR/seed/strategy/scripts/agent_fault_remind.py" \
+    "$SCRIPT_DIR/seed/strategy/scripts/agent_fault_remind.sh" \
+    "$SCRIPT_DIR/scripts/agent-fault/iwe_checklist_memory.py" \
     "$SCRIPT_DIR/scripts/lib/find-python3.sh" \
     "$SCRIPT_DIR/scripts/generate-executor-catalog.py" \
     "$SCRIPT_DIR/scripts/route-task.sh" \
@@ -308,8 +327,9 @@ PATH="$SHIM_DIR:$PATH" HOME="$FAKE_HOME" IWE_UPDATE_CHANNEL=main \
     bash "$SCRIPT_DIR/update.sh" --yes > "$TEST_ROOT/out-d1.log" 2>&1
 RC_D1=$?
 set -e
-if [ "$RC_D1" -eq 3 ] && grep -q 'является symlink' "$TEST_ROOT/out-d1.log"; then
-    pass "D1: snapshot symlink blocks post-backfill with EXIT_RUNTIME"
+if [ "$RC_D1" -eq 3 ] && \
+   grep -q 'consumer scan refused symlinked Python file' "$TEST_ROOT/out-d1.log"; then
+    pass "D1: snapshot symlink blocks before consumer scan can read through it"
 else
     fail "D1: expected symlink refusal/exit 3, got rc=$RC_D1"
 fi
@@ -343,6 +363,18 @@ else
 fi
 if cmp -s "$SCRIPT_DIR/seed/strategy/scripts/update-derived-snapshot.py" \
       "$GOVERNANCE/scripts/update-derived-snapshot.py" && \
+   cmp -s "$SCRIPT_DIR/seed/strategy/scripts/day-open-llm-fill.py" \
+      "$GOVERNANCE/scripts/day-open-llm-fill.py" && \
+   cmp -s "$SCRIPT_DIR/seed/strategy/scripts/iwe_checklist_memory.py" \
+      "$GOVERNANCE/scripts/iwe_checklist_memory.py" && \
+   cmp -s "$SCRIPT_DIR/seed/strategy/scripts/sync_feedback_to_memory.py" \
+      "$GOVERNANCE/scripts/sync_feedback_to_memory.py" && \
+   cmp -s "$SCRIPT_DIR/seed/strategy/scripts/agent_fault_remind.py" \
+      "$GOVERNANCE/scripts/agent_fault_remind.py" && \
+   cmp -s "$SCRIPT_DIR/seed/strategy/scripts/agent_fault_remind.sh" \
+      "$GOVERNANCE/scripts/agent_fault_remind.sh" && \
+   cmp -s "$ROOT/scripts/agent-fault/iwe_checklist_memory.py" \
+      "$SCRIPT_DIR/scripts/agent-fault/iwe_checklist_memory.py" && \
    cmp -s "$SCRIPT_DIR/seed/strategy/scripts/install-hooks.sh" \
       "$GOVERNANCE/scripts/install-hooks.sh" && \
    cmp -s "$SCRIPT_DIR/seed/strategy/.githooks/pre-commit" \
@@ -350,7 +382,7 @@ if cmp -s "$SCRIPT_DIR/seed/strategy/scripts/update-derived-snapshot.py" \
    cmp -s "$SCRIPT_DIR/seed/strategy/.githooks/pre-push" \
       "$GOVERNANCE/.githooks/pre-push" && \
    [ -f "$GOVERNANCE/scripts/executor-catalog.yaml" ]; then
-    pass "D2: snapshot, hooks, installer and executor catalog all delivered"
+    pass "D2: snapshot, reader, canonical CLI, shims, hooks and catalog delivered"
 else
     fail "D2: one or more installed governance backfills are stale or missing"
 fi

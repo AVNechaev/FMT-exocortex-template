@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Compatibility reminder delegated to the canonical agent-fault CLI."""
+"""Legacy reminder arguments delegated to the canonical fault CLI."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from typing import NoReturn, Sequence
 
 
 SUBJECT_KINDS = ("personality", "runtime", "system")
-CLI = Path(__file__).resolve().parent / "agent-fault" / "iwe_checklist_memory.py"
+COMPATIBILITY_CLI = Path(__file__).absolute().with_name("iwe_checklist_memory.py")
 
 
 def _subject(arguments: argparse.Namespace) -> tuple[str, str] | None:
@@ -38,11 +38,7 @@ def main(argv: Sequence[str] | None = None) -> NoReturn:
         description="Compatibility reminder for the canonical fault CLI",
         allow_abbrev=False,
     )
-    parser.add_argument(
-        "--protocol",
-        choices=("open", "close", "day_close", "work", "all"),
-        default="work",
-    )
+    parser.add_argument("--protocol", choices=("open", "close", "day_close", "work", "all"), default="work")
     parser.add_argument("--limit", type=int, default=3)
     parser.add_argument("--context", default="")
     parser.add_argument("--stats", action="store_true")
@@ -52,8 +48,6 @@ def main(argv: Sequence[str] | None = None) -> NoReturn:
     subject = _subject(arguments)
     if subject is None:
         raise SystemExit("ERROR: reminder and stats require one exact subject")
-    if not CLI.is_file():
-        raise SystemExit(f"ERROR: canonical agent-fault CLI is missing: {CLI}")
 
     if arguments.stats:
         command = [
@@ -77,7 +71,10 @@ def main(argv: Sequence[str] | None = None) -> NoReturn:
             "--subject-id",
             subject[1],
         ]
-    os.execv(sys.executable, [sys.executable, str(CLI), *command])
+    os.execv(
+        sys.executable,
+        [sys.executable, str(COMPATIBILITY_CLI), *command],
+    )
 
 
 if __name__ == "__main__":

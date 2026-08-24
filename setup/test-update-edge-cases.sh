@@ -682,74 +682,69 @@ fi
 # ============================================================
 echo "--- T12: memory backup keeps nested files ---"
 
-# The rsync flag list is READ OUT OF day-close.sh, not retyped here: a hand-copied
-# flag list would keep passing after someone drops --include='*/' from the real script,
-# which is exactly the failure this test exists to catch.
+# Run the production backup, not a retyped copy primitive. Since issue #536 the
+# destination is multi-writer and stale pruning is driven by the ownership
+# manifest rather than by a global rsync --delete.
 T12_SCRIPT="$TEMPLATE_DIR/scripts/day-close.sh"
 if [ ! -f "$T12_SCRIPT" ]; then
     fail "T12: scripts/day-close.sh not found"
 else
-    # Slice the rsync invocation: from the `rsync -aL --delete \` line up to (not
-    # including) the line carrying the source/destination pair.
-    # while-read, not mapfile: macOS ships bash 3.2, where mapfile does not exist.
-    # T12_FLAG_COUNT is tracked separately because this harness runs under `set -u`,
-    # and bash 3.2 treats ${#EMPTY_ARRAY[@]} as an unbound variable — the crash would
-    # land on exactly the branch meant to report "extraction produced nothing".
-    T12_FLAGS=()
-    T12_FLAG_COUNT=0
-    while IFS= read -r t12_flag; do
-        T12_FLAGS+=("$t12_flag")
-        T12_FLAG_COUNT=$((T12_FLAG_COUNT + 1))
-    done < <(
-        # Anchored on the `rsync` keyword and the MEMORY_SRC line, NOT on a specific
-        # short-flag set: pinning `rsync -aL --delete` made the extraction return
-        # nothing the moment -m was added, turning correct code into a red test.
-        # The short flags on the rsync line itself are captured too (everything after
-        # the command name) — otherwise the test would run its own -aL and never
-        # exercise the -m the real script relies on. One token per line, since a
-        # source line may carry several flags.
-        awk '/^[[:space:]]*rsync[[:space:]]/{grab=1; for (i = 2; i <= NF; i++) if ($i != "\\") print $i; next}
-             grab && /MEMORY_SRC/{exit}
-             grab {for (i = 1; i <= NF; i++) if ($i != "\\") print $i}' "$T12_SCRIPT" \
-        | tr -d "'"
+    T12_ROOT="$TEST_WS/t12"
+    T12_WS="$T12_ROOT/workspace"
+    T12_SRC="$T12_ROOT/memory"
+    T12_DST="$T12_WS/governance/exocortex"
+    T12_HOME="$T12_ROOT/home"
+    mkdir -p \
+        "$T12_HOME" \
+        "$T12_SRC/reference" \
+        "$T12_SRC/.git/objects/ab" \
+        "$T12_DST/reference" \
+        "$T12_DST/extensions" \
+        "$T12_DST/agent-fault-profile/audit" \
+        "$T12_DST/hindsight" \
+        "$T12_DST/decisions"
+    echo "top-level" > "$T12_SRC/navigation.md"
+    echo "nested" > "$T12_SRC/reference/agent-core.md"
+    echo "owned then removed" > "$T12_SRC/reference/stale-memory.md"
+    echo "blob" > "$T12_SRC/.git/objects/ab/deadbeef"
+    echo "extension" > "$T12_DST/extensions/day-close.after.md"
+    echo "fault audit" > "$T12_DST/agent-fault-profile/audit/faults.md"
+    echo "hindsight" > "$T12_DST/hindsight/notes.md"
+    echo "legacy decision" > "$T12_DST/decisions/decision-log.md"
+
+    T12_ENV=(
+        HOME="$T12_HOME"
+        WORKSPACE_DIR="$T12_WS"
+        IWE_ROOT="$T12_WS"
+        IWE_WORKSPACE="$T12_WS"
+        IWE_TEMPLATE="$TEMPLATE_DIR"
+        IWE_SCRIPTS="$TEMPLATE_DIR/scripts"
+        IWE_GOVERNANCE_REPO="governance"
+        GOVERNANCE_REPO="governance"
+        IWE_MEMORY_SRC="$T12_SRC"
+        IWE_DAY_CLOSE_LOG="$T12_ROOT/day-close.log"
     )
+    T12_FIRST_RC=0
+    env "${T12_ENV[@]}" bash "$T12_SCRIPT" --backup \
+        > "$T12_ROOT/first.out" 2>&1 || T12_FIRST_RC=$?
+    rm -f -- "$T12_SRC/reference/stale-memory.md"
+    T12_SECOND_RC=0
+    env "${T12_ENV[@]}" bash "$T12_SCRIPT" --backup \
+        > "$T12_ROOT/second.out" 2>&1 || T12_SECOND_RC=$?
 
-    if [ "$T12_FLAG_COUNT" -eq 0 ]; then
-        fail "T12: could not extract rsync flags from day-close.sh — test cannot verify anything"
+    if [ "$T12_FIRST_RC" -ne 0 ] || [ "$T12_SECOND_RC" -ne 0 ]; then
+        fail "T12: real day-close backup failed ($T12_FIRST_RC/$T12_SECOND_RC)"
     else
-        T12_SRC="$TEST_WS/t12/memory"
-        T12_DST="$TEST_WS/t12/exocortex"
-        # .git/objects/ab mirrors what the live memory source actually contains: its
-        # files are dropped by the trailing --exclude, so the directory must not survive.
-        mkdir -p \
-            "$T12_SRC/reference" \
-            "$T12_SRC/.git/objects/ab" \
-            "$T12_DST/reference" \
-            "$T12_DST/extensions" \
-            "$T12_DST/agent-fault-profile/audit" \
-            "$T12_DST/hindsight" \
-            "$T12_DST/decisions"
-        echo "top-level" > "$T12_SRC/navigation.md"
-        echo "nested" > "$T12_SRC/reference/agent-core.md"
-        echo "blob" > "$T12_SRC/.git/objects/ab/deadbeef"
-        echo "stale memory" > "$T12_DST/reference/stale-memory.md"
-        echo "extension" > "$T12_DST/extensions/day-close.after.md"
-        echo "fault audit" > "$T12_DST/agent-fault-profile/audit/faults.md"
-        echo "hindsight" > "$T12_DST/hindsight/notes.md"
-        echo "legacy decision" > "$T12_DST/decisions/decision-log.md"
-
-        rsync "${T12_FLAGS[@]}" "$T12_SRC/" "$T12_DST/" >/dev/null 2>&1
-
         if [ -f "$T12_DST/reference/agent-core.md" ] && [ -f "$T12_DST/navigation.md" ]; then
             pass "T12: nested memory/reference/agent-core.md reaches the backup"
         elif [ -f "$T12_DST/navigation.md" ]; then
-            fail "T12: top-level file copied but memory/reference/agent-core.md was dropped (missing --include='*/')"
+            fail "T12: top-level file copied but memory/reference/agent-core.md was dropped"
         else
-            fail "T12: backup produced nothing — flags extracted: ${T12_FLAGS[*]}"
+            fail "T12: production backup copied no memory files"
         fi
 
         if [ -d "$T12_DST/.git" ]; then
-            fail "T12: empty .git skeleton was mirrored into the backup (missing -m / --prune-empty-dirs)"
+            fail "T12: empty .git skeleton was mirrored into the backup"
         else
             pass "T12: directory skeletons with no matching files are not mirrored"
         fi
@@ -763,15 +758,21 @@ else
             [ -f "$T12_DST/$foreign" ] || T12_FOREIGN_MISSING=$((T12_FOREIGN_MISSING + 1))
         done
         if [ "$T12_FOREIGN_MISSING" -eq 0 ]; then
-            pass "T12: --delete preserves all declared non-memory writer subtrees"
+            pass "T12: ownership sync preserves all non-memory writer subtrees"
         else
-            fail "T12: --delete removed $T12_FOREIGN_MISSING file(s) owned by other exocortex writers"
+            fail "T12: ownership sync removed $T12_FOREIGN_MISSING foreign file(s)"
         fi
 
         if [ ! -f "$T12_DST/reference/stale-memory.md" ]; then
-            pass "T12: --delete still prunes stale files inside a memory-owned subtree"
+            pass "T12: manifest prunes an unchanged formerly-owned memory file"
         else
-            fail "T12: ownership protection disabled stale-memory pruning"
+            fail "T12: manifest did not prune an unchanged formerly-owned file"
+        fi
+
+        if [ -s "$T12_DST/.day-close-backup-manifest.json" ]; then
+            pass "T12: ownership manifest records the production backup"
+        else
+            fail "T12: ownership manifest is missing"
         fi
     fi
 fi
@@ -1029,17 +1030,17 @@ if t16_run inject-code-style.sh "{\"session_id\":\"t16-code\",\"tool_name\":\"Ed
     fi
 fi
 
-# inject-fault-profile: with a reminder fixture in the governance path, a real
+# inject-fault-profile: with a canonical CLI fixture in the workspace, a real
 # payload must yield the reminder AND the traversal-shaped session_id must be
 # sanitized before landing in the state-file name.
-mkdir -p "$T16_PROJ/DS-strategy/scripts"
+mkdir -p "$T16_PROJ/scripts/agent-fault"
 printf '#!/usr/bin/env python3\nprint("\\U0001F534 [CRITICAL | n=5] test-reminder-fixture")\n' \
-    > "$T16_PROJ/DS-strategy/scripts/agent_fault_remind.py"
+    > "$T16_PROJ/scripts/agent-fault/iwe_checklist_memory.py"
 if t16_run inject-fault-profile.sh '{"session_id":"t16-../../evil","prompt":"x"}'; then
     T16_EV=$(t16_json "d['hookSpecificOutput']['hookEventName']")
     T16_HAS=$(t16_json "'test-reminder-fixture' in d['hookSpecificOutput']['additionalContext']")
     if [ "$T16_EV" = "UserPromptSubmit" ] && [ "$T16_HAS" = "True" ]; then
-        pass "T16: inject-fault-profile serves reminders from the governance fixture"
+        pass "T16: inject-fault-profile serves reminders from the canonical CLI fixture"
     else
         fail "T16: inject-fault-profile event='$T16_EV' reminder='$T16_HAS'"
     fi
