@@ -128,6 +128,7 @@ PLATFORM_HOOKS_EXPLICIT_INCLUDE=(
     "seed/strategy/.githooks/pre-commit"
     "seed/strategy/.githooks/pre-push"
     "seed/strategy/scripts/install-hooks.sh"
+    # #533: existing installations need the subject-scoped Day Open reader.
     "seed/strategy/scripts/day-open-llm-fill.py"
     "seed/strategy/scripts/update-derived-snapshot.py"
 )
@@ -202,6 +203,7 @@ SCRIPT_CONTRACT_EXPLICIT_INCLUDE=(
     "scripts/tests/test_issue_473_build_active_wp_columns.py"
     "scripts/tests/test_issue_473_wp_sync_bundle_status.sh"
     "scripts/tests/test_issue_511_day_close_commit_guard.sh"
+    # #533/#536: ship the installed-delivery and crash-recovery regressions.
     "scripts/tests/test_issue_533_agent_fault_delivery.py"
     "scripts/tests/test_issue_536_day_close_backup.sh"
     "scripts/tests/test_issue_calendar_api_error_named.sh"
