@@ -593,6 +593,264 @@ finish_update_transaction() {
     UPDATE_TRANSACTION_STARTED=false
 }
 
+effective_governance_repo() {
+    local configured="${ENV_GOVERNANCE_REPO:-}"
+    local env_file
+
+    # Normal installs keep the file in the workspace root. Older installs can
+    # still have it inside the template repository, so a zero-diff recovery
+    # must honour the same fallback as the main update path. Parse only the one
+    # data line; never source either file.
+    for env_file in "$WORKSPACE_DIR/.exocortex.env" "$SCRIPT_DIR/.exocortex.env"; do
+        [ -z "$configured" ] || break
+        [ -f "$env_file" ] || continue
+        configured=$(grep -E '^GOVERNANCE_REPO=' "$env_file" 2>/dev/null \
+            | head -1 | cut -d= -f2- | tr -d '"' | tr -d "'")
+    done
+    configured="${configured:-${IWE_GOVERNANCE_REPO:-DS-strategy}}"
+    case "$configured" in
+        ""|.|..|.*|*/*|*[!A-Za-z0-9._-]*)
+            echo "ОШИБКА: GOVERNANCE_REPO должен быть именем каталога, не путём: $configured" >&2
+            return 1
+            ;;
+    esac
+    if [ -L "$WORKSPACE_DIR/$configured" ]; then
+        echo "ОШИБКА: governance repo является symlink; backfill запрещён: $WORKSPACE_DIR/$configured" >&2
+        return 1
+    fi
+    if [ -d "$WORKSPACE_DIR/$configured" ] && [ -d "$SCRIPT_DIR" ]; then
+        local governance_real script_real
+        governance_real=$(cd -P "$WORKSPACE_DIR/$configured" 2>/dev/null && pwd -P) || return 1
+        script_real=$(cd -P "$SCRIPT_DIR" 2>/dev/null && pwd -P) || return 1
+        if [ "$governance_real" = "$script_real" ]; then
+            echo "ОШИБКА: GOVERNANCE_REPO указывает на template repo; backfill запрещён: $configured" >&2
+            return 1
+        fi
+    fi
+    printf '%s\n' "$configured"
+}
+
+atomic_copy_executable() {
+    if [ "$#" -ne 2 ]; then
+        echo "ОШИБКА: atomic_copy_executable требует <source> <target>" >&2
+        return 1
+    fi
+    local source_path="$1" target_path="$2" target_dir temporary_path
+    target_dir=$(dirname "$target_path")
+    if [ -L "$target_dir" ]; then
+        echo "ОШИБКА: каталог назначения является symlink: $target_dir" >&2
+        return 1
+    fi
+    if ! mkdir -p "$target_dir"; then
+        echo "ОШИБКА: не удалось создать каталог $target_dir" >&2
+        return 1
+    fi
+    if ! temporary_path=$(mktemp "$target_dir/.iwe-update-copy.XXXXXX"); then
+        echo "ОШИБКА: не удалось создать временный файл рядом с $target_path" >&2
+        return 1
+    fi
+    if ! cp "$source_path" "$temporary_path" || \
+       ! chmod +x "$temporary_path" || \
+       ! mv -f "$temporary_path" "$target_path"; then
+        rm -f "$temporary_path"
+        echo "ОШИБКА: атомарная доставка $target_path не завершена" >&2
+        return 1
+    fi
+}
+
+backfill_platform_hooks() {
+    local governance_repo="${EFFECTIVE_GOVERNANCE_REPO:-$(effective_governance_repo)}"
+    local governance_dir="$WORKSPACE_DIR/$governance_repo"
+    local source_installer="$SCRIPT_DIR/seed/strategy/scripts/install-hooks.sh"
+    local target_installer="$governance_dir/scripts/install-hooks.sh"
+    local backup_dir="$governance_dir/.git/hook-backups"
+    local backup backup_index
+
+    if [ -L "$governance_dir" ] || [ -L "$governance_dir/.git" ] || [ -L "$backup_dir" ]; then
+        echo "  ✗ $governance_repo: governance/.git/hook-backups symlink запрещён; platform hooks не изменены." >&2
+        return 1
+    fi
+    if [ -f "$governance_dir/.git" ]; then
+        echo "  ⚠ $governance_repo: обнаружен Git worktree (.git — файл); platform hooks не установлены. Используйте обычный clone или установите hooks вручную после проверки общего core.hooksPath." >&2
+        return 0
+    fi
+    if [ ! -d "$governance_dir/.git" ]; then
+        echo "  ○ $governance_repo: git-репозиторий не найден, миграция hooks пропущена."
+        return 0
+    fi
+    if [ -L "$governance_dir/scripts" ] || [ -L "$governance_dir/.githooks" ]; then
+        echo "  ✗ Каталоги scripts/.githooks в $governance_repo не должны быть symlink; platform hooks не изменены." >&2
+        return 1
+    fi
+
+    for source_path in \
+        "$source_installer" \
+        "$SCRIPT_DIR/seed/strategy/.githooks/pre-commit" \
+        "$SCRIPT_DIR/seed/strategy/.githooks/pre-push"
+    do
+        if [ -L "$source_path" ] || [ ! -f "$source_path" ]; then
+            echo "  ✗ Канонический platform-hook не доставлен: ${source_path#"$SCRIPT_DIR"/}" >&2
+            return 1
+        fi
+    done
+    if [ -L "$target_installer" ]; then
+        echo "  ✗ scripts/install-hooks.sh является symlink; автоматическая перезапись запрещена." >&2
+        return 1
+    fi
+
+    if ! mkdir -p "$governance_dir/scripts" "$backup_dir"; then
+        echo "  ✗ Не удалось подготовить каталоги platform hooks." >&2
+        return 1
+    fi
+    if [ -f "$target_installer" ] && ! cmp -s "$source_installer" "$target_installer"; then
+        backup="$backup_dir/install-hooks.sh.backup.$(date +%s)"
+        backup_index=0
+        while [ -e "$backup" ]; do
+            backup_index=$((backup_index + 1))
+            backup="$backup_dir/install-hooks.sh.backup.$(date +%s).$backup_index"
+        done
+        if ! cp "$target_installer" "$backup"; then
+            echo "  ✗ Не удалось сохранить backup существующего install-hooks.sh." >&2
+            return 1
+        fi
+        echo "  📝 Existing install-hooks.sh backed up to: $backup"
+    fi
+    if [ ! -f "$target_installer" ] || ! cmp -s "$source_installer" "$target_installer"; then
+        atomic_copy_executable "$source_installer" "$target_installer" || return 1
+    elif ! chmod +x "$target_installer"; then
+        echo "  ✗ Не удалось восстановить executable bit у install-hooks.sh." >&2
+        return 1
+    fi
+
+    if ! IWE_TEMPLATE="$SCRIPT_DIR" IWE_ROOT="$WORKSPACE_DIR" \
+        bash "$target_installer" "$governance_dir"; then
+        return 1
+    fi
+}
+
+backfill_executor_catalog() {
+    local governance_repo="${EFFECTIVE_GOVERNANCE_REPO:-$(effective_governance_repo)}"
+    local governance_dir="$WORKSPACE_DIR/$governance_repo"
+    local skills_dir="$WORKSPACE_DIR/.claude/skills"
+    local output_path="$governance_dir/scripts/executor-catalog.yaml"
+    local resolved_python catalog_output
+
+    if [ -L "$governance_dir" ]; then
+        echo "  ✗ executor-catalog.yaml не обновлён: governance repo является symlink." >&2
+        return 1
+    fi
+    if [ ! -d "$governance_dir" ] || [ ! -d "$skills_dir" ]; then
+        echo "  ○ executor-catalog.yaml: governance repo или skills не найдены, backfill пропущен."
+        return 0
+    fi
+    if [ -L "$governance_dir/scripts" ] || [ -L "$output_path" ]; then
+        echo "  ✗ executor-catalog.yaml не обновлён: scripts или сам target является symlink." >&2
+        return 1
+    fi
+    if ! resolved_python=$("$SCRIPT_DIR/scripts/lib/find-python3.sh" 2>/dev/null); then
+        echo "  ⚠ executor-catalog.yaml не сгенерирован: нет python3 с PyYAML." >&2
+        return 1
+    fi
+
+    if catalog_output=$(IWE_ROOT="$WORKSPACE_DIR" IWE_GOVERNANCE_REPO="$governance_repo" \
+        "$resolved_python" "$SCRIPT_DIR/scripts/generate-executor-catalog.py" \
+        --skills-dir "$skills_dir" --output "$output_path" 2>&1); then
+        [ -n "$catalog_output" ] && printf '%s\n' "$catalog_output" | sed 's/^/  /'
+        return 0
+    fi
+
+    [ -n "$catalog_output" ] && printf '%s\n' "$catalog_output" | sed 's/^/  /' >&2
+    echo "  ⚠ executor-catalog.yaml не сгенерирован: повторите после исправления ошибки выше." >&2
+    return 1
+}
+
+backfill_derived_snapshot_updater() {
+    local governance_repo="${EFFECTIVE_GOVERNANCE_REPO:-$(effective_governance_repo)}"
+    local governance_dir="$WORKSPACE_DIR/$governance_repo"
+    local relative_path="scripts/update-derived-snapshot.py"
+    # Fresh installs receive the seed copy (including its provenance header),
+    # so upgrades must use the same canonical installed payload byte-for-byte.
+    local source_path="$SCRIPT_DIR/seed/strategy/$relative_path"
+    local target_path="$governance_dir/$relative_path"
+
+    if [ -L "$governance_dir" ]; then
+        echo "  ✗ $relative_path не обновлён: governance repo является symlink." >&2
+        return 1
+    fi
+    if [ ! -d "$governance_dir" ]; then
+        echo "  ○ $governance_repo: governance repo не найден, backfill snapshot updater пропущен."
+        return 0
+    fi
+    if [ -L "$source_path" ] || [ ! -f "$source_path" ]; then
+        echo "  ✗ $relative_path не доставлен в целевом release payload." >&2
+        return 1
+    fi
+    if [ -L "$governance_dir/scripts" ]; then
+        echo "  ✗ $relative_path не обновлён: governance scripts является symlink." >&2
+        return 1
+    fi
+    if [ -L "$target_path" ]; then
+        echo "  ✗ $relative_path является symlink; автоматическая перезапись запрещена." >&2
+        return 1
+    fi
+    if [ -e "$target_path" ] && ! cmp -s "$source_path" "$target_path"; then
+        if git -C "$governance_dir" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+            if ! git -C "$governance_dir" ls-files --error-unmatch -- "$relative_path" >/dev/null 2>&1; then
+                echo "  ✗ $relative_path существует как пользовательский untracked-файл; автоматическая перезапись запрещена." >&2
+                return 1
+            fi
+            if ! git -C "$governance_dir" diff --quiet -- "$relative_path" || \
+               ! git -C "$governance_dir" diff --cached --quiet -- "$relative_path"; then
+                echo "  ✗ $relative_path содержит локальные изменения; сначала сохраните или разберите их." >&2
+                return 1
+            fi
+        else
+            echo "  ✗ $relative_path отличается, а governance directory не является git-репозиторием; автоматическая перезапись запрещена." >&2
+            return 1
+        fi
+    fi
+
+    if [ ! -f "$target_path" ] || ! cmp -s "$source_path" "$target_path"; then
+        atomic_copy_executable "$source_path" "$target_path" || return 1
+        echo "  ⟳ $relative_path обновлён в $governance_repo."
+    else
+        echo "  ✓ $relative_path уже совпадает с release payload."
+    fi
+}
+
+run_post_apply_backfills_or_die() {
+    $CHECK_ONLY && return 0
+    if ! EFFECTIVE_GOVERNANCE_REPO=$(effective_governance_repo); then
+        return 1
+    fi
+
+    bash "$SCRIPT_DIR/setup/install-iwe-paths.sh" \
+        --workspace "$WORKSPACE_DIR" --governance "$EFFECTIVE_GOVERNANCE_REPO" \
+        --quiet 2>&1 | sed 's/^/  /'
+    local install_paths_status="${PIPESTATUS[0]}"
+    if [ "$install_paths_status" -ne 0 ]; then
+        echo "  ⚠ install-iwe-paths.sh завершился с ошибкой (exit $install_paths_status). Запустите вручную: bash $SCRIPT_DIR/setup/install-iwe-paths.sh --workspace $WORKSPACE_DIR --governance $EFFECTIVE_GOVERNANCE_REPO"
+    fi
+
+    echo ""
+    echo "Platform hooks (upgrade backfill)..."
+    if ! backfill_platform_hooks; then
+        echo "  ОШИБКА: platform hooks не мигрированы; обновление оставлено незавершённым." >&2
+        return 1
+    fi
+
+    echo ""
+    echo "Derived snapshot updater (upgrade backfill)..."
+    if ! backfill_derived_snapshot_updater; then
+        echo "  ОШИБКА: governance snapshot updater не обновлён; обновление оставлено незавершённым." >&2
+        return 1
+    fi
+
+    echo ""
+    echo "Executor catalog (upgrade backfill)..."
+    backfill_executor_catalog || true
+}
+
 record_rule_workspace_state() {
     local fpath="$1" src dst
     case "$fpath" in .claude/rules/*) ;; *) return 0 ;; esac
@@ -670,11 +928,25 @@ CLAUDE_MEMORY_DIR=$(resolve_workspace_memory_dir "$WORKSPACE_DIR") || exit 1
 # users found out by losing an edit. Called from every branch that shows a preview,
 # including the "no changes" one — there a repair-pass still writes to all of these.
 print_extra_write_targets() {
+    local governance_repo governance_dir
+    if governance_repo=$(effective_governance_repo 2>/dev/null); then
+        governance_dir="$WORKSPACE_DIR/$governance_repo"
+    else
+        governance_dir="$WORKSPACE_DIR/<invalid-GOVERNANCE_REPO>"
+    fi
     echo "Кроме перечисленного, обычный запуск (без --check) также пишет — это зоны возможной перезаписи, пофайлового прогноза для них превью не строит (issue #350):"
     echo "  • $WORKSPACE_DIR/.claude/ — рабочие копии скиллов, хуков, правил"
     echo "  • $CLAUDE_MEMORY_DIR — рабочие копии memory-файлов"
     echo "  • $WORKSPACE_DIR/.iwe-runtime/ — пересобирается целиком из шаблона"
     echo "  • $WORKSPACE_DIR/.exocortex.env, $SCRIPT_DIR/.claude.md.base, $SCRIPT_DIR/update-manifest.json"
+    echo "  • $WORKSPACE_DIR/.iwe-paths и $HOME/.zshenv — пересоздаваемое окружение путей"
+    echo "  • local core.hooksPath в git-репозиториях с .githooks под $WORKSPACE_DIR"
+    echo "  • $governance_dir/scripts/install-hooks.sh — установщик platform hooks"
+    echo "  • $governance_dir/.githooks/pre-commit и pre-push — platform hooks"
+    echo "  • $governance_dir/scripts/update-derived-snapshot.py — обновлятор derived snapshot"
+    echo "  • $governance_dir/scripts/executor-catalog.yaml — каталог исполнителей"
+    echo "    Symlink-пути блокируют backfill. Отличающиеся installer/hooks сохраняются в .git/hook-backups/ и заменяются."
+    echo "    Локально изменённый snapshot updater блокирует обновление; executor-catalog.yaml — генерируемый файл и заменяется при смысловом расхождении."
     echo "  Расхождение рабочей копии с шаблоном чинится независимо от списков выше."
     echo ""
 }
@@ -945,8 +1217,41 @@ fi
 # на актуальной версии от предыдущего запуска, а workspace остался stale) И
 # после обычной propagation (Step 6) — чтобы не дублировать работу NEW/UPDATED_FILES.
 # REPAIRED — глобальный счётчик, читается вызывающим кодом после возврата.
+sync_workspace_agents() {
+    [ -f "$SCRIPT_DIR/AGENTS.md" ] || return 0
+    local ws_agents_new="$TMPDIR_UPDATE/ws-agents-new-substituted.md"
+    local destination="$WORKSPACE_DIR/AGENTS.md"
+    local destination_temp=""
+    if [ -L "$destination" ]; then
+        echo "  ✗ $destination — symbolic link is forbidden" >&2
+        return 1
+    fi
+    if [ -e "$destination" ] && [ ! -f "$destination" ]; then
+        echo "  ✗ $destination — existing target is not a regular file" >&2
+        return 1
+    fi
+    substitute_claude_placeholders "$SCRIPT_DIR/AGENTS.md" "$ws_agents_new" || return 1
+    if [ ! -f "$destination" ] || ! cmp -s "$destination" "$ws_agents_new"; then
+        destination_temp=$(mktemp "$WORKSPACE_DIR/.AGENTS.md.update.XXXXXX") || {
+            echo "  ✗ $destination — не удалось создать временный файл" >&2
+            return 1
+        }
+        if ! cp "$ws_agents_new" "$destination_temp" || \
+           ! mv -f "$destination_temp" "$destination"; then
+            rm -f "$destination_temp"
+            echo "  ✗ $destination не синхронизирован" >&2
+            return 1
+        fi
+        echo "  ✓ $destination обновлён (generated, substituted)"
+    fi
+    return 0
+}
+
 repair_pass() {
     REPAIRED=0
+    # Generated workspace instructions are part of repair, not only delivery:
+    # both TOTAL_CHANGES=0 recovery branches must restore a missing/stale copy.
+    sync_workspace_agents || return 1
     # Bash 3.2 (macOS) parses the apostrophe in the comment below before it
     # recognizes the closing `)` of a process substitution.  Keep the manifest
     # reader in ordinary temporary files: its diagnostics stay visible and the
@@ -1642,6 +1947,9 @@ if [ "$TOTAL_CHANGES" -eq 0 ] && [ ${#SKIPPED_DOWNLOAD[@]} -gt 0 ]; then
         begin_update_transaction
         repair_pass
         run_build_runtime_or_die
+        if ! run_post_apply_backfills_or_die; then
+            exit "$EXIT_RUNTIME"
+        fi
         finish_update_transaction
         report_settings_merge_drift
     fi
@@ -1689,6 +1997,9 @@ if [ "$TOTAL_CHANGES" -eq 0 ]; then
         # without ever rebuilding .iwe-runtime/ — recovery ended with a removed
         # marker but stale substitutions. Same fail-closed contract as Step 6d.
         run_build_runtime_or_die
+        if ! run_post_apply_backfills_or_die; then
+            exit "$EXIT_RUNTIME"
+        fi
         # Cold review 2026-08-19 (Critical): finish must stay OUT of --check —
         # the preview used to clear a live .update-incomplete from a previous
         # failed run without repair or build-runtime, disarming the contract
@@ -1749,7 +2060,6 @@ echo "  ✓ .secrets/ (ключи)"
 echo "  ✓ .claude/settings.local.json (permissions)"
 echo "  ✓ sessions/00-index.md (журнал peer-сессий)"
 echo "  ✓ personal/ (ваши файлы)"
-echo "  ✓ ${IWE_GOVERNANCE_REPO:-DS-strategy}/ (ваше планирование)"
 echo ""
 
 print_extra_write_targets
@@ -2626,7 +2936,8 @@ echo "Проверка применённых изменений..."
 
 validate_no_install_values_in_applied_additions() {
     local env_file="$WORKSPACE_DIR/.exocortex.env"
-    local key value fpath applied_additions added_line historical_lines upstream_ref target_sha256
+    local key value fpath applied_additions added_line target_file target_sha256
+    local applied_line_count target_line_count
     local i failed=0
     local -a install_keys=() install_values=()
 
@@ -2653,29 +2964,16 @@ validate_no_install_values_in_applied_additions() {
         install_values+=("$value")
     done
 
-    # issue #459: guard считал совпадение по подстроке уже утечкой, хотя
-    # substitute_claude_placeholders() никогда не пишет в $SCRIPT_DIR (только
-    # во временную workspace-копию CLAUDE.md) — совпадение здесь могло быть
-    # текстом, который апстрим и раньше приносил под другим значением, не
-    # реальной подстановкой личного пути. Полностью убирать guard нельзя (он
-    # защищает от любой утечки install-path, не только через подстановку —
-    # например, случайно скопированный фрагмент личного конфига в коммит
-    # шаблона); вместо этого сужаем срабатывание: install-значение блокирует
-    # только если добавленная строка ЦЕЛИКОМ (не подстрока) не встречалась
-    # раньше ни в одной прошлой upstream-версии этого же файла.
-    upstream_ref=$(git -C "$SCRIPT_DIR" rev-parse --verify --quiet '@{upstream}' 2>/dev/null || true)
-
-    # issue #524 (P0, WP-529 Ф16): git-history эвристика выше слепа к файлам,
-    # которых в ЭТОМ локальном чекауте раньше не было вообще (old target upgrade
-    # добавил файл целиком) — historical_lines пуст, и ЛЮБАЯ строка с
-    # install-значением в новом файле блокируется, даже если она байт-в-байт
-    # каноничное содержимое target-релиза. Провенанс через сам манифест: если
-    # ВЕСЬ файл на диске побайтово совпадает с sha256, который target release
-    # заявил для этого пути в $MANIFEST — каждая его строка гарантированно
-    # пришла из upstream (иначе хэш не совпал бы), exempt всего файла целиком.
-    # Не срабатывает (mismatch/no entry/no manifest) → падаем в прежнюю
-    # построчную git-history проверку без изменений — fail-closed по умолчанию
-    # не ослаблен, exempt только ДОБАВЛЯЕТ разрешение на доказуемых байтах.
+    # issue #524: provenance belongs to the exact target release, not the old
+    # installation fork's history. First accept a whole file whose bytes match
+    # its unique target-manifest hash. This also works in the deliberately
+    # tainted no-Python mode, which exits 4 after applying the update.
+    #
+    # A legitimate 3-way merge cannot match the whole-file hash. For that case,
+    # fall through to the already integrity-verified downloaded target payload:
+    # each install-valued line must exist in that exact same target file and may
+    # occur no more often than in the target. Cross-file matches, unverified
+    # payloads and locally duplicated canonical lines remain fail-closed.
     #
     # Детерминированно в обоих окружениях (peer-review Codex, 2026-08-24-07):
     # python-путь и shell-фоллбек дают одинаковый результат на одном манифесте
@@ -2733,7 +3031,7 @@ PYEOF
             echo "  install-path guard: $fpath exempt (byte-identical to target manifest sha256)" >&2
             continue
         fi
-        echo "  install-path guard: $fpath -- no manifest hash match, falling back to history check" >&2
+        echo "  install-path guard: $fpath -- no manifest hash match, falling back to verified target-line provenance" >&2
         # Полное текущее содержимое файла на диске, не git-diff working
         # tree против HEAD. Cold-context review нашёл живую дыру: если файл
         # уже ЗАКОММИЧЕН до этого прогона (второй прогон update.sh после
@@ -2751,27 +3049,28 @@ PYEOF
         fi
         [ -n "$applied_additions" ] || continue
 
-        # Полные строки из всех прошлых версий именно этого файла в upstream.
-        # Нет upstream ref / нет истории — исключения нет, guard fail-closed.
-        historical_lines=""
-        if [ -n "$upstream_ref" ]; then
-            historical_lines=$(git -C "$SCRIPT_DIR" log --follow --format= \
-                --no-ext-diff --no-textconv -p "$upstream_ref" -- "$fpath" |
-                awk '
-                    /^diff --git / { in_hunk=0; next }
-                    /^@@ / { in_hunk=1; next }
-                    in_hunk && /^[+-]/ { print substr($0, 2) }
-                ')
-        fi
+        target_file="${TMPDIR_UPDATE:-}/files/$fpath"
 
         while IFS= read -r added_line || [ -n "$added_line" ]; do
             for i in "${!install_keys[@]}"; do
                 [[ "$added_line" == *"${install_values[$i]}"* ]] || continue
 
-                # Исключение только для идентичной полной строки, уже
-                # поставлявшейся upstream; совпадение одной подстроки не достаточно.
-                if ! grep -Fqx -- "$added_line" <<<"$historical_lines"; then
+                # The exception is scoped to the identical target file and to
+                # the target's exact multiplicity of this full line. A local
+                # duplicate of an otherwise canonical line has no provenance.
+                # Cross-file text and unverified payloads never establish it.
+                if [ "${INTEGRITY_TAINTED:-true}" != false ] || \
+                   [ ! -f "$target_file" ] || \
+                   ! grep -Fqx -- "$added_line" "$target_file"; then
                     echo "  ✗ install-value ${install_keys[$i]} найден в новой строке обновления:" >&2
+                    printf '    %s\n' "$fpath" >&2
+                    failed=1
+                    continue
+                fi
+                applied_line_count=$(grep -Fxc -- "$added_line" "$SCRIPT_DIR/$fpath" || true)
+                target_line_count=$(grep -Fxc -- "$added_line" "$target_file" || true)
+                if [ "$applied_line_count" -gt "$target_line_count" ]; then
+                    echo "  ✗ install-value ${install_keys[$i]} продублирован сверх проверенного target payload:" >&2
                     printf '    %s\n' "$fpath" >&2
                     failed=1
                 fi
@@ -2813,17 +3112,12 @@ if [ -f "$ENV_FILE" ]; then
     fi
 fi
 
-# === Step 7.6: Re-run install-iwe-paths.sh auto-enable (issue #317) ===
-# CHANGELOG 0.28.5 promised this ("update.sh может тоже его вызывать при
-# следующих апгрейдах"), but the call was never added — so a DS-strategy
-# repo that shipped with .githooks/ after this update had no way to get
-# core.hooksPath enabled without a fresh setup.sh run.
-if ! $CHECK_ONLY; then
-    bash "$SCRIPT_DIR/setup/install-iwe-paths.sh" \
-        --workspace "$WORKSPACE_DIR" --governance "${IWE_GOVERNANCE_REPO:-DS-strategy}" --quiet 2>&1 | sed 's/^/  /'
-    INSTALL_PATHS_STATUS="${PIPESTATUS[0]}"
-    [ "$INSTALL_PATHS_STATUS" -eq 0 ] || \
-        echo "  ⚠ install-iwe-paths.sh завершился с ошибкой (exit $INSTALL_PATHS_STATUS). Запустите вручную: bash $SCRIPT_DIR/setup/install-iwe-paths.sh --workspace $WORKSPACE_DIR --governance ${IWE_GOVERNANCE_REPO:-DS-strategy}"
+# === Step 7.6–7.9: post-apply governance backfills ===
+# The same helper also runs in TOTAL_CHANGES=0 recovery branches. Otherwise a
+# failed first backfill could leave .update-incomplete, while a zero-diff retry
+# skipped the failing action and incorrectly cleared the marker.
+if ! run_post_apply_backfills_or_die; then
+    exit "$EXIT_RUNTIME"
 fi
 
 # === Done ===

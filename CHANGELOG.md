@@ -146,6 +146,15 @@ Refs: WP-NNN
 
 ## [Unreleased]
 
+## [0.38.10] — 2026-08-24
+
+### Security
+- [security] Состояние согласий вынесено из Git в закрытое локальное хранилище с атомарной миграцией, повторной проверкой старых писателей и защитой от ссылок; усилены границы hook-доставки, commit/owner/self-scan и DayPlan-гейтов (#502 #511 #521 #529 #530 #532).
+
+### Fixed
+- [behavior] Закрыт пакет пользовательских дефектов: ленивый State-Transition Gate, полный lifecycle АрхГейта, каталог extensions, опциональные Hindsight/Obsidian-пути, происхождение манифеста, role-prefix, scheduler и точный статус index-health (#481 #490 #508 #522 #523 #524 #525 #527 #528 #531).
+- [migration] Fresh-install и update/recovery теперь одинаково доставляют `AGENTS.md`, lazy-правило, Python-resolver и governance hooks, включая повторный запуск после частичного обновления (#481 #502 #508 #521).
+
 ## [0.38.9] — 2026-08-24
 ### Fixed
 - `6c4f52b` fix(template): batch of nine small user-reported defects (#515 #514 #513 #503 #499 #507 #512 #511 + flush) — WP-529 F14, peer session with Kimi (#520)
