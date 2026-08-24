@@ -35,6 +35,24 @@ TEST_WS="${SMOKE_WORKSPACE:-/tmp/iwe-smoke-test-$$}"
 # DS-pilot-strategy и пр. Закрывает gap «hardcode виден только при non-default».
 SMOKE_GOVERNANCE_REPO="${SMOKE_GOVERNANCE_REPO:-DS-strategy}"
 
+# E2E sections replace HOME so setup cannot touch the caller's real dotfiles.
+# On macOS CI, PyYAML can live in the original HOME's user-site; changing HOME
+# would otherwise make the already-verified dependency disappear mid-test and
+# create unrelated ResidencyGate/catalog cascades. Preserve only the resolved
+# package directory for the isolated subprocesses.
+SMOKE_PYTHON_RESOLVER="$TEMPLATE_DIR/.claude/lib/find-python3.sh"
+if [ -x "$SMOKE_PYTHON_RESOLVER" ]; then
+    SMOKE_PYTHON=$("$SMOKE_PYTHON_RESOLVER" 2>/dev/null || true)
+    if [ -n "$SMOKE_PYTHON" ]; then
+        SMOKE_PYYAML_SITE=$("$SMOKE_PYTHON" -c \
+            'from pathlib import Path; import yaml; print(Path(yaml.__file__).resolve().parent.parent)' \
+            2>/dev/null || true)
+        if [ -n "$SMOKE_PYYAML_SITE" ]; then
+            export PYTHONPATH="$SMOKE_PYYAML_SITE${PYTHONPATH:+:$PYTHONPATH}"
+        fi
+    fi
+fi
+
 # Cleanup при exit
 cleanup() {
     local rc=$?
