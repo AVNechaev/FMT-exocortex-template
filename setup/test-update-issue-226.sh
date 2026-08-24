@@ -38,6 +38,12 @@ mkdir -p "$TEST_ROOT" "$FAKE_HOME"
 UPSTREAM="$TEST_ROOT/upstream"
 mkdir -p "$UPSTREAM/.claude/hooks"
 
+cat > "$UPSTREAM/AGENTS.md" <<'EOF'
+# Generated agent instructions
+
+registry={{GOVERNANCE_REPO}}/docs/state-axes-registry.yaml
+EOF
+
 cat > "$UPSTREAM/CLAUDE.md" <<'EOF'
 # Template CLAUDE.md
 
@@ -70,6 +76,7 @@ manifest = {
     'version': '0.99.0-test-226',
     'files': [
         entry('CLAUDE.md'),
+        entry('AGENTS.md'),
         entry('.claude/hooks/dummy-hook.sh'),
         entry('memory/dummy-memo.md'),
     ],
@@ -99,6 +106,9 @@ EOF
 cp "$SCRIPT_DIR/CLAUDE.md" "$SCRIPT_DIR/.claude.md.base"
 
 WORKSPACE_DIR="$TEST_ROOT/repo"
+cat > "$WORKSPACE_DIR/.exocortex.env" <<'EOF'
+GOVERNANCE_REPO="pilot-governance"
+EOF
 
 # Workspace CLAUDE.md: user edited the SAME line the upstream also changed → real conflict
 cat > "$WORKSPACE_DIR/CLAUDE.md" <<'EOF'
@@ -308,11 +318,13 @@ fi
 echo "--- Scenario B: repair-pass on the 'всё актуально' path ---"
 git -C "$SCRIPT_DIR" checkout -q main 2>/dev/null || git -C "$SCRIPT_DIR" checkout -q -b main
 cp "$UPSTREAM/CLAUDE.md" "$SCRIPT_DIR/CLAUDE.md"
+cp "$UPSTREAM/AGENTS.md" "$SCRIPT_DIR/AGENTS.md"
 cp "$SCRIPT_DIR/CLAUDE.md" "$SCRIPT_DIR/.claude.md.base"
 cp "$UPSTREAM/.claude/hooks/dummy-hook.sh" "$SCRIPT_DIR/.claude/hooks/dummy-hook.sh"
 cp "$UPSTREAM/memory/dummy-memo.md" "$SCRIPT_DIR/memory/dummy-memo.md"
 cp "$UPSTREAM/update-manifest.json" "$SCRIPT_DIR/update-manifest.json"
 rm -f "$WORKSPACE_DIR/.claude/hooks/dummy-hook.sh"
+rm -f "$WORKSPACE_DIR/AGENTS.md"
 # Resolve the workspace CLAUDE.md conflict so it doesn't confuse this scenario
 cp "$UPSTREAM/CLAUDE.md" "$WORKSPACE_DIR/CLAUDE.md"
 cp "$UPSTREAM/CLAUDE.md" "$WORKSPACE_DIR/.claude.md.base"
@@ -335,6 +347,13 @@ else
     fail "B: hook file was NOT repaired — defect 2 regression (repair-pass unreachable)"
 fi
 
+if grep -Fxq 'registry=pilot-governance/docs/state-axes-registry.yaml' "$WORKSPACE_DIR/AGENTS.md" && \
+   ! grep -Fq '{{GOVERNANCE_REPO}}' "$WORKSPACE_DIR/AGENTS.md"; then
+    pass "B: missing workspace AGENTS.md was repaired with install placeholders resolved"
+else
+    fail "B: workspace AGENTS.md was not repaired/substituted on TOTAL_CHANGES=0"
+fi
+
 if [ "$RC_B" -eq 0 ]; then
     pass "B: exit code 0 (no conflicts in this scenario)"
 else
@@ -346,6 +365,42 @@ if [ ! -e "$SCRIPT_DIR/.update-incomplete" ]; then
 else
     fail "B: incomplete-update marker survived a successful recovery"
 fi
+
+# Same repair guarantee on the sibling zero-change branch where one remote
+# payload cannot be fetched. The failed path must not suppress local recovery.
+echo "--- Scenario B2: repair-pass on incomplete zero-change verification ---"
+python3 - "$UPSTREAM/update-manifest.json" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+manifest = json.loads(path.read_text(encoding="utf-8"))
+manifest["files"].append({"path": "missing-payload.md", "sha256": "0" * 64})
+path.write_text(json.dumps(manifest), encoding="utf-8")
+PY
+rm -f "$WORKSPACE_DIR/AGENTS.md"
+set +e
+PATH="$SHIM_DIR:$PATH" HOME="$FAKE_HOME" IWE_UPDATE_CHANNEL=main \
+    bash "$SCRIPT_DIR/update.sh" --yes > "$TEST_ROOT/out-b2.log" 2>&1
+RC_B2=$?
+set -e
+if [ "$RC_B2" -eq 0 ] && grep -q 'Проверка неполная' "$TEST_ROOT/out-b2.log" && \
+   grep -Fxq 'registry=pilot-governance/docs/state-axes-registry.yaml' "$WORKSPACE_DIR/AGENTS.md"; then
+    pass "B2: incomplete remote verification still repairs workspace AGENTS.md"
+else
+    fail "B2: skipped download suppressed AGENTS recovery (rc=$RC_B2)"
+fi
+python3 - "$UPSTREAM/update-manifest.json" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+manifest = json.loads(path.read_text(encoding="utf-8"))
+manifest["files"] = [entry for entry in manifest["files"] if entry["path"] != "missing-payload.md"]
+path.write_text(json.dumps(manifest), encoding="utf-8")
+PY
 
 # ------------------------------------------------------------------
 # Scenario C: same version and paths, changed content hash.
