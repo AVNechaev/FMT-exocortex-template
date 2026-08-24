@@ -145,6 +145,8 @@ Refs: WP-NNN
 
 
 ## [Unreleased]
+
+## [0.38.9] — 2026-08-24
 ### Fixed
 - `6c4f52b` fix(template): batch of nine small user-reported defects (#515 #514 #513 #503 #499 #507 #512 #511 + flush) — WP-529 F14, peer session with Kimi (#520)
 
