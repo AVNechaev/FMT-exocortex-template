@@ -252,6 +252,7 @@ PERSONALITY=""
 SESSION_ID_ARG=""
 CLEANUP_ORPHANS=0
 FORCE_NO_REFLECTION=""
+CLOSE_PATH=""
 POSITIONAL=()
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -266,6 +267,7 @@ while [[ $# -gt 0 ]]; do
     --since)  SINCE="$2"; shift 2 ;;
     --cleanup-orphans) CLEANUP_ORPHANS=1; shift ;;
     --force-no-reflection) FORCE_NO_REFLECTION="$2"; shift 2 ;;
+    --close-path) CLOSE_PATH="$2"; shift 2 ;;
     --)       shift; POSITIONAL+=("$@"); break ;;
     -*)       shift ;;
     *)        POSITIONAL+=("$1"); shift ;;
@@ -434,6 +436,8 @@ if [ "$CMD" = "open" ]; then
     echo "opened_at: $(now_iso)"
     echo "created_at: $(now_iso)"
     echo "session_id: $SESSION_ID"
+    [ -n "${CLAUDE_CODE_SESSION_ID:-}" ] && echo "harness_session_id: $CLAUDE_CODE_SESSION_ID"
+    echo "close_path: ${CLOSE_PATH:-unknown}"
     echo "orz_file: $ORZ_BASENAME"
     # WP-484 (08.08, Kimi diagnosis + pilot report): regular sessions never
     # recorded a pid at all, so sweep_orphaned_semaphores()'s dead-pid check —
