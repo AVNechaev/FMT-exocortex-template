@@ -237,7 +237,7 @@
     },
     {
       "path": ".claude/rules/role-prefixes.md",
-      "sha256": "bf94b1e6a4536b873bdaa381f968686b9668a893998cf585afcbd1076b044edc"
+      "sha256": "8e9a5220a89ca63a4421b70e2bd612d30b87664efb99c7fa8af6e6ca332ac9cb"
     },
     {
       "path": ".claude/rules/wp-scope.md",
@@ -2341,7 +2341,7 @@
     },
     {
       "path": "scripts/session-guard.sh",
-      "sha256": "b6789de0192b4fa57030e2e0f1308dac2c436aece13f2cb72e0430ba8abef76c"
+      "sha256": "387949a41e39aff4fb3dac1395092b5b5fa0fefe79fc7d318ea539cb96210782"
     },
     {
       "path": "scripts/settings-promote.sh",
@@ -2564,10 +2564,6 @@
       "sha256": "45d241902da232578652c576f3240088936fb165a4ada29917089e802df61edb"
     },
     {
-      "path": "scripts/tests/test_session_guard_unknown_flag.sh",
-      "sha256": "b6ad60ec3ce07b867e3e5ea4a9482f72f0e64bd43e205d6b8d1a2f2115449a93"
-    },
-    {
       "path": "scripts/tests/test_update_build_runtime_fail_closed.sh",
       "sha256": "610bdb4af8d97fe3c66c84323518590279c49ac33f2603ed548b3c61b3634917"
     },
@@ -2776,6 +2772,7 @@
     "scripts/tests/test_pending_phases_sweep.sh",
     "scripts/tests/test_release_receipt.sh",
     "scripts/tests/test_residency_gate_skill_adapter.py",
+    "scripts/tests/test_session_guard_unknown_flag.sh",
     "scripts/tests/test_setup_runtime_isolation.sh",
     "scripts/tests/test_skill_promote.py",
     "scripts/tests/test_translate_delta.py",
