@@ -1952,6 +1952,18 @@
       "sha256": "4b4098e2ea3568b5e13e314ded98f82a910ad174ca86f7729502cde65c31c594"
     },
     {
+      "path": "scripts/attestation-build-statement.sh",
+      "sha256": "4fd7d51e25df9f28e481e67bdbe284eee48220ac6a26cf00dfa9669946953acf"
+    },
+    {
+      "path": "scripts/attestation-canonical-digest.sh",
+      "sha256": "b447b5308428e9f2cd63c23699e26a297653beb3ab04e67335635da1fdec9184"
+    },
+    {
+      "path": "scripts/attestation-statement.schema.json",
+      "sha256": "5473f31ff649349b2a6a676e02e6d1bedc9daf0bdcfbd92f48d7a92432c0b34a"
+    },
+    {
       "path": "scripts/backup-icloud.sh",
       "sha256": "952484d862c8b6975656d21362d59dd43ce9ea280a20611e6b4fd277d1de7bd4"
     },
@@ -2814,6 +2826,7 @@
     "docs/developer/card-template.md",
     "docs/developer/code-style.md",
     "docs/developer/developer-guide.md",
+    "docs/developer/external-developer-letter.md",
     "docs/developer/proposal-process.md",
     "docs/developer/testing-as-spec.md",
     "docs/developer/working-with-claude.md",
@@ -2879,6 +2892,8 @@
     "setup/promote-fixtures/sample-skill/scripts/sample-tool.sh",
     "setup/release-audit-prompt.md",
     "setup/smoke-test-fresh-install.sh",
+    "setup/test-attestation-build-statement.sh",
+    "setup/test-attestation-canonical-digest.sh",
     "setup/test-day-open-delivery-closure.sh",
     "setup/test-delivery-route-label.sh",
     "setup/test-detectors.sh",
