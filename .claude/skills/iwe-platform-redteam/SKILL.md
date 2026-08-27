@@ -257,3 +257,6 @@ GO / CAUTION / BLOCKED — exact tag/SHA and audit time
 ```
 
 Report skipped and unavailable checks explicitly. Do not bury a blocker below secondary observations.
+
+<!-- USER-SPACE -->
+<!-- /USER-SPACE -->

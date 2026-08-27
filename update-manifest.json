@@ -397,7 +397,7 @@
     },
     {
       "path": ".claude/skills/iwe-platform-redteam/SKILL.md",
-      "sha256": "df3a5b72d9cdab272e5e71ba58405afafe8b45692240549965baa3c5a73490ae"
+      "sha256": "6646a5801eb4aedfdbadbb7a9b8b8a09b13ad4932857bd5e33e5ffb8a14dd756"
     },
     {
       "path": ".claude/skills/iwe-platform-redteam/boundary-guard.sh",
