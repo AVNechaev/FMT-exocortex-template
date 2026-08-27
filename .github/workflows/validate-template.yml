@@ -144,6 +144,14 @@ jobs:
         run: bash setup/smoke-test-fresh-install.sh
       - name: Run detector regression fixtures (regex gap guard)
         run: bash setup/test-detectors.sh
+      - name: Ensure jsonschema available (attestation statement test contract)
+        run: |
+          python3 -c "import jsonschema" 2>/dev/null && exit 0
+          python3 -m pip install --user jsonschema
+      - name: Run WP-529 Ф21 attestation digest tests (cross-OS determinism)
+        run: bash setup/test-attestation-canonical-digest.sh
+      - name: Run WP-529 Ф21 attestation statement tests
+        run: bash setup/test-attestation-build-statement.sh
 
   integration-contract-macos:
     if: github.event_name == 'pull_request' || github.event_name == 'schedule'
@@ -214,6 +222,23 @@ jobs:
             echo "Non-zero exit but no crash signature — treating as a legitimate business-rule result on synthetic smoke data:"
             cat /tmp/route-label-smoke.log
           fi
+      - name: Ensure jsonschema available (attestation statement test contract)
+        run: |
+          python3 -c "import jsonschema" 2>/dev/null && exit 0
+          python3 -m pip install --user jsonschema 2>/dev/null && python3 -c "import jsonschema" && exit 0
+          python3 -m pip install --user --break-system-packages jsonschema
+      # WP-529 Ф21 (peer-session 2026-08-27-14-wp529-f21-implement-attestation,
+      # turn 11): this is the actual cross-OS determinism guard for the
+      # attestation digest — same golden vector, same hardcoded expected
+      # hash, run on both ubuntu-latest (above) and macos-latest (here). Run
+      # under system /bin/bash (3.2), same reasoning as the two steps above:
+      # the script claims bash-3.2 compatibility, so prove it against the
+      # real system interpreter, not a newer Homebrew bash the runner's PATH
+      # might expose ahead of it.
+      - name: Run WP-529 Ф21 attestation digest tests (cross-OS determinism)
+        run: /bin/bash setup/test-attestation-canonical-digest.sh
+      - name: Run WP-529 Ф21 attestation statement tests
+        run: /bin/bash setup/test-attestation-build-statement.sh
 
   # Upgrade-flow regression test (0.29.18).
   # Корень бага (0.29.13): template-sync перезаписал FMT файлы — smoke-test fresh

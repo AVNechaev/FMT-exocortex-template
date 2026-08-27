@@ -209,6 +209,57 @@ git -C "$r9" commit -q --allow-empty -m "empty"
 sha9="$(git -C "$r9" rev-parse HEAD)"
 assert_fails "empty tree fails closed" "$r9" "$sha9" "attestation/att.yml"
 
+# --- Case 10: golden vector, built via git plumbing (hash-object + mktree),
+# never through the filesystem — the cross-OS determinism concern is about
+# whether a filesystem SILENTLY NORMALIZES Unicode filenames on write (HFS+
+# historically did; verified live on this machine's APFS that it currently
+# does not, but that is exactly the kind of runner/version-specific behavior
+# this test must not depend on). Building the tree directly in git's object
+# database sidesteps the question entirely: blob and tree SHAs are
+# content-addressed, so the same bytes always produce the same tree
+# regardless of what any given runner's filesystem would have done with
+# them (peer-session 2026-08-27-14-wp529-f21-implement-attestation, turn 11).
+# If this ever produces a different digest on a different OS, this
+# hardcoded expected value catches it immediately — see also the
+# ubuntu-latest/macos-latest CI matrix that runs this whole suite on both.
+golden_dir="$WORK/golden"
+mkdir -p "$golden_dir"
+git -C "$golden_dir" init -q
+
+blob_ascii="$(printf 'plain ascii\n' | git -C "$golden_dir" hash-object -w --stdin)"
+blob_nfc="$(printf 'nfc content\n' | git -C "$golden_dir" hash-object -w --stdin)"
+blob_nfd="$(printf 'nfd content\n' | git -C "$golden_dir" hash-object -w --stdin)"
+blob_space="$(printf 'space content\n' | git -C "$golden_dir" hash-object -w --stdin)"
+blob_symlink_target="$(printf 'a.txt' | git -C "$golden_dir" hash-object -w --stdin)"
+blob_no_newline="$(printf 'no trailing newline' | git -C "$golden_dir" hash-object -w --stdin)"
+
+# NFC_NAME: e-acute as one codepoint (U+00E9). NFD_NAME: e + combining
+# acute accent (U+0065 U+0301) — same rendered glyph, different bytes; git
+# (and our digest) must treat them as two distinct files, never collapse
+# them, on every OS.
+nfc_name="$(printf 'unicode-nfc-\xc3\xa9.txt')"
+nfd_name="$(printf 'unicode-nfd-e\xcc\x81.txt')"
+space_name="$(printf 'name with space.txt')"
+tab_name="$(printf 'name\twith\ttab.txt')"
+nl_name="$(printf 'name\nwith\nnewline.txt')"
+
+{
+  printf '100644 blob %s\t%s\0' "$blob_ascii" "a.txt"
+  printf '100644 blob %s\t%s\0' "$blob_nfc" "$nfc_name"
+  printf '100644 blob %s\t%s\0' "$blob_nfd" "$nfd_name"
+  printf '100644 blob %s\t%s\0' "$blob_space" "$space_name"
+  printf '100644 blob %s\t%s\0' "$blob_no_newline" "no-newline.txt"
+  printf '120000 blob %s\t%s\0' "$blob_symlink_target" "link.txt"
+  printf '100644 blob %s\t%s\0' "$blob_ascii" "$tab_name"
+  printf '100644 blob %s\t%s\0' "$blob_ascii" "$nl_name"
+} > "$golden_dir/tree-input"
+
+golden_tree_sha="$(git -C "$golden_dir" mktree -z < "$golden_dir/tree-input")"
+golden_digest="$(digest_of "$golden_dir" "$golden_tree_sha" "")"
+assert_eq "golden vector matches the hardcoded expected digest" \
+  "$golden_digest" \
+  "e01345666ec30bf71ce15703132a22e87300a9089bb9716aa93a56171252113a"
+
 echo ""
 echo "attestation-canonical-digest.sh: $PASS passed, $FAIL failed"
 [ "$FAIL" -eq 0 ]
