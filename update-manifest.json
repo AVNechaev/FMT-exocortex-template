@@ -629,7 +629,7 @@
     },
     {
       "path": ".githooks/pre-commit",
-      "sha256": "30b3698b653f1035ce1287776de6e293e91bc9f5658101a972f4b15cb10363a2"
+      "sha256": "1097b690e58456f673e180cae712182ce8298e4b7546ad91c42c82116a4c9652"
     },
     {
       "path": ".github/workflows/cloud-scheduler.yml",
@@ -1925,7 +1925,7 @@
     },
     {
       "path": "scripts/check-platform-compat.sh",
-      "sha256": "df7aa7df671db2824880ec2888bebfdc9ae21c2c5c7faf185d7ed86a083a25e2"
+      "sha256": "61c960813407e0b37df5522935d55d3ae7f12dadc90b26bcdfc53b88545f041e"
     },
     {
       "path": "scripts/check-python-resolver-contract.sh",
@@ -1953,7 +1953,7 @@
     },
     {
       "path": "scripts/claude-peer-adapter.sh",
-      "sha256": "75d882d3671f1a87c2b082b94a5952794bf8cf01c52451484ef40f488361e48f"
+      "sha256": "f7185cafe9ca62e2c408e2502539811f81ac7b7c22e8bd91d083a19f77d33b8c"
     },
     {
       "path": "scripts/close-wp.sh",
@@ -1961,7 +1961,7 @@
     },
     {
       "path": "scripts/codex-peer-adapter.sh",
-      "sha256": "715b235ccad524bf170513abb59760b9b3c1d73117ca97d8475f6fa9226621bc"
+      "sha256": "dbef2b0357617283119d0b2641e43b3f2b01a9e77d302d7c193e63f823504231"
     },
     {
       "path": "scripts/config/pipeline-security-whitelist.yaml",
@@ -2297,7 +2297,7 @@
     },
     {
       "path": "scripts/pending-phases-sweep.sh",
-      "sha256": "9e2434ef4b64154fc15cb3874588b086670c89d74993ecdb778fbd8a4e5e42b2"
+      "sha256": "793b9b888fdb62d82c9c6b0947f0ce9a7a6648de1e4725f410e4dea5ce68e620"
     },
     {
       "path": "scripts/post-update-check-skills.sh",
@@ -2305,7 +2305,7 @@
     },
     {
       "path": "scripts/pre-commit-secret-scan.sh",
-      "sha256": "459824d705ab47bd8896c9a9b46b4fdada37f97af56c4b2b7eb6998535f78aaf"
+      "sha256": "5e9bfc63e64b095c427508ecfb4b05cc755aa65aedbe87fe7d4880c76229ac91"
     },
     {
       "path": "scripts/promote-common.sh",
@@ -2321,7 +2321,7 @@
     },
     {
       "path": "scripts/route-task.sh",
-      "sha256": "8b92ead81604ba29f2d4c226ac1438aa4cff6026b901648805a0c0a61c3b3bd7"
+      "sha256": "d6a8a42e3607992570b1f684f6bfaa1ed97a6f985e2dc0c57b55752a9da67335"
     },
     {
       "path": "scripts/run-regression-tests.sh",
