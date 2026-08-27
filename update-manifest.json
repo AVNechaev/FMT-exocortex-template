@@ -285,7 +285,7 @@
     },
     {
       "path": ".claude/skills-catalog.yaml",
-      "sha256": "7eef8f33d8fd19d519d50e32c76eb343b135790c34f73fe5121aed8af7eb978c"
+      "sha256": "3868726466047addb13df7524aafbe469e38ef42dbbb8c45b26ff68f621a6063"
     },
     {
       "path": ".claude/skills/SKILL-INDEX.yaml",
@@ -394,6 +394,82 @@
     {
       "path": ".claude/skills/iwe-bug-report/SKILL.md",
       "sha256": "627aa06118e339999e7eb901ccf852730544160cf667b873b1ec50260215f7cf"
+    },
+    {
+      "path": ".claude/skills/iwe-platform-redteam/SKILL.md",
+      "sha256": "df3a5b72d9cdab272e5e71ba58405afafe8b45692240549965baa3c5a73490ae"
+    },
+    {
+      "path": ".claude/skills/iwe-platform-redteam/boundary-guard.sh",
+      "sha256": "d259907b4a6e964f19164aa16ca187e019e039f7bead9b103b42b1ab73995b54"
+    },
+    {
+      "path": ".claude/skills/iwe-platform-redteam/fixtures/known-bad-release/ci-receipt.txt",
+      "sha256": "f40aaff58ec84a4c6435e58cc6edc450c58f5e1c7d6ceef37cd4f5f66607e65e"
+    },
+    {
+      "path": ".claude/skills/iwe-platform-redteam/fixtures/known-bad-release/files/alpha.txt",
+      "sha256": "905954a0933d7bc8b8ae1ed115abc317c8bcb3490c007fbacbd36a61b4a4b50e"
+    },
+    {
+      "path": ".claude/skills/iwe-platform-redteam/fixtures/known-bad-release/files/beta.txt",
+      "sha256": "ec513fa72a8d8c074d91b2d3360ce60a561675ea074b6fabe8ee25dd88eed280"
+    },
+    {
+      "path": ".claude/skills/iwe-platform-redteam/fixtures/known-bad-release/manifest.txt",
+      "sha256": "eb5632cc0202628f030785fe41e1850ba991fd6328f608d68db1ca2f31d1c94a"
+    },
+    {
+      "path": ".claude/skills/iwe-platform-redteam/fixtures/known-good-release/ci-receipt.txt",
+      "sha256": "f40aaff58ec84a4c6435e58cc6edc450c58f5e1c7d6ceef37cd4f5f66607e65e"
+    },
+    {
+      "path": ".claude/skills/iwe-platform-redteam/fixtures/known-good-release/files/alpha.txt",
+      "sha256": "905954a0933d7bc8b8ae1ed115abc317c8bcb3490c007fbacbd36a61b4a4b50e"
+    },
+    {
+      "path": ".claude/skills/iwe-platform-redteam/fixtures/known-good-release/files/beta.txt",
+      "sha256": "ec513fa72a8d8c074d91b2d3360ce60a561675ea074b6fabe8ee25dd88eed280"
+    },
+    {
+      "path": ".claude/skills/iwe-platform-redteam/fixtures/known-good-release/manifest.txt",
+      "sha256": "7e6815431d26f51080b5301e0a260d1c23d893b4055dfbe5aeb4b03ea0c2b45c"
+    },
+    {
+      "path": ".claude/skills/iwe-platform-redteam/references/adversarial-cases.md",
+      "sha256": "9c7fe1c0ec2a8a52f10806f03ba1526b310b5cb01a787bd478993b6e62898524"
+    },
+    {
+      "path": ".claude/skills/iwe-platform-redteam/references/agentic-security.md",
+      "sha256": "678ec2c9a2c91c5c52ca6306bdbb7c68f06e1b9f8768d45cfea62a83daace92e"
+    },
+    {
+      "path": ".claude/skills/iwe-platform-redteam/references/ci-and-supply-chain.md",
+      "sha256": "b9b8865abb5a6b6d072ed02626b694e28d1f96dbd2421e302c11765bd89a1de9"
+    },
+    {
+      "path": ".claude/skills/iwe-platform-redteam/references/evidence-and-reporting.md",
+      "sha256": "ac38d11a5ed761da8b069081e03081f7a245a6baee7994eb9350badb6fd175ba"
+    },
+    {
+      "path": ".claude/skills/iwe-platform-redteam/references/install-and-upgrade-matrix.md",
+      "sha256": "6b51feb1308fe8fab70d0e587a1fda36331377e3b8d99f244336b7f1e2995d5c"
+    },
+    {
+      "path": ".claude/skills/iwe-platform-redteam/references/methodology-sources.md",
+      "sha256": "db7aaff6e0f61fbc84c41a740783442e13ed70f6f6f7bf6095e82de9326774cb"
+    },
+    {
+      "path": ".claude/skills/iwe-platform-redteam/references/release-and-update.md",
+      "sha256": "8eff3fd1121f351b1cfb2c4b98063463f4869cf13f959e52841ba6f5cce95844"
+    },
+    {
+      "path": ".claude/skills/iwe-platform-redteam/references/runtime-and-integrations.md",
+      "sha256": "8e1497951291f30f116dece0368b254a4deba01da1d0606e8a8df13b5b22a161"
+    },
+    {
+      "path": ".claude/skills/iwe-platform-redteam/tests/run-calibration.sh",
+      "sha256": "2ec5f5bbf73ca5b3d8a33280108ab5fdbbd5f00a41e4c7d76de4f9f0e474f16d"
     },
     {
       "path": ".claude/skills/iwe-restore/SKILL.md",
