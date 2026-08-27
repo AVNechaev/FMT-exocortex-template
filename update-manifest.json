@@ -2321,7 +2321,7 @@
     },
     {
       "path": "scripts/route-task.sh",
-      "sha256": "d6a8a42e3607992570b1f684f6bfaa1ed97a6f985e2dc0c57b55752a9da67335"
+      "sha256": "e82346bbb334e2bcce42b24546282a886e31648ece8a19b0b6777bab9eb8fe69"
     },
     {
       "path": "scripts/run-regression-tests.sh",
@@ -2397,7 +2397,7 @@
     },
     {
       "path": "scripts/test-route-task.sh",
-      "sha256": "6f435d627517ff724bef1716695e4b97aca71097ba65971b7865217c29f4fdd1"
+      "sha256": "8b42da27ee36905e4b426edfcd1dd9d66e3a70f851d07a8e558e03a38cbe3c94"
     },
     {
       "path": "scripts/test_archive_cadence_sweep.py",
