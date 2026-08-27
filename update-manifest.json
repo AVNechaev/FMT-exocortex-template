@@ -997,7 +997,7 @@
     },
     {
       "path": "generate-manifest.sh",
-      "sha256": "f9745e6f0e4632b20a1ab85d03e8bbc28c1fda3f9ba8e969f7c5206e691481ad"
+      "sha256": "ccc13cf5f1ecbf804065215ea088672180038d34c7f7b346f41df52da669a15f"
     },
     {
       "path": "guide-kit/.gitignore",
@@ -2621,7 +2621,7 @@
     },
     {
       "path": "scripts/verify-manifest.sh",
-      "sha256": "224777b7b735b0b1be3048957b10738cd4eefb88dd30fbced42322c7d223747d"
+      "sha256": "94013dea2b59ba5bd384846b280fa706318d43a0279af69d6031dab5f2c09db7"
     },
     {
       "path": "scripts/week-draft-append.sh",
@@ -2763,6 +2763,7 @@
     "scripts/tests/test_delivery_content.py",
     "scripts/tests/test_delivery_formal.py",
     "scripts/tests/test_dry_run_gate.py",
+    "scripts/tests/test_generate_manifest_deprecated_excluded.sh",
     "scripts/tests/test_issue_529_owner_integrity.sh",
     "scripts/tests/test_issue_530_staged_self_scan.sh",
     "scripts/tests/test_issue_531_index_health_status_cell.py",
@@ -2913,6 +2914,11 @@
     {
       "path": "sessions/2026-06/2026-06-17-01-kimi-setup/report.md",
       "reason": "session transcripts archived, removed by WP-401 Ф6.1 2026-07-22"
+    },
+    {
+      "path": "scripts/tests/test_session_guard_unknown_flag.sh",
+      "reason": "moved to excluded_paths[] (scripts/tests/ blanket pattern) after being in files[] by oversight — WP-7 Ф92",
+      "excluded_confirmed": true
     }
   ]
 }

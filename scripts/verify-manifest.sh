@@ -70,6 +70,7 @@ DEP_CONFLICTS=$(python3 - "$MANIFEST" <<'PYCHECK'
 import json, subprocess, sys
 m = json.load(open(sys.argv[1]))
 delivered = {e['path'] for e in m.get('files', [])}
+excluded = set(m.get('excluded_paths', []))
 # 2026-08-22 (Codex peer-review): git ls-files без проверки кода возврата —
 # при сбое git множество tracked молча становилось пустым, и проверка
 # «deprecated ∩ дерево» деградировала fail-open. Теперь сбой git = сбой проверки.
@@ -77,7 +78,14 @@ r = subprocess.run(['git', 'ls-files'], capture_output=True, text=True)
 if r.returncode != 0:
     sys.exit('git ls-files failed: ' + r.stderr.strip())
 tracked = set(r.stdout.splitlines())
-bad = [e['path'] for e in m.get('deprecated_files', []) if e.get('path') in delivered or e.get('path') in tracked]
+# WP-7 Ф92: mirrors generate-manifest.sh — a files[] → excluded_paths[] move
+# stays deprecated (cleanup for pilots who got it while still delivered) only
+# when the entry itself is marked excluded_confirmed, not just by being tracked.
+bad = [
+    e['path'] for e in m.get('deprecated_files', [])
+    if e.get('path') in delivered
+    or (e.get('path') in tracked and not (e.get('excluded_confirmed') and e.get('path') in excluded))
+]
 print('\n'.join(bad))
 PYCHECK
 )
