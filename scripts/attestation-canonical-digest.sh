@@ -92,7 +92,9 @@ while IFS= read -r -d '' entry; do
     exit 4
   fi
 
-  printf '%s\0%s\0%s\0%s\0' "$mode" "$type" "$content_sha" "$path" >> "$TMP_RECORDS"
+  # Path first: lets the final sort key on the whole NUL-terminated record
+  # without a -t/-k argument (see note below on why -t can't carry NUL).
+  printf '%s\0%s\0%s\0%s\0' "$path" "$mode" "$type" "$content_sha" >> "$TMP_RECORDS"
 done < <(git -C "$REPO_ROOT" ls-tree -r -z "$COMMIT")
 
 if [ "$saw_any" != "true" ]; then
@@ -106,12 +108,18 @@ if [ -n "$EXCLUDED_PATH" ] && [ "$found_excluded" != "true" ]; then
 fi
 
 # Explicit re-sort by raw path bytes (not relied-upon git traversal order):
-# each record is "mode\0type\0content_sha\0path\0" — sort -z on the whole
-# 4-field NUL-delimited record sorts by mode first if we're not careful, so
-# sort by field 4 (the path) explicitly, byte-wise (LC_ALL=C), NUL-safe.
+# each record is "path\0mode\0type\0content_sha\0" with path moved to the
+# front, so a plain whole-record `sort -z` (LC_ALL=C, byte-wise) already
+# sorts by path first — paths are unique per tree, so the trailing fields
+# never need to break a tie. Deliberately NOT `-t $'\0' -k4` (the field-4
+# approach this replaced): bash cannot pass a literal NUL byte as a command
+# argument, so $'\0' arrives at `sort` as an empty string — GNU sort (Linux
+# CI) rejects that outright ("sort: empty tab", exit 2), while BSD sort
+# (macOS, where this was authored) silently tolerates it, which is why the
+# bug shipped past local testing and only broke on integration-contract-ubuntu.
 SORTED_RECORDS="$(mktemp)"
 trap 'rm -f "$TMP_RECORDS" "$SORTED_RECORDS"' EXIT
-LC_ALL=C sort -z -t $'\0' -k4 "$TMP_RECORDS" > "$SORTED_RECORDS"
+LC_ALL=C sort -z "$TMP_RECORDS" > "$SORTED_RECORDS"
 
 # Version/domain separator prefix (Codex, turn 1: prevents a digest computed
 # for an unrelated purpose from being replayed here even if the byte format

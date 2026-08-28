@@ -821,7 +821,7 @@
     },
     {
       "path": "docs/QUICK-START.md",
-      "sha256": "b9302dab6cb9d7de7852787b75a0c1b58be739312e0572a80c169f096331eda4"
+      "sha256": "66d8037c86370dd02aef648928fa4a3362429379cf0c7eac1fceffc381b9bae3"
     },
     {
       "path": "docs/RELEASE-PROCESS.md",
@@ -1957,7 +1957,7 @@
     },
     {
       "path": "scripts/attestation-canonical-digest.sh",
-      "sha256": "b447b5308428e9f2cd63c23699e26a297653beb3ab04e67335635da1fdec9184"
+      "sha256": "cd0bca61f82ed3aa59c4f1d8dd8df6835ca5543ac69f3aaaa4e53eb37549a31d"
     },
     {
       "path": "scripts/attestation-statement.schema.json",
