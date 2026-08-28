@@ -2709,7 +2709,7 @@
     },
     {
       "path": "scripts/verify-manifest.sh",
-      "sha256": "94013dea2b59ba5bd384846b280fa706318d43a0279af69d6031dab5f2c09db7"
+      "sha256": "5d2a58223e9c4d52bb0254a781b03c650142d166e900935f6c88b7d610221a97"
     },
     {
       "path": "scripts/week-draft-append.sh",
