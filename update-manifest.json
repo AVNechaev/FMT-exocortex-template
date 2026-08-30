@@ -2720,6 +2720,10 @@
       "sha256": "35c13fa3df643cade27d01f6a15e62ae0002c6adb6e9885545d47e5d8becd815"
     },
     {
+      "path": "scripts/validate-staged-artifacts.sh",
+      "sha256": "be628b27788432af3497f918c5e7a2157d0f98914ae02a2e2a6d82c7f78204da"
+    },
+    {
       "path": "scripts/verify-context-budget.sh",
       "sha256": "f5d55e0427acabe899428cdaa3b64cbc2a64c8f2c4a402041a66ba48365ea4d2"
     },
@@ -2749,7 +2753,7 @@
     },
     {
       "path": "seed/strategy/.githooks/pre-commit",
-      "sha256": "8588fd4668cee6d9808e852bb57f575b87b80103bd5ea654cc64c5de64e01a0b"
+      "sha256": "b52c3095b14d589223b1651cb5d573242cea22aa9fb7a2df0f2b010a950be8f4"
     },
     {
       "path": "seed/strategy/.githooks/pre-push",
@@ -2877,6 +2881,7 @@
     "scripts/tests/test_issue_530_staged_self_scan.sh",
     "scripts/tests/test_issue_531_index_health_status_cell.py",
     "scripts/tests/test_issue_532_dayplan_strategy_gate.sh",
+    "scripts/tests/test_issue_544_staged_precommit.sh",
     "scripts/tests/test_issue_545_sessions_root.sh",
     "scripts/tests/test_issue_555_claude_silent_loss.sh",
     "scripts/tests/test_issue_581_calendar_single_source.sh",
