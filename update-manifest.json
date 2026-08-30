@@ -2878,6 +2878,7 @@
     "scripts/tests/test_issue_531_index_health_status_cell.py",
     "scripts/tests/test_issue_532_dayplan_strategy_gate.sh",
     "scripts/tests/test_issue_555_claude_silent_loss.sh",
+    "scripts/tests/test_issue_582_audit_promoted_layout.sh",
     "scripts/tests/test_issue_583_dayopen_yaml.sh",
     "scripts/tests/test_issue_584_build_version.sh",
     "scripts/tests/test_issue_python_resolver_contract.sh",
