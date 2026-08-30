@@ -148,6 +148,10 @@
       "sha256": "07b157c5d7614939f027aa50080cabe4531aba4ebae8886038f167620daba6b9"
     },
     {
+      "path": ".claude/hooks/session-start-hooks-bootstrap.sh",
+      "sha256": "9ced3b69e749eef98bf2ccdc5a666f11064d62eb3b2dd5c20d837ef7e5a453d3"
+    },
+    {
       "path": ".claude/hooks/wp-gate-reminder.sh",
       "sha256": "a6dfaee3ebc87432236f63b33a047c52fa1a117b4d44803689cf96ba2559a84d"
     },
@@ -281,7 +285,7 @@
     },
     {
       "path": ".claude/settings.json",
-      "sha256": "3540ae0f183610eb87f987c20d13b4262078b5c5f2454f598c5ee22f501aaf0b"
+      "sha256": "280fa18d9d5e4188569c1a30e3dfe31e992975e295c9817e438dca3c66ae4b81"
     },
     {
       "path": ".claude/skills-catalog.yaml",
