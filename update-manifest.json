@@ -2221,7 +2221,7 @@
     },
     {
       "path": "scripts/iwe-audit.sh",
-      "sha256": "0863c2f389fd4a734528470aa1296f87b5097cc40d0165de020e3f543f24fa1f"
+      "sha256": "640078ac3d1de22a3abd43efd0cf2ddba518bab473d4a998eab093235bc25802"
     },
     {
       "path": "scripts/iwe-backup-check.sh",
@@ -2878,6 +2878,7 @@
     "scripts/tests/test_issue_531_index_health_status_cell.py",
     "scripts/tests/test_issue_532_dayplan_strategy_gate.sh",
     "scripts/tests/test_issue_555_claude_silent_loss.sh",
+    "scripts/tests/test_issue_582_audit_promoted_layout.sh",
     "scripts/tests/test_issue_583_dayopen_yaml.sh",
     "scripts/tests/test_issue_584_build_version.sh",
     "scripts/tests/test_issue_python_resolver_contract.sh",
