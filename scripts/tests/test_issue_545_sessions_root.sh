@@ -170,6 +170,20 @@ env -u IWE_ROOT -u IWE_TEMPLATE -u IWE_GOVERNANCE_REPO -u IWE_DS_MY_STRATEGY \
     > "$TMP/out-scaffold.txt" 2>&1 || true
 check_grep "интеграция: scaffold находит carry-over в MC-sessions" \
     "КАНАРЕЙКА_ПЕРЕНОС" "$TMP/out-scaffold.txt"
+
+# Тот же прогон БЕЗ IWE_SCRIPTS в окружении (реальная среда CI T26, issue
+# #581-регрессия): PENDING-комментарий скелета не должен тащить \$IWE_SCRIPTS
+# в раскрываемый шаблон — под set -u это было «unbound variable».
+env -u IWE_ROOT -u IWE_TEMPLATE -u IWE_GOVERNANCE_REPO -u IWE_DS_MY_STRATEGY \
+    -u IWE_RUNTIME -u IWE_WORKSPACE -u IWE_SESSIONS_ROOT -u GOVERNANCE_REPO \
+    -u IWE_SCRIPTS \
+    WORKSPACE_DIR="$WSS" \
+    bash "$WSS/FMT-exocortex-template/scripts/day-open-scaffold.sh" "$(date +%Y-%m-%d)" \
+    > "$TMP/out-scaffold-noenv.txt" 2>&1 || true
+check_grep_absent "интеграция: scaffold работает без IWE_SCRIPTS (нет unbound variable)" \
+    "unbound variable" "$TMP/out-scaffold-noenv.txt"
+check_grep "интеграция: carry-over находится и без IWE_SCRIPTS" \
+    "КАНАРЕЙКА_ПЕРЕНОС" "$TMP/out-scaffold-noenv.txt"
 # NB: строка сводки «РП закрыто: нет данных (Day Close не найден)» здесь
 # ожидаема и честна — она ключуется на git-коммит закрытия дня в governance
 # (render_yesterday), а не на файлы журналов; в фиктивном workspace его нет.
