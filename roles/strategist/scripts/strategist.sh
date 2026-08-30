@@ -199,9 +199,15 @@ ${prompt}"
     fi
     # NB: --dangerously-skip-permissions не используется — Claude Code блокирует флаг
     # под root/sudo (Linux cron). --allowedTools задаёт явный whitelist, чего достаточно.
+    # Календарный коннектор в whitelist (issue #581): без него morning-прогон не видит
+    # встречи дня ни при какой конфигурации. Имя сервера зависит от установки —
+    # переопределяется через IWE_CALENDAR_MCP_SERVERS (список через запятую);
+    # дефолт — проверенный mcp__claude_ai_Google_Calendar. Неизвестные имена в
+    # whitelist безвредны — просто никогда не совпадут.
+    local calendar_mcp="${IWE_CALENDAR_MCP_SERVERS:-mcp__claude_ai_Google_Calendar}"
     timeout "$CLAUDE_TIMEOUT" "$CLAUDE_PATH" \
         "${model_args[@]}" \
-        --allowedTools "Read,Write,Edit,Glob,Grep,Bash" \
+        --allowedTools "Read,Write,Edit,Glob,Grep,Bash,${calendar_mcp}" \
         -p "$prompt" \
         >> "$LOG_FILE" 2>&1 || rc=$?
 

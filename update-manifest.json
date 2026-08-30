@@ -361,11 +361,11 @@
     },
     {
       "path": ".claude/skills/day-open/SKILL.md",
-      "sha256": "c5309ba2ae2cff0ede10980711066efd3144eac6b863e9abb3bbf4a144758376"
+      "sha256": "99bb1148ae2b80fb4609ed48a1e6e5bf6ee670d69deffe0b9ce46048d0c3d5f5"
     },
     {
       "path": ".claude/skills/day-open/day-open-details.md",
-      "sha256": "280c0f17b8ae166eb87763af1a48430da9e3e3ec29472d5d2b920f01b3dfd8ea"
+      "sha256": "63c269059c129fc4a51cb140ca17216439f3cbdd6084d12180f14f8657b72a37"
     },
     {
       "path": ".claude/skills/day-open/templates.md",
@@ -1793,7 +1793,7 @@
     },
     {
       "path": "roles/strategist/scripts/strategist.sh",
-      "sha256": "3faf6b4cdbd657567a0acb5e17eb3c779a0e855315220782f40afa42f1531c41"
+      "sha256": "cf6cfc2de937429e4c966a3495fc20911c1d7e9c1500d8c1075dea8da773956a"
     },
     {
       "path": "roles/strategist/scripts/systemd/iwe-strategist-morning.service",
@@ -2093,7 +2093,7 @@
     },
     {
       "path": "scripts/day-close.sh",
-      "sha256": "8f9d73f8a9b90e7ae6c97deedd155cbb81d48dc8c1b2709886ef7a55c3c3b8ba"
+      "sha256": "9b73293b523d7d86322e0714f1efdd7d42276a000a754e63c50c8793d65465e8"
     },
     {
       "path": "scripts/day-open-bottleneck-patch.sh",
@@ -2137,7 +2137,7 @@
     },
     {
       "path": "scripts/day-open-scaffold.sh",
-      "sha256": "382a4b93acf9eb84932fbc7604f04f37bcd3187b9f3fa49452c031a70d22094f"
+      "sha256": "ecf5812666f503feef6397700b321ececf8e28fac46320b4f83d962d7c59210f"
     },
     {
       "path": "scripts/day-open-smoke-extended.sh",
@@ -2305,7 +2305,7 @@
     },
     {
       "path": "scripts/lib/common.sh",
-      "sha256": "a2c08644cb85a947671ac6e2f61bb293af4ed67bc6af2ecabdb85a992d0a6515"
+      "sha256": "ac0700709a939e4f0fc8c9bb504c9918e4f0a7d17694d65a7b7682ebb4979bf1"
     },
     {
       "path": "scripts/lib/day-open-hooks.sh",
@@ -2877,7 +2877,9 @@
     "scripts/tests/test_issue_530_staged_self_scan.sh",
     "scripts/tests/test_issue_531_index_health_status_cell.py",
     "scripts/tests/test_issue_532_dayplan_strategy_gate.sh",
+    "scripts/tests/test_issue_545_sessions_root.sh",
     "scripts/tests/test_issue_555_claude_silent_loss.sh",
+    "scripts/tests/test_issue_581_calendar_single_source.sh",
     "scripts/tests/test_issue_582_audit_promoted_layout.sh",
     "scripts/tests/test_issue_583_dayopen_yaml.sh",
     "scripts/tests/test_issue_584_build_version.sh",

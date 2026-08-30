@@ -185,7 +185,14 @@ fi
 # --- Deterministic context extractors (WP-7 DAP: strategy + day-close) ---
 extract_day_close_carry_over() {
   local yday="$1"
-  local sessions_dir="$IWE/${IWE_GOVERNANCE_REPO:-DS-strategy}/sessions"
+  # issue #545: корень журналов — тем же контрактом, что писатель
+  # (session-guard.sh): MC-sessions после миграции, legacy иначе. Явный
+  # IWE_SESSIONS_ROOT, если сломан, — видимый WARN, не молчаливый промах.
+  local sessions_dir
+  if ! sessions_dir=$(iwe_sessions_dir); then
+    echo "WARN: IWE_SESSIONS_ROOT=${IWE_SESSIONS_ROOT:-} недоступен — читаю legacy-путь $(iwe_resolve_governance_repo "${GOVERNANCE_REPO:-}")/sessions" >&2
+    sessions_dir="$IWE/$(iwe_resolve_governance_repo "${GOVERNANCE_REPO:-}")/sessions"
+  fi
   local month="${yday:0:7}"
   local carry_over=""
 
@@ -194,6 +201,11 @@ extract_day_close_carry_over() {
   dc_report=$(find "$sessions_dir/$month" -maxdepth 2 -type f -name "report.md" 2>/dev/null | grep -F "${yday}-" | grep -F "day-close" | head -1)
   if [ -z "$dc_report" ]; then
     dc_report=$(find "$sessions_dir/$month" -maxdepth 1 -type f -name "${yday}-day-close.md" 2>/dev/null | head -1)
+  fi
+  if [ -z "$dc_report" ]; then
+    # Плоская раскладка (журналы прямо в корне, без подпапки по месяцу) —
+    # запасной путь для установок, где писатель ещё писал плоско (issue #545).
+    dc_report=$(find "$sessions_dir" -maxdepth 1 -type f -name "${yday}*day-close*" 2>/dev/null | head -1)
   fi
   if [ -n "$dc_report" ] && [ -f "$dc_report" ]; then
     carry_over=$(awk '
@@ -228,7 +240,14 @@ extract_day_close_carry_over() {
 
 extract_strategy_context() {
   local week_num="$1"
-  local sessions_dir="$IWE/${IWE_GOVERNANCE_REPO:-DS-strategy}/sessions"
+  # issue #545: корень журналов — тем же контрактом, что писатель
+  # (session-guard.sh): MC-sessions после миграции, legacy иначе. Явный
+  # IWE_SESSIONS_ROOT, если сломан, — видимый WARN, не молчаливый промах.
+  local sessions_dir
+  if ! sessions_dir=$(iwe_sessions_dir); then
+    echo "WARN: IWE_SESSIONS_ROOT=${IWE_SESSIONS_ROOT:-} недоступен — читаю legacy-путь $(iwe_resolve_governance_repo "${GOVERNANCE_REPO:-}")/sessions" >&2
+    sessions_dir="$IWE/$(iwe_resolve_governance_repo "${GOVERNANCE_REPO:-}")/sessions"
+  fi
   local strategy_file=""
 
   # 1. Strategy session markdown. Search current AND previous month: the session for a
@@ -1133,7 +1152,14 @@ render_yesterday() {
     grep "^| " "$day_report_file" | grep -v "^| РП\|^| Время\|^|---" | sed 's/^/- /'
   else
     # Fallback: сканировать sessions напрямую за вчера если DayReport отсутствует
-    local sessions_dir="$IWE/${IWE_GOVERNANCE_REPO:-DS-strategy}/sessions"
+    # issue #545: см. extract_day_close_carry_over — корень журналов по
+    # контракту писателя (MC-sessions / legacy), сломанный явный
+    # IWE_SESSIONS_ROOT — видимый WARN.
+    local sessions_dir
+    if ! sessions_dir=$(iwe_sessions_dir); then
+      echo "WARN: IWE_SESSIONS_ROOT=${IWE_SESSIONS_ROOT:-} недоступен — читаю legacy-путь $(iwe_resolve_governance_repo "${GOVERNANCE_REPO:-}")/sessions" >&2
+      sessions_dir="$IWE/$(iwe_resolve_governance_repo "${GOVERNANCE_REPO:-}")/sessions"
+    fi
     local found=0
     # WP-529 (continuation, 19.08): resolved once here, not inside the loop —
     # this whole branch only runs when DayReport is missing (rare fallback), and
@@ -1375,11 +1401,13 @@ $(render_fleeting_notes)
 <details>
 <summary><b>Календарь ($DAY_NUM $MONTH_RU)</b></summary>
 
-<!-- PENDING: calendar — сначала вызвать mcp__ext-google-calendar__list-calendars,
-  чтобы получить собственные calendar_ids пилота (свои календари + подключённые
-  общие), затем mcp__ext-google-calendar__list-events для каждого найденного ID
-  с timeMin=$DATE 00:00 МСК, timeMax=$DATE 23:59 МСК.
+<!-- PENDING: calendar — единый источник: календарный коннектор (MCP-инструменты
+  календаря; имена зависят от установки, шаблон mcp__*calendar* — фактические имена
+  взять из списка инструментов текущей сессии). Получить список календарей пилота
+  (свои + подключённые общие), затем события каждого за $DATE (00:00–23:59 МСК).
   Показать ВСЕ события дня по всем найденным календарям.
+  Если коннектора нет — фоллбэк: bash $IWE_SCRIPTS/server-calendar.sh $DATE
+  (его «credentials не настроены» — факт о скрипте, не о календаре; issue #581).
   Формат: таблица + строка свободных блоков ≥1h. -->
 
 | Время (МСК) | Событие | Длит. | Связь с РП |
