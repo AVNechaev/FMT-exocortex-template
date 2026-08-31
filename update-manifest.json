@@ -69,7 +69,7 @@
     },
     {
       "path": ".claude/hooks/dry-run-gate.sh",
-      "sha256": "ed3ca530db9409243c8a37af45a1c324249997074633ad64d427a4bfa73886a0"
+      "sha256": "1f3f2d75cd688dceddfc407eafc3f8bec4075beeb5d618fe30ae6e92e6589a10"
     },
     {
       "path": ".claude/hooks/extensions-gate.sh",
@@ -2153,11 +2153,11 @@
     },
     {
       "path": "scripts/dry-run-begin.sh",
-      "sha256": "4ae995c686871d57d2bdad0486aeba02410064c7e881b881740b3a05b2ea8a4b"
+      "sha256": "998accf2fa2199069c6af58bc6eade22e14132a841187e07aedde6647c81405a"
     },
     {
       "path": "scripts/dry-run-complete.sh",
-      "sha256": "db22ed2587a2e0b8278b1b0dc1d91a0d3ad08ede46a34e0a54c821614809bcff"
+      "sha256": "e7712eb5c2fc68b6f675c97b626e80e5f5198c195acd2956a9ef0a60170aad23"
     },
     {
       "path": "scripts/external-tracker.py",
