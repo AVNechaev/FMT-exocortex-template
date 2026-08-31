@@ -161,6 +161,11 @@ cp "$ROOT/scripts/day-open-scaffold.sh" "$WSS/FMT-exocortex-template/scripts/"
 cp "$ROOT/scripts/lib/common.sh" "$ROOT/scripts/lib/find-python3.sh" \
    "$WSS/FMT-exocortex-template/scripts/lib/"
 cp "$ROOT/.claude/lib/iwe-env-bootstrap.sh" "$WSS/FMT-exocortex-template/.claude/lib/"
+# Скелет по дизайну НЕ генерирует DayPlan в strategy_day (exit 2) — дефолт
+# monday. Фикстура обязана ставить strategy_day на заведомо НЕ сегодняшний
+# будний день, иначе тест падает каждый понедельник (поймано 31.08).
+STRAT_DAY=$(date -v+1d +%A 2>/dev/null | tr 'A-Z' 'a-z' || date -d "tomorrow" +%A | tr 'A-Z' 'a-z')
+printf 'day_open:\n  strategy_day: %s\n' "$STRAT_DAY" > "$WSS/DS-strategy/exocortex/day-rhythm-config.yaml"
 printf '## 1. Открытые вопросы\n\n- КАНАРЕЙКА_ПЕРЕНОС: доделать X\n\n## 2. Прочее\n' \
     > "$WSS/MC-sessions/$YMONTH/${YESTERDAY}-demo-day-close/report.md"
 env -u IWE_ROOT -u IWE_TEMPLATE -u IWE_GOVERNANCE_REPO -u IWE_DS_MY_STRATEGY \
