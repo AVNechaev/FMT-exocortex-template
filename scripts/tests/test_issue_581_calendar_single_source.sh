@@ -30,6 +30,8 @@ check_grep_absent "seed scaffold: нет mcp__ext-google-calendar" \
 check_grep "SKILL 4c: коннектор первичен" \
     'Единый источник — подключённый календарный коннектор' \
     "$ROOT/.claude/skills/day-open/SKILL.md"
+check_grep "SKILL 4c: регистр имени коннектора оговорён" \
+    'без учёта регистра' "$ROOT/.claude/skills/day-open/SKILL.md"
 check_grep "SKILL 4c: скрипт — фоллбэк" \
     'фоллбэк' "$ROOT/.claude/skills/day-open/SKILL.md"
 check_grep "details 4c: скрипт помечен фоллбэком" \
@@ -44,6 +46,17 @@ check_grep "scaffold PENDING: коннектор первичен" \
     'единый источник: календарный коннектор' "$ROOT/scripts/day-open-scaffold.sh"
 check_grep "scaffold PENDING: фоллбэк назван" \
     'server-calendar.sh' "$ROOT/scripts/day-open-scaffold.sh"
+
+# 3b. Morning-сценарий day-plan.md: календарь — явный шаг, коннектор первичен,
+# атрибуция «credentials» скрипту сохранена.
+check_grep "day-plan.md: шаг календаря через коннектор" \
+    'mcp__claude_ai_Google_Calendar__*' "$ROOT/roles/strategist/prompts/day-plan.md"
+check_grep "day-plan.md: регистр имени коннектора оговорён" \
+    'без учёта регистра' "$ROOT/roles/strategist/prompts/day-plan.md"
+check_grep "day-plan.md: «credentials не настроены» — факт о скрипте" \
+    'факт об отсутствии файла ключей у СКРИПТА' "$ROOT/roles/strategist/prompts/day-plan.md"
+check_grep "day-plan.md: честный маркер недоступности" \
+    'ни коннектор, ни файл ключей' "$ROOT/roles/strategist/prompts/day-plan.md"
 
 # 4. Morning-прогон: календарный сервер в whitelist, имя конфигурируемо.
 check_grep "strategist: календарный коннектор в --allowedTools" \

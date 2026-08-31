@@ -361,11 +361,11 @@
     },
     {
       "path": ".claude/skills/day-open/SKILL.md",
-      "sha256": "99bb1148ae2b80fb4609ed48a1e6e5bf6ee670d69deffe0b9ce46048d0c3d5f5"
+      "sha256": "c23d798b21fff625fb80271b17d84b937203221044e6ced06f1e61deec95cc19"
     },
     {
       "path": ".claude/skills/day-open/day-open-details.md",
-      "sha256": "63c269059c129fc4a51cb140ca17216439f3cbdd6084d12180f14f8657b72a37"
+      "sha256": "37172dfebeb48f276963e129120aec72f824632346e75ee1abb7d0d55e9e7f89"
     },
     {
       "path": ".claude/skills/day-open/templates.md",
@@ -1669,7 +1669,7 @@
     },
     {
       "path": "roles/strategist/prompts/day-plan.md",
-      "sha256": "e6472a47438198a96bde2495cbfd2f6c0e0e040b28f5379e06704445773f1148"
+      "sha256": "d31d486744b069d87b3f964228547d40e12120ab6f3db0f5bf8a3e9885b9d52d"
     },
     {
       "path": "roles/strategist/prompts/evening.md",
@@ -2137,7 +2137,7 @@
     },
     {
       "path": "scripts/day-open-scaffold.sh",
-      "sha256": "d5ec10b64f969796bdafd0ba96fc85e46e69619d389bb75d2ab6f05dbe7e8523"
+      "sha256": "bb08a935dcdffb045df29b4d27d3fb87e5bfd2c05caafedc5adf42171b72e9b2"
     },
     {
       "path": "scripts/day-open-smoke-extended.sh",
