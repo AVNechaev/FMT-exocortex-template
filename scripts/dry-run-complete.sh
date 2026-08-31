@@ -47,9 +47,15 @@ fail() { echo "dry-run-complete: $*" >&2; exit 2; }
 # повторять их, не только комментировать).
 [ -L "$DRY_DIR" ] && fail "dir $DRY_DIR is a symlink — refusing"
 [ -d "$DRY_DIR" ] || fail "no dry-run dir $DRY_DIR (gate_id неизвестен)"
-OWNER_UID=$(stat -f %u "$DRY_DIR" 2>/dev/null || stat -c %u "$DRY_DIR" 2>/dev/null)
+case "$(uname)" in
+    Darwin) OWNER_UID=$(stat -f %u "$DRY_DIR" 2>/dev/null || true) ;;
+    *)      OWNER_UID=$(stat -c %u "$DRY_DIR" 2>/dev/null || true) ;;
+esac
 [ "$OWNER_UID" = "$(id -u)" ] || fail "dir $DRY_DIR owned by uid $OWNER_UID"
-PERMS=$(stat -f %Lp "$DRY_DIR" 2>/dev/null || stat -c %a "$DRY_DIR" 2>/dev/null)
+case "$(uname)" in
+    Darwin) PERMS=$(stat -f %Lp "$DRY_DIR" 2>/dev/null || true) ;;
+    *)      PERMS=$(stat -c %a "$DRY_DIR" 2>/dev/null || true) ;;
+esac
 [ -n "$PERMS" ] && [ $(( 8#$PERMS & 077 )) -eq 0 ] || fail "dir $DRY_DIR has group/other write permissions ($PERMS)"
 
 tries=0
@@ -124,7 +130,10 @@ esac
 # Sentinel снимается ТОЛЬКО после completed и ТОЛЬКО если он ссылается на
 # этот же gate_id — и это обычный файл того же владельца (lstat, Codex r1).
 if [ -f "$SENTINEL" ] && [ ! -L "$SENTINEL" ]; then
-    S_UID=$(stat -f %u "$SENTINEL" 2>/dev/null || stat -c %u "$SENTINEL" 2>/dev/null)
+    case "$(uname)" in
+    Darwin) S_UID=$(stat -f %u "$SENTINEL" 2>/dev/null || true) ;;
+    *)      S_UID=$(stat -c %u "$SENTINEL" 2>/dev/null || true) ;;
+esac
     [ "$S_UID" = "$(id -u)" ] || fail "sentinel $SENTINEL owned by uid $S_UID"
     S_GID=$(jq -r '.gate_id // empty' "$SENTINEL" 2>/dev/null || true)
     if [ "$S_GID" = "$GATE_ID" ]; then

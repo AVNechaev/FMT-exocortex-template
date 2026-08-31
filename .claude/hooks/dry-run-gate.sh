@@ -315,7 +315,10 @@ fi
 # не только по TTL ниже. Sentinel старого формата (без gate_id) идёт по
 # прежнему пути TTL+whitelist без изменений.
 # lstat-инварианты sentinel (Codex r1): обычный файл того же владельца.
-S_UID=$(stat -f %u "$SENTINEL" 2>/dev/null || stat -c %u "$SENTINEL" 2>/dev/null || true)
+case "$(uname)" in
+    Darwin) S_UID=$(stat -f %u "$SENTINEL" 2>/dev/null || true) ;;
+    *)      S_UID=$(stat -c %u "$SENTINEL" 2>/dev/null || true) ;;
+esac
 [ -n "$S_UID" ] && [ "$S_UID" = "$(id -u)" ] || fail_closed "sentinel $SENTINEL owned by uid ${S_UID:-unknown}, expected $(id -u)"
 SENTINEL_GID=$(jq -r '.gate_id // empty' "$SENTINEL" 2>/dev/null || true)
 if [ -n "$SENTINEL_GID" ]; then

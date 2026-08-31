@@ -38,9 +38,15 @@ fail() { echo "dry-run-begin: $*" >&2; exit 1; }
 if [ ! -d "$DRY_DIR" ]; then
     mkdir -m 0700 "$DRY_DIR" 2>/dev/null || fail "cannot create $DRY_DIR with 0700"
 fi
-OWNER_UID=$(stat -f %u "$DRY_DIR" 2>/dev/null || stat -c %u "$DRY_DIR" 2>/dev/null)
+case "$(uname)" in
+    Darwin) OWNER_UID=$(stat -f %u "$DRY_DIR" 2>/dev/null || true) ;;
+    *)      OWNER_UID=$(stat -c %u "$DRY_DIR" 2>/dev/null || true) ;;
+esac
 [ "$OWNER_UID" = "$(id -u)" ] || fail "dir owned by uid $OWNER_UID"
-PERMS=$(stat -f %Lp "$DRY_DIR" 2>/dev/null || stat -c %a "$DRY_DIR" 2>/dev/null)
+case "$(uname)" in
+    Darwin) PERMS=$(stat -f %Lp "$DRY_DIR" 2>/dev/null || true) ;;
+    *)      PERMS=$(stat -c %a "$DRY_DIR" 2>/dev/null || true) ;;
+esac
 [ -n "$PERMS" ] && [ $(( 8#$PERMS & 077 )) -eq 0 ] || fail "dir $DRY_DIR has group/other write permissions ($PERMS)"
 
 tries=0
