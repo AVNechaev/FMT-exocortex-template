@@ -539,9 +539,14 @@ def _prepare_database(paths: ProfilePaths, *, create: bool) -> bool:
 def _connect(paths: ProfilePaths, *, create: bool) -> sqlite3.Connection | None:
     if not _prepare_database(paths, create=create):
         return None
-    connection = sqlite3.connect(paths.database, timeout=5)
+    # 30s (было 5s): десятки параллельных писателей (хуки нескольких агентов
+    # одновременно) на нагруженном хосте периодически превышали 5s очереди на
+    # блокировке — "database is locked" и в проде, и в CI (issue-tests 533,
+    # мерцал на каждом втором прогоне). busy_timeout остаётся ограничением
+    # ожидания, не бесконечным зависанием.
+    connection = sqlite3.connect(paths.database, timeout=30)
     connection.row_factory = sqlite3.Row
-    connection.execute("PRAGMA busy_timeout=5000")
+    connection.execute("PRAGMA busy_timeout=30000")
     try:
         _migrate(connection)
         _harden_database_files(paths)
