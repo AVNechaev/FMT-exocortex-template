@@ -732,6 +732,10 @@
       "sha256": "af6d4f4f3b7b4b07faef627856bd77c28ac0a957b42fcb9c8b68ff7f460094d4"
     },
     {
+      "path": ".gitleaks.toml",
+      "sha256": "1d86da22e3faa02a9c9789a8cfe5b000ce7daae9d04e3a99530fec2ca899d57c"
+    },
+    {
       "path": ".mcp.json",
       "sha256": "ecd2f0ef900004f49208fed8f71500ca23876807a0cd3ae3525de306f25df6d8"
     },
