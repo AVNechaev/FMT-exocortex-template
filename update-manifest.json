@@ -69,7 +69,7 @@
     },
     {
       "path": ".claude/hooks/dry-run-gate.sh",
-      "sha256": "45325b52ede9fab9a7cf65cc68ecfe58f619ef281a336f005474e7c7805eed19"
+      "sha256": "1f3f2d75cd688dceddfc407eafc3f8bec4075beeb5d618fe30ae6e92e6589a10"
     },
     {
       "path": ".claude/hooks/extensions-gate.sh",
@@ -117,7 +117,7 @@
     },
     {
       "path": ".claude/hooks/protocol-stop-gate.sh",
-      "sha256": "e6dee756c37e45edf95849f2fa083657eb28832b87c29ebc116c88ac5bc2fe2d"
+      "sha256": "40e9d2b474fe71719fb704cb4d1b2415bc8e52272bcca5519baff64dd38ed9dd"
     },
     {
       "path": ".claude/hooks/pull-on-touch.sh",
@@ -325,7 +325,7 @@
     },
     {
       "path": ".claude/skills/audit-installation/SKILL.md",
-      "sha256": "931d80593488a1eb60090ddcad18ede87fce1fcf3b8e6c5e1bb0e424199bc606"
+      "sha256": "2ab7fc246cdd75827d47c538a20a91947db313e58aaac6d1866a718b5de954ac"
     },
     {
       "path": ".claude/skills/author-mode/SKILL.md",
@@ -1405,7 +1405,7 @@
     },
     {
       "path": "memory/dry-run-contract.md",
-      "sha256": "50b328a36c8ccda742ce45452c657e16e849f2d027bf96cdee971534458277cc"
+      "sha256": "fc1aa32ffbbd041c9f35c540b261e9c645d47221c9159042367852c99ec0f6ee"
     },
     {
       "path": "memory/feedback_community_communication_style.md",
@@ -2152,6 +2152,14 @@
       "sha256": "4324e682ec690e2ef565f7c99ba580e5d80556bccb73d36ca39b8ee096a2decf"
     },
     {
+      "path": "scripts/dry-run-begin.sh",
+      "sha256": "998accf2fa2199069c6af58bc6eade22e14132a841187e07aedde6647c81405a"
+    },
+    {
+      "path": "scripts/dry-run-complete.sh",
+      "sha256": "e7712eb5c2fc68b6f675c97b626e80e5f5198c195acd2956a9ef0a60170aad23"
+    },
+    {
       "path": "scripts/external-tracker.py",
       "sha256": "d248cb83b373ad9e8e71c6af6a42634d8dde25c5a56ba2ef667627109321ad9b"
     },
@@ -2883,6 +2891,7 @@
     "scripts/tests/test_issue_532_dayplan_strategy_gate.sh",
     "scripts/tests/test_issue_544_staged_precommit.sh",
     "scripts/tests/test_issue_545_sessions_root.sh",
+    "scripts/tests/test_issue_549_dryrun_redesign.sh",
     "scripts/tests/test_issue_555_claude_silent_loss.sh",
     "scripts/tests/test_issue_581_calendar_single_source.sh",
     "scripts/tests/test_issue_582_audit_promoted_layout.sh",
