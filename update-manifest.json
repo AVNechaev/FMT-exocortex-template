@@ -2153,7 +2153,7 @@
     },
     {
       "path": "scripts/dry-run-begin.sh",
-      "sha256": "bb63a40f04274221b5f064950846c9bc9af42a3f9467265253de409a66bc34bc"
+      "sha256": "4ae995c686871d57d2bdad0486aeba02410064c7e881b881740b3a05b2ea8a4b"
     },
     {
       "path": "scripts/dry-run-complete.sh",
