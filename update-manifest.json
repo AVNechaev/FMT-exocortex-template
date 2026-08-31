@@ -1925,7 +1925,7 @@
     },
     {
       "path": "scripts/agent-fault/iwe_checklist_memory.py",
-      "sha256": "2c9fe09b959ca6c8c1c1db66f148388e97e2f92b2e4b4abd310962526bed03a4"
+      "sha256": "0e498f9aa925f3a91c031fd2a10823a53f0d350d6fdb09b086d703ae4035ea79"
     },
     {
       "path": "scripts/agent-heartbeat.sh",
