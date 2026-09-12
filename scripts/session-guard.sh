@@ -1538,6 +1538,45 @@ validate_orz() { # <orz-path> <agent> [orz-base-dir, default $ORZ_DIR] [tracked-
   return $errors
 }
 
+_append_direct_close_ledger() { # <validated terminal receipt>
+  local receipt="$1" writer="$IWE_ROOT/$GOV_REPO/scripts/ledger-append.sh"
+  local metadata period payload
+  if [ ! -f "$writer" ]; then
+    echo "  ⚠️  ledger session_closed_direct не записан: ledger-append.sh отсутствует" >&2
+    return 0
+  fi
+  # Only receipt fields are projected: a retry has no live close variables,
+  # and its date must stay in the original close's ledger partition.
+  if ! metadata=$(python3 - "$receipt" <<'PY'
+from datetime import datetime
+import json
+from pathlib import Path
+import sys
+
+keys = {"wp", "slug", "agent", "close_path", "session_id", "close_attempt_id", "closed_at"}
+fields = {}
+for line in Path(sys.argv[1]).read_text(encoding="utf-8").splitlines():
+    key, separator, value = line.partition(": ")
+    if separator and key in keys:
+        if key in fields:
+            raise ValueError(f"duplicate receipt field: {key}")
+        fields[key] = value
+closed_at = datetime.fromisoformat(fields.pop("closed_at").replace("Z", "+00:00"))
+print(closed_at.astimezone().date().isoformat())
+print(json.dumps(fields))
+PY
+  ); then
+    echo "  ⚠️  ledger session_closed_direct не записан: повреждены метаданные закрытия" >&2
+    return 0
+  fi
+  period="${metadata%%$'\n'*}"
+  payload="${metadata#*$'\n'}"
+  IWE_LEDGER_DIR="${IWE_LEDGER_DIR:-$IWE_ROOT/$GOV_REPO/machine/ledger}" \
+    bash "$writer" day "$period" session_closed_direct "$payload" session-guard \
+    >/dev/null 2>&1 \
+    || echo "  ⚠️  ledger session_closed_direct не записан (best-effort, не блокирует close)" >&2
+}
+
 # --- CLOSE ---
 if [ "$CMD" = "close" ]; then
   [ "${#POSITIONAL[@]}" -eq 0 ] || fail "close не принимает позиционные аргументы" 1
@@ -1589,7 +1628,10 @@ if [ "$CMD" = "close" ]; then
         "$AGENT_STATUS_SCRIPT" --session-id "$SESSION_ID_ARG" --personality "$CLOSED_PERSONALITY" \
           "$AGENT" idle "" "" 2>/dev/null || true
       fi
-      echo "Session CLOSE: ${CLOSED_WP:-unknown} — durable receipt уже terminal; проекции сверены ✅"
+      if grep -q '^close_path: peer-session$' "$EXACT_CLOSED"; then
+        _append_direct_close_ledger "$EXACT_CLOSED"
+      fi
+      echo "Session CLOSE: ${CLOSED_WP:-unknown} — закрытие подтверждено существующей квитанцией ✅"
       exit 0
     fi
   fi
@@ -1655,6 +1697,10 @@ if [ "$CMD" = "close" ]; then
   RUNNER_GRAPH="$IWE_ROOT/$GOV_REPO/scripts/processes/quick-close.yaml"
   if [ ! -f "$RUNNER_BIN" ] || [ ! -f "$RUNNER_GRAPH" ]; then
     echo "Session CLOSE: runner_check=not_applicable — process-runner не установлен, ручной Quick Close"
+    # Peer-close still needs its ledger projection on a fresh installation.
+    if grep -q '^close_path: peer-session$' "${SEM_FILE:-}" 2>/dev/null; then
+      FORCED_CARD="declared-peer-session:$SLUG"
+    fi
   else
   # Quick Close — не текстовая декларация: именно терминальная карточка раннера
   # доказывает, что эта сессия прошла обязательный процесс. Сопоставление по slug
@@ -1790,16 +1836,8 @@ $_repo"
   # force-no-reflection). Условие обязательно: без него событие писалось бы и
   # для нормального завершённого раннера, задваивая r23_verdict тем же
   # смыслом под другим именем. Никогда не проваливает close.
-  if [ -n "${FORCED_CARD:-}" ] && [ -f "$IWE_ROOT/$GOV_REPO/scripts/ledger-append.sh" ]; then
-    _cp_from_sem=$(grep "^close_path: " "$_sem_read" 2>/dev/null | cut -d' ' -f2- || echo "unknown")
-    _direct_event=$(python3 -c '
-import json, sys
-print(json.dumps({"wp": sys.argv[1], "slug": sys.argv[2], "agent": sys.argv[3], "close_path": sys.argv[4]}))
-' "$WP" "$SLUG" "$AGENT" "$_cp_from_sem" 2>/dev/null) || _direct_event=""
-    if [ -n "$_direct_event" ]; then
-      bash "$IWE_ROOT/$GOV_REPO/scripts/ledger-append.sh" day "$(now_date)" session_closed_direct "$_direct_event" session-guard \
-        >/dev/null 2>&1 || echo "  ⚠️  ledger session_closed_direct не записан (best-effort, не блокирует close)" >&2
-    fi
+  if [ -n "${FORCED_CARD:-}" ]; then
+    _append_direct_close_ledger "$_sem_read"
   fi
 
   exit 0

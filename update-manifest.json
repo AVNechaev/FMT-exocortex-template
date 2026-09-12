@@ -1149,7 +1149,7 @@
     },
     {
       "path": "generate-manifest.sh",
-      "sha256": "21d30b236b7fa4bfd3ad931ace08219782037966a142bb61a3fd8a632f8778d6"
+      "sha256": "6fc2199a7662e4934746c06ad6b63ec23b76289ec426c273efa0ce5cb19689c3"
     },
     {
       "path": "guide-kit/.gitignore",
@@ -2213,7 +2213,7 @@
     },
     {
       "path": "scripts/day-open-llm-fill.py",
-      "sha256": "bf9aa003ff7f34987f68c58285c10c627e2dde92accd1a1ae8244e8d0e7acb92"
+      "sha256": "7243271376023bd450ab9d129a4974f196731a1624d32eb3e5c97b5db730e66d"
     },
     {
       "path": "scripts/day-open-multiplier-backfill-patch.py",
@@ -2405,7 +2405,7 @@
     },
     {
       "path": "scripts/ledger-append.sh",
-      "sha256": "6a7f4f22ce6281e3b195d4f15930bf96cc92ae873303ae06143528242175c5eb"
+      "sha256": "faab91cc4b183bf81affa0d51e2cdb896ad17521b4893fa192c2e7520cb04b03"
     },
     {
       "path": "scripts/lesson-close.sh",
@@ -2557,7 +2557,7 @@
     },
     {
       "path": "scripts/session-guard.sh",
-      "sha256": "7106f3a9004e9f448c478da0a3e8c75362122046ffdbd60d445bb257ab37bd75"
+      "sha256": "bc6ed724de1227c6edf4229b4a872960e1d66847de8d7423c0fefdbaf73a76c6"
     },
     {
       "path": "scripts/settings-promote.sh",
@@ -2801,7 +2801,7 @@
     },
     {
       "path": "scripts/tests/test_session_guard_hypothesis_gate.sh",
-      "sha256": "1c30d6e56c915a401385bdc43dfdb348703281c1080458931054c00c3a82dcb7"
+      "sha256": "a2ffd22d845d6fba8a3e07e2da388b798e314687cd743a772e5d48bf8d0c7048"
     },
     {
       "path": "scripts/tests/test_update_build_runtime_fail_closed.sh",
@@ -2933,7 +2933,7 @@
     },
     {
       "path": "seed/strategy/scripts/day-open-llm-fill.py",
-      "sha256": "21ed75881d7c07c1beb5967112a67f5cc5cdf53674f774fb737abd64fb029f24"
+      "sha256": "357549fb60f334993f9814493a7362a4d7b6f7b3bb43073edc084b343f1b5a8b"
     },
     {
       "path": "seed/strategy/scripts/day-open-multiplier-backfill-patch.py",
@@ -2969,7 +2969,7 @@
     },
     {
       "path": "seed/strategy/scripts/ledger-append.sh",
-      "sha256": "ec7d819c6b8c27bf90dbc7a18bcd3ac042663075e944f71b160c79a1423f8700"
+      "sha256": "3d8e85e5bffdfa1ad10dce8284fc21450ec03ea7170a1e2312bd7afdb703301d"
     },
     {
       "path": "seed/strategy/scripts/lib/common.sh",
@@ -2986,6 +2986,10 @@
     {
       "path": "seed/strategy/scripts/lib/ledger-path.sh",
       "sha256": "ed4e4441ac98b118b5b5ae356ee971a12e54e6a3331901bc36ad821ba10244e4"
+    },
+    {
+      "path": "seed/strategy/scripts/lib/ledger-publish-kick.sh",
+      "sha256": "8a08155b48355edc329c06af4dc96c2ec290a1776aaffc520c6a30aecb5dc673"
     },
     {
       "path": "seed/strategy/scripts/lib/ledger_path.py",
@@ -3091,6 +3095,8 @@
     "scripts/iwe-trace.py",
     "scripts/session-dispatcher-tsekh.py",
     "scripts/tests/conftest.py",
+    "scripts/tests/day-open-llm-fill-today-plan-detect-smoke.sh",
+    "scripts/tests/day-open-world-fill-smoke.sh",
     "scripts/tests/lib/extract-update-download-batch.sh",
     "scripts/tests/session-guard-audit-validate-orz-batch-smoke.sh",
     "scripts/tests/test-update-extractor-feeders.sh",

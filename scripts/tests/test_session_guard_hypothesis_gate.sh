@@ -10,6 +10,56 @@ GUARD="$ROOT_DIR/scripts/session-guard.sh"
 GOV="$TMP_DIR/DS-strategy"
 SESSIONS="$TMP_DIR/.iwe-runtime/sessions"
 
+# Exercise the delivered writer and its actual seed dependencies. A stub keeps
+# ledger writes local even on hosts with an active ledger-publish service.
+mkdir -p "$GOV/scripts" "$TMP_DIR/bin"
+cp "$ROOT_DIR/seed/strategy/scripts/ledger-append.sh" "$GOV/scripts/"
+cp -R "$ROOT_DIR/seed/strategy/scripts/lib" "$GOV/scripts/lib"
+LEDGER_DIR="$GOV/machine/ledger"
+unset IWE_LEDGER_DIR
+export LEDGER_PUBLISH_STUB_LOG="$TMP_DIR/publisher-stub.log"
+cat > "$TMP_DIR/bin/systemctl" <<'SYSTEMCTL'
+#!/usr/bin/env bash
+printf '%s\n' "$*" >> "$LEDGER_PUBLISH_STUB_LOG"
+SYSTEMCTL
+chmod +x "$TMP_DIR/bin/systemctl"
+export TEST_REAL_DATE="$(command -v date)"
+cat > "$TMP_DIR/bin/date" <<'DATE'
+#!/usr/bin/env bash
+if [ "$*" = '+%Y-%m-%d' ] && [ -n "${TEST_CLOSE_DATE:-}" ]; then
+  printf '%s\n' "$TEST_CLOSE_DATE"
+else
+  exec "$TEST_REAL_DATE" "$@"
+fi
+DATE
+chmod +x "$TMP_DIR/bin/date"
+export PATH="$TMP_DIR/bin:$PATH"
+
+assert_direct_closes() {
+  python3 - "$LEDGER_DIR" "$SESSIONS" "$@" <<'PY'
+from pathlib import Path
+import sys
+import yaml
+
+events = []
+for path in sorted(Path(sys.argv[1]).rglob("*.yaml")):
+    events.extend(yaml.safe_load(path.read_text())["events"])
+expected = sys.argv[3:]
+assert len(events) == len(expected), (events, expected)
+for event, slug in zip(events, expected):
+    assert event["kind"] == "session_closed_direct", event
+    assert event["source"] == "session-guard", event
+    receipt = Path(sys.argv[2]) / f"kimi-{slug}.open.closed"
+    attempts = [row.split(": ", 1)[1] for row in receipt.read_text().splitlines()
+                if row.startswith("close_attempt_id: ")]
+    assert len(attempts) == 1, attempts
+    assert event["data"] == {
+        "wp": "WP-001", "slug": slug, "agent": "kimi", "close_path": "peer-session",
+        "session_id": slug, "close_attempt_id": attempts[0]
+    }, event
+PY
+}
+
 mkdir -p "$GOV/inbox/WP-001"
 git -C "$GOV" init -q
 git -C "$GOV" config user.name "Session Guard Test"
@@ -127,6 +177,7 @@ chmod +x "$TMP_DIR/scripts/agent-status-report.sh"
 
 IWE_ROOT="$TMP_DIR" IWE_GOVERNANCE_REPO="DS-strategy" \
   bash "$GUARD" close --agent kimi --session-id exact-a >/dev/null
+assert_direct_closes exact-a
 [ ! -e "$SEM_A" ] && [ -f "$SEM_A.closed" ] \
   || { echo "FAIL: durable close did not leave exactly the terminal receipt" >&2; exit 1; }
 python3 - "$SEM_A.closed" <<'PY'
@@ -179,6 +230,7 @@ mv "$SEM_A.closed" "$TMP_DIR/exact-a.closed.rejected-copy"
 mv "$TMP_DIR/exact-a.closed.original" "$SEM_A.closed"
 IWE_ROOT="$TMP_DIR" IWE_GOVERNANCE_REPO="DS-strategy" \
   bash "$GUARD" close --agent kimi --session-id exact-a >/dev/null
+assert_direct_closes exact-a
 
 # Even with a valid attempt UUID and a corrected inode field, a receipt copied
 # under another exact session name must fail its bound terminal destination.
@@ -231,14 +283,18 @@ if [ ! -f "$SEM_B" ] || ! grep -qxF 'foreign terminal' "$SEM_B.closed"; then
   exit 1
 fi
 rm -f "$SEM_B.closed"
+# The update-delivered root copy must preserve the same producer contract.
+cp "$ROOT_DIR/scripts/ledger-append.sh" "$GOV/scripts/ledger-append.sh"
 IWE_ROOT="$TMP_DIR" IWE_GOVERNANCE_REPO="DS-strategy" \
   bash "$GUARD" close --agent kimi --session-id exact-b >/dev/null
+assert_direct_closes exact-a exact-b
 B_CLOSE_ATTEMPT=$(sed -n 's/^close_attempt_id: //p' "$SEM_B.closed")
 B_CLOSED_INODE=$(python3 -c 'import os,sys; print(os.stat(sys.argv[1]).st_ino)' "$SEM_B.closed")
 
-# Simulate a crash after durable hard-link publication but before unlink.
+# Simulate a crash after durable hard-link publication but before unlink, then
+# retry on another day: projection must retain the original close's partition.
 ln "$SEM_B.closed" "$SEM_B"
-IWE_ROOT="$TMP_DIR" IWE_GOVERNANCE_REPO="DS-strategy" \
+TEST_CLOSE_DATE=2099-01-01 IWE_ROOT="$TMP_DIR" IWE_GOVERNANCE_REPO="DS-strategy" \
   bash "$GUARD" close --agent kimi --session-id exact-b >/dev/null
 [ ! -e "$SEM_B" ] && [ -f "$SEM_B.closed" ] \
   || { echo "FAIL: close retry did not finish a same-inode terminal transition" >&2; exit 1; }
@@ -248,5 +304,91 @@ IWE_ROOT="$TMP_DIR" IWE_GOVERNANCE_REPO="DS-strategy" \
   || { echo "FAIL: crash retry replaced the bound terminal inode" >&2; exit 1; }
 IWE_ROOT="$TMP_DIR" IWE_GOVERNANCE_REPO="DS-strategy" \
   bash "$GUARD" close --agent kimi --session-id exact-b >/dev/null
+assert_direct_closes exact-a exact-b
+[ "$(wc -l < "$LEDGER_PUBLISH_STUB_LOG" | tr -d ' ')" = 2 ] \
+  || { echo "FAIL: publisher was not stubbed exactly once per ledger append" >&2; exit 1; }
+
+if bash "$GOV/scripts/ledger-append.sh" day "$(date +%F)" unsupported_kind '{}' \
+  >"$TMP_DIR/invalid-kind.log" 2>&1; then
+  echo "FAIL: unsupported event kind was accepted" >&2
+  exit 1
+fi
+assert_direct_closes exact-a exact-b
+
+# The writer is independently callable: a reused attempt id in another session
+# must not hide that session, and legacy producers remain append-only.
+python3 - "$GOV/scripts/ledger-append.sh" "$TMP_DIR/dedup-ledger" <<'PY'
+from datetime import date
+import json
+import os
+from pathlib import Path
+import subprocess
+import sys
+import yaml
+
+writer, ledger_dir = sys.argv[1:]
+env = dict(os.environ, IWE_LEDGER_DIR=ledger_dir)
+kick_log = Path(os.environ["LEDGER_PUBLISH_STUB_LOG"])
+
+def append(data):
+    subprocess.run(
+        ["bash", writer, "day", date.today().isoformat(), "session_closed_direct",
+         json.dumps(data), "smoke-test"],
+        env=env, check=True, capture_output=True, text=True,
+    )
+
+first = {"session_id": "session-one", "close_attempt_id": "same-attempt"}
+append(first)
+ledger_file, = Path(ledger_dir).rglob("*.yaml")
+before = ledger_file.read_bytes()
+kicks_before = kick_log.read_bytes()
+append(first)
+assert ledger_file.read_bytes() == before, "duplicate rewrote the ledger"
+assert kick_log.read_bytes() == kicks_before, "duplicate started the publisher"
+append({**first, "session_id": "session-two"})
+assert len(yaml.safe_load(ledger_file.read_text())["events"]) == 2
+for legacy in ({}, {"close_attempt_id": "same-attempt"}, {"session_id": "session-one"},
+               {**first, "session_id": 1}, {**first, "close_attempt_id": True}):
+    count = len(yaml.safe_load(ledger_file.read_text())["events"])
+    append(legacy)
+    append(legacy)
+    assert len(yaml.safe_load(ledger_file.read_text())["events"]) == count + 2
+print("PASS: session-scoped retry dedup preserves bytes, publisher and legacy events")
+PY
+
+# A normal manual close keeps its previous no-runner behavior. A peer close
+# whose ledger writer fails must leave a warning and no invented event.
+for CASE in ordinary ledger-error; do
+  CASE_CLOSE_PATH=unknown
+  [ "$CASE" != ledger-error ] || CASE_CLOSE_PATH=peer-session
+  IWE_ROOT="$TMP_DIR" IWE_GOVERNANCE_REPO="DS-strategy" \
+    bash "$GUARD" open --wp WP-001 --agent kimi --slug "$CASE" \
+    --session-id "$CASE" --owner-pid "$$" --close-path "$CASE_CLOSE_PATH" >/dev/null
+  git -C "$GOV" add sessions
+  git -C "$GOV" commit -qm "test: prepare $CASE receipt"
+  if [ "$CASE" = ledger-error ]; then
+    printf '#!/usr/bin/env bash\nexit 1\n' > "$GOV/scripts/ledger-append.sh"
+  fi
+  IWE_ROOT="$TMP_DIR" IWE_GOVERNANCE_REPO="DS-strategy" \
+    bash "$GUARD" close --agent kimi --session-id "$CASE" \
+    >"$TMP_DIR/$CASE.log" 2>&1
+  [ -f "$SESSIONS/kimi-$CASE.open.closed" ] && [ ! -e "$SESSIONS/kimi-$CASE.open" ] \
+    || { echo "FAIL: $CASE close lost its terminal receipt" >&2; exit 1; }
+  grep -q 'runner_check=not_applicable' "$TMP_DIR/$CASE.log" \
+    || { echo "FAIL: $CASE fixture unexpectedly depended on an installed runner" >&2; exit 1; }
+  assert_direct_closes exact-a exact-b
+done
+grep -q 'ledger session_closed_direct не записан' "$TMP_DIR/ledger-error.log" \
+  || { echo "FAIL: failed ledger projection was not reported" >&2; exit 1; }
+
+cp "$ROOT_DIR/scripts/ledger-append.sh" "$GOV/scripts/ledger-append.sh"
+for RETRY in 1 2; do
+  [ ! -e "$SESSIONS/kimi-ledger-error.open" ] \
+    || { echo "FAIL: terminal replay fixture recreated the open receipt" >&2; exit 1; }
+  TEST_CLOSE_DATE=2099-01-01 IWE_ROOT="$TMP_DIR" IWE_GOVERNANCE_REPO="DS-strategy" \
+    bash "$GUARD" close --agent kimi --session-id ledger-error >/dev/null
+  assert_direct_closes exact-a exact-b ledger-error
+done
+echo "PASS: terminal replay restores a failed ledger projection without reopening the session"
 
 echo "PASS: hypothesis, exact-id, no-create heartbeat and durable close contracts hold"

@@ -160,6 +160,7 @@ PLATFORM_HOOKS_EXPLICIT_INCLUDE=(
     "seed/strategy/scripts/lib/day-open-hooks.sh"
     "seed/strategy/scripts/lib/find-python3.sh"
     "seed/strategy/scripts/lib/ledger-path.sh"
+    "seed/strategy/scripts/lib/ledger-publish-kick.sh"
     "seed/strategy/scripts/lib/ledger_path.py"
     "seed/strategy/scripts/lib/network-wait.sh"
     "seed/strategy/scripts/lib/notification-render.sh"

@@ -612,6 +612,15 @@ jobs:
       - name: Run Day Open delivery-closure acceptance test
         run: bash setup/test-day-open-delivery-closure.sh
 
+      - name: Run session guard and delivered ledger contract test
+        run: bash scripts/tests/test_session_guard_hypothesis_gate.sh
+
+      - name: Run delivered Day Open today-plan checks
+        run: bash scripts/tests/day-open-llm-fill-today-plan-detect-smoke.sh
+
+      - name: Run delivered Day Open world checks
+        run: bash scripts/tests/day-open-world-fill-smoke.sh
+
       # WP-529 F7 follow-up (pilot decision 2026-08-21): update.sh delivers the
       # last published release by default, moving main only via explicit
       # IWE_UPDATE_CHANNEL=main or as an announced fallback when no release
