@@ -308,6 +308,11 @@ write_prefilter_section() {
 prefilter_changed_reports() {
     local strategy_dir="$1" report output status result pack_ref
     local prefilter_script="$SCRIPT_DIR/wp429-extractor-prefilters.py"
+    local python_resolver="${IWE_TEMPLATE:-${PROMPTS_DIR%/roles/extractor/prompts}}/scripts/lib/find-python3.sh"
+    local prefilter_python=""
+    if [ -f "$python_resolver" ]; then
+        prefilter_python=$(bash "$python_resolver" --stdlib-only 2>> "$LOG_FILE") || prefilter_python=""
+    fi
     local prefilter_args=()
     for pack_ref in "${EXTRACTOR_PACK_REFS[@]}"; do
         prefilter_args+=(--pack-ref "$pack_ref")
@@ -315,10 +320,10 @@ prefilter_changed_reports() {
     while IFS= read -r -d '' report; do
         [[ "$report" = *.md ]] || continue
         status="not-checked"
-        output="Проверка не выполнена: отсутствует поставленный фильтр или Python 3."
-        if [ -f "$prefilter_script" ] && command -v python3 >/dev/null 2>&1; then
+        output="Проверка не выполнена: отсутствует фильтр или недоступен штатный выбор Python 3."
+        if [ -f "$prefilter_script" ] && [ -n "$prefilter_python" ]; then
             result=0
-            output=$(python3 "$prefilter_script" --report "$strategy_dir/$report" \
+            output=$("$prefilter_python" "$prefilter_script" --report "$strategy_dir/$report" \
                 --iwe-root "$WORKSPACE" "${prefilter_args[@]}" 2>&1) || result=$?
             case "$result" in
                 0) status="clean" ;;

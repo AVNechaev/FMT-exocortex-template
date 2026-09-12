@@ -521,13 +521,11 @@ def arguments():
         parser.error("writing requires --report FILE or explicit --all; --dry-run is read-only")
     if args.reports_dir is None:
         own_repo = Path(__file__).resolve().parent.parent
-        governance = os.environ.get("IWE_GOVERNANCE_REPO")
+        governance = os.environ.get("IWE_GOVERNANCE_REPO", "DS-strategy")
         if (own_repo / "inbox/extraction-reports").is_dir():
             args.reports_dir = own_repo / "inbox/extraction-reports"
-        elif governance:
-            args.reports_dir = args.workspace / governance / "inbox/extraction-reports"
         else:
-            args.reports_dir = args.workspace / "DS-strategy/inbox/extraction-reports"
+            args.reports_dir = args.workspace / governance / "inbox/extraction-reports"
     return args
 
 

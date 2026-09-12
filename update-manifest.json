@@ -1697,7 +1697,7 @@
     },
     {
       "path": "roles/extractor/scripts/extractor.sh",
-      "sha256": "6115ebd8b0c74ca3136828ffac2c07d96eee6bf000632ea168ae0c57ca2190bc"
+      "sha256": "0401f4c6d22c4bc9e626e60628c826b6ad97867a498195d2664bd70e21c33113"
     },
     {
       "path": "roles/extractor/scripts/launchd/com.extractor.inbox-check.plist",
@@ -2381,15 +2381,15 @@
     },
     {
       "path": "scripts/ke-queue-stats.sh",
-      "sha256": "a70a2d25b565c3d0e544414bd40be4f7eaf6a6dafc3b8f3ae76e707c667039a5"
+      "sha256": "1468a1d435572d922e69e96a0c11f679436a4d41fa1ecece118348972dd87b41"
     },
     {
       "path": "scripts/ke-report-reconcile.sh",
-      "sha256": "7006ec3d49e9e032be3e44723db45816f3a03b52cd2286cd7ccdbac2b7bb05c4"
+      "sha256": "bf927d93653e5d1c69f3697f58d1d6eff14bd61370e33a222cc6600f73c40e59"
     },
     {
       "path": "scripts/ke-report-state.py",
-      "sha256": "51aa4f304056a0ea78dd3319a37ed963142191ec280f5bbec4325874fa904afa"
+      "sha256": "8eeabe56dc03ec3948e99c9b4607e46ef03be90cc1765e785890497f2ca56332"
     },
     {
       "path": "scripts/kimi-auto-heartbeat.sh",
