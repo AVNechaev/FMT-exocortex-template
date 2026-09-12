@@ -301,7 +301,7 @@
     },
     {
       "path": ".claude/runtime-overlay.yaml",
-      "sha256": "836a2413a5e3c3ff7122f633c7ec58dc56de4df72360d8b1ddca322eb2bb5272"
+      "sha256": "882cd8c85f7a20a396e0955acdcaf5bc55cfd4cefc5fb9e4fa00e8d25ae372c0"
     },
     {
       "path": ".claude/scripts/check-index-health.py",
@@ -357,7 +357,7 @@
     },
     {
       "path": ".claude/skills/apply-captures/SKILL.md",
-      "sha256": "865a1f10a0ce6e01965299f34698217dc107b12410a0d39d4f97daf0c963558c"
+      "sha256": "bb34d8478f923e7acb01785b81844b24fab87423393ebfe8d275632a5a0be5a0"
     },
     {
       "path": ".claude/skills/archgate/SKILL.md",
@@ -541,7 +541,7 @@
     },
     {
       "path": ".claude/skills/ke/SKILL.md",
-      "sha256": "6b353eda26ee252c3379fd92413df4bcc654a4530700aa8fb46b011bbb527a9c"
+      "sha256": "ede0e4fcb3dc2545c7c9fbac1a94b12fc455cd4554a6781e584d7c92d68d7aaf"
     },
     {
       "path": ".claude/skills/kimi-peer-writer/SKILL.md",
@@ -1669,7 +1669,7 @@
     },
     {
       "path": "roles/extractor/prompts/inbox-check.md",
-      "sha256": "41992442742bbb44665d175296ada3088b3f0c6131fe2817762565aceb743d47"
+      "sha256": "597b9aafd0305c561865ec3afdd1010b81514089f4b3c61e1286b62203a4b156"
     },
     {
       "path": "roles/extractor/prompts/knowledge-audit.md",
@@ -1697,7 +1697,7 @@
     },
     {
       "path": "roles/extractor/scripts/extractor.sh",
-      "sha256": "a27d6fddcee535ea78740987998a98bb375cc372d181f6efe198a808e4dce1f4"
+      "sha256": "6115ebd8b0c74ca3136828ffac2c07d96eee6bf000632ea168ae0c57ca2190bc"
     },
     {
       "path": "roles/extractor/scripts/launchd/com.extractor.inbox-check.plist",
@@ -1713,7 +1713,11 @@
     },
     {
       "path": "roles/extractor/scripts/wp429-extractor-prefilters.py",
-      "sha256": "9fc2ec3a24618221bdd5793931098d4ce25683449d83287e8a4ae9f85371cd5e"
+      "sha256": "17d30e9599f9bc0b30a2c2e1adecbeb20514698fc5f1ff6555562c202848d6d4"
+    },
+    {
+      "path": "roles/extractor/tests/test_extractor_pipeline.py",
+      "sha256": "d2af918a9f085d5fb6fac70acfa0ae995ad7ea10ec28c5fb39af205e084b1edb"
     },
     {
       "path": "roles/lib/scheduler-cron.sh",
@@ -2377,7 +2381,15 @@
     },
     {
       "path": "scripts/ke-queue-stats.sh",
-      "sha256": "5428c6cc329add702e5d2ff91ba7af2114a8cd023f9cb5c921a9f6b1720e89df"
+      "sha256": "a70a2d25b565c3d0e544414bd40be4f7eaf6a6dafc3b8f3ae76e707c667039a5"
+    },
+    {
+      "path": "scripts/ke-report-reconcile.sh",
+      "sha256": "7006ec3d49e9e032be3e44723db45816f3a03b52cd2286cd7ccdbac2b7bb05c4"
+    },
+    {
+      "path": "scripts/ke-report-state.py",
+      "sha256": "51aa4f304056a0ea78dd3319a37ed963142191ec280f5bbec4325874fa904afa"
     },
     {
       "path": "scripts/kimi-auto-heartbeat.sh",
