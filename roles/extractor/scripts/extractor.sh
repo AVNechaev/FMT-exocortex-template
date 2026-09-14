@@ -745,6 +745,48 @@ capture_source_files() {
     [ ! -f "$inbox_dir/fleeting-notes.md" ] || printf '%s\n' "$inbox_dir/fleeting-notes.md"
 }
 
+# Browser-source captures: individual <type>_<slug>.md files (lesson_/
+# pattern_/distinction_/feedback_), produced by the browser's server-side
+# run_extractor (gateway-mcp -> agent-runner) via a direct GitHub commit.
+# Each such file IS one capture, with YAML frontmatter (status:
+# pending-review) instead of a "### " heading inside a shared monthly file --
+# pending_capture_count()'s awk cannot parse this shape at all (it looks for
+# "### " lines), so these files were entirely invisible to inbox-check no
+# matter how long they sat there. Found live (WP-560 Ф13, 2026-09-14,
+# peer-session Kimi+Codex): 3 real pending-review files unprocessed for
+# ~2 months since 2026-07-14. A file with any other status (active, applied,
+# analyzed, ...) is not pending and is skipped.
+standalone_capture_files() {
+    local inbox_dir="$1"
+    [ -d "$inbox_dir/captures" ] || return 0
+    local f
+    while IFS= read -r f; do
+        [ -r "$f" ] || continue
+        # Frontmatter block only (between the two "---" delimiters), not a
+        # whole-file grep: a lesson/pattern whose BODY happens to quote or
+        # describe this exact status line (very plausible -- these captures
+        # are lessons about this pipeline's own bugs) would otherwise match
+        # and falsely re-enter the queue. [[:space:]]* rather than a literal
+        # space: same bug class already fixed once in day-open-scaffold.sh
+        # (bug-2026-06-10-ke-queue-drift) -- a tab or CRLF right after
+        # "status:" breaks a literal-space regex and silently drops a real
+        # pending file; [[:space:]] also matches a trailing CRLF "\r" on the
+        # delimiter line itself.
+        awk '
+          NR == 1 {
+            if ($0 ~ /^---[[:space:]]*$/) { infm = 1; next }
+            exit
+          }
+          infm && $0 ~ /^---[[:space:]]*$/ { exit }
+          infm && $0 ~ /^status:[[:space:]]*pending-review[[:space:]]*$/ { found = 1 }
+          END { exit !found }
+        ' "$f" 2>/dev/null && printf '%s\n' "$f"
+    done < <(find "$inbox_dir/captures" -maxdepth 1 -type f \
+               \( -name 'lesson_*.md' -o -name 'pattern_*.md' \
+                  -o -name 'distinction_*.md' -o -name 'feedback_*.md' \) \
+               2>/dev/null | sort)
+}
+
 run_inbox_check_isolated() {
     local canonical_workspace="$WORKSPACE"
     local repo_name="${IWE_GOVERNANCE_REPO:-DS-strategy}"
@@ -810,11 +852,20 @@ run_inbox_check_isolated() {
         capture_sources+=("$src")
         EXTRACTOR_CAPTURE_PATHS+=("${src#"$worktree/"}")
     done < <(capture_source_files "$worktree/inbox")
+    # Browser-source files count separately: each one already IS one
+    # pending capture (no "### " sub-sections to parse), so the array
+    # length itself is the pending count for this source -- no awk needed.
+    local standalone_sources=()
+    while IFS= read -r src; do
+        standalone_sources+=("$src")
+        EXTRACTOR_CAPTURE_PATHS+=("${src#"$worktree/"}")
+    done < <(standalone_capture_files "$worktree/inbox")
     actual_pending=0
     if [ "${#capture_sources[@]}" -gt 0 ]; then
         actual_pending=$(pending_capture_count "${capture_sources[@]}")
     fi
     actual_pending=${actual_pending:-0}
+    actual_pending=$((actual_pending + ${#standalone_sources[@]}))
     if [ "$actual_pending" -le 0 ]; then
         log "SKIP: No pending captures in refreshed inbox"
         cleanup_isolated_inbox_worktree "$canonical_repo" "$worktree" "$branch_name" \

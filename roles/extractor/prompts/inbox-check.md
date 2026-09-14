@@ -32,14 +32,17 @@
 подсчёта и публикации меток. Если контекст отсутствует, сформируй тот же список:
 
 1. Прочитай `{{WORKSPACE_DIR}}/{{GOVERNANCE_REPO}}/inbox/captures.md` — легаси-inbox (после ротации помесячных файлов не растёт, но может держать старые pending)
-1b. Прочитай все файлы `{{WORKSPACE_DIR}}/{{GOVERNANCE_REPO}}/inbox/captures/YYYY-MM.md` по возрастанию месяца — **только** имена вида `2026-08.md` (`^[0-9]{4}-[0-9]{2}\.md$`); другие файлы в этой папке (`pattern_*.md`, `lesson_*.md` и т.п.) НЕ читать. Папка может отсутствовать (ротация не включена) — пропусти.
+1b. Прочитай все файлы `{{WORKSPACE_DIR}}/{{GOVERNANCE_REPO}}/inbox/captures/YYYY-MM.md` по возрастанию месяца — **только** имена вида `2026-08.md` (`^[0-9]{4}-[0-9]{2}\.md$`). Папка может отсутствовать (ротация не включена) — пропусти.
 2. Прочитай `{{WORKSPACE_DIR}}/{{GOVERNANCE_REPO}}/inbox/fleeting-notes.md` — secondary inbox (быстрые мысли пользователя). Файл может отсутствовать — пропусти.
-3. Найди pending записи во всех перечисленных файлах: секции `### ...` с непустым телом БЕЗ любого из 4 маркеров статуса на той же строке (`[analyzed]`, `[processed]`, `[duplicate]`, `[defer]`, в том числе с датой внутри скобок). Если стоит хоть один — capture уже в workflow, пропускай. Блок заканчивается перед следующим заголовком уровня 1–3; пустой заголовок не поглощает следующий блок. Заголовки внутри ограждённого блока кода не являются captures. Комментарии HTML не считаются содержимым.
+2b. Прочитай все файлы `{{WORKSPACE_DIR}}/{{GOVERNANCE_REPO}}/inbox/captures/{lesson,pattern,distinction,feedback}_*.md` со `status: pending-review` в YAML-frontmatter (браузерный источник — пишет серверный `run_extractor` через прямой commit, gateway-mcp/agent-runner). Файлы с другим `status` (`active`, `applied`, `analyzed`, ...) не pending — пропусти. Весь такой файл = ОДИН capture (нет вложенных `### `-секций, в отличие от 1/1b).
+3. Найди pending записи:
+   - в файлах 1/1b/2 — секции `### ...` с непустым телом БЕЗ любого из 4 маркеров статуса на той же строке (`[analyzed]`, `[processed]`, `[duplicate]`, `[defer]`, в том числе с датой внутри скобок). Если стоит хоть один — capture уже в workflow, пропускай. Блок заканчивается перед следующим заголовком уровня 1–3; пустой заголовок не поглощает следующий блок. Заголовки внутри ограждённого блока кода не являются captures. Комментарии HTML не считаются содержимым.
+   - в файлах 2b — сам факт `status: pending-review` в frontmatter уже означает pending.
 
-   **Источники различай:** при формализации в Шаге 2 укажи в кандидате `source_file: captures.md`, `source_file: captures/YYYY-MM.md` или `source_file: fleeting-notes.md` относительно `inbox/` и точный исходный заголовок `source_heading`. Раннер публикует метку из того же файла вместе с отчётом; применение позднее связывает результат с этим источником.
+   **Источники различай:** при формализации в Шаге 2 укажи в кандидате `source_file: captures.md`, `source_file: captures/YYYY-MM.md`, `source_file: fleeting-notes.md` или `source_file: captures/{type}_{slug}.md` относительно `inbox/` и (для 1/1b/2) точный исходный заголовок `source_heading`. Раннер публикует метку из того же файла вместе с отчётом; применение позднее связывает результат с этим источником.
 
 4. Если pending записей нет → сообщение `No pending captures in inbox` выводи через stdout (его поймает `extractor.sh` и запишет в `{{HOME_DIR}}/logs/extractor/YYYY-MM-DD.log`). **НЕ создавай отдельный лог-файл** в `{{GOVERNANCE_REPO}}/` или где-либо ещё. Заверши работу.
-5. Если pending > 5 → возьми первые 5 (по порядку списка: captures.md, помесячные файлы по возрастанию, fleeting-notes.md).
+5. Если pending > 5 → возьми первые 5 (по порядку списка: captures.md, помесячные файлы по возрастанию, fleeting-notes.md, браузерные type-prefixed файлы по алфавиту — таков порядок, в котором раннер строит список разрешённых входящих файлов).
 
 ### Шаг 2: Обработать каждый capture (max 5)
 
@@ -112,7 +115,7 @@ remaining: M
 ## Кандидат #1
 
 **Источник capture:** {точный исходный заголовок}
-source_file: {captures.md / captures/YYYY-MM.md / fleeting-notes.md}
+source_file: {captures.md / captures/YYYY-MM.md / fleeting-notes.md / captures/{type}_{slug}.md}
 source_heading: {точный исходный заголовок без метки обработки}
 **Сырой текст:** «{цитата из capture}»
 **Классификация:** {тип}
@@ -167,7 +170,13 @@ source_heading: {точный исходный заголовок без мет�
 **Было:** `### Паттерн X`
 **Стало:** `### Паттерн X [analyzed 2026-02-12]`
 
-> **ВАЖНО:** НЕ ставить `[processed]`! Метка `[processed]` означает «записано в Pack» и ставится ТОЛЬКО в session-close после подтверждённой записи. `[analyzed]` означает «extraction report создан, ожидает применения».
+Для браузерных type-prefixed файлов (`source_file: captures/{type}_{slug}.md`) —
+тот же смысл, другое место: в frontmatter самого файла поменяй `status:
+pending-review` → `status: analyzed`. Не удаляй и не перемещай файл — он
+остаётся историческим сырым capture, extraction report становится
+авторитетным источником для решения R15.
+
+> **ВАЖНО:** НЕ ставить `[processed]` / `status: processed`! Это означает «записано в Pack» и ставится ТОЛЬКО в session-close (или вручную R15 через `/apply-captures`) после подтверждённой записи. `[analyzed]`/`status: analyzed` означает «extraction report создан, ожидает применения».
 
 ### Шаг 5: Передать изменения раннеру
 

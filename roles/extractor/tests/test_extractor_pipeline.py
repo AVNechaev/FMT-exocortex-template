@@ -129,6 +129,76 @@ class ExtractorPipelineTests(unittest.TestCase):
         self.assertEqual(result.stdout.strip(), "1")
         self.assertTrue(fleeting.exists())
 
+    def test_standalone_capture_files_pending_status_only(self):
+        # Browser-source captures (run_extractor -> agent-runner direct commit):
+        # one file IS one capture, YAML frontmatter status instead of a
+        # "### " heading. pending_capture_count() cannot parse this shape at
+        # all -- these files sat unprocessed for ~2 months in production
+        # before this fix (WP-560 Ф13, 2026-09-14).
+        inbox = self.workspace / "inbox"
+        pending_lesson = self.write(inbox / "captures/lesson_a.md", "---\nstatus: pending-review\n---\n# A\n")
+        pending_pattern = self.write(inbox / "captures/pattern_b.md", "---\nstatus: pending-review\n---\n# B\n")
+        self.write(inbox / "captures/distinction_c.md", "---\nstatus: active\n---\n# C\n")
+        self.write(inbox / "captures/feedback_d.md", "---\nstatus: applied\n---\n# D\n")
+        # No frontmatter at all -- same fixture shape used elsewhere
+        # (test_sources_and_empty_heading_boundaries) to prove capture_source_files
+        # excludes it; must be excluded here too, for the same reason a real
+        # capture always carries frontmatter.
+        self.write(inbox / "captures/pattern_helper.md", "### Not an input\nBody\n")
+        # A monthly file must never leak into this function -- it has its own.
+        self.write(inbox / "captures/2026-09.md", "### Not a standalone file\nBody\n")
+        # `|| true`: the last file in sorted order (pattern_helper.md) has no
+        # match, so the loop's own last exit status is 1 -- harmless under
+        # the real call site (a process-substitution `<(...)` feeding a
+        # `while read` loop, whose exit status isn't checked either), but
+        # fatal here where the function is the script's own last statement
+        # under `set -e`.
+        result = self.shell(f'standalone_capture_files {shlex.quote(str(inbox))} || true')
+        self.assertEqual(result.stdout.splitlines(), [str(pending_lesson), str(pending_pattern)])
+
+    def test_standalone_capture_files_ignores_status_line_in_body(self):
+        # A lesson describing this very bug can legitimately quote the
+        # phrase "status: pending-review" in its BODY while its own real
+        # frontmatter status is something else entirely (e.g. active). A
+        # whole-file grep would wrongly re-open an already-settled capture.
+        inbox = self.workspace / "inbox"
+        self.write(
+            inbox / "captures/lesson_about_this_bug.md",
+            "---\nstatus: active\n---\n"
+            "# A lesson about a past bug\n\n"
+            "The browser writer used `status: pending-review` in its frontmatter.\n",
+        )
+        result = self.shell(f'standalone_capture_files {shlex.quote(str(inbox))} || true')
+        self.assertEqual(result.stdout.splitlines(), [])
+
+    def test_standalone_capture_files_tolerates_whitespace_variants(self):
+        # Same bug class as bug-2026-06-10-ke-queue-drift (day-open-scaffold.sh):
+        # a literal-space regex silently drops a real pending file when a tab
+        # or CRLF follows "status:".
+        inbox = self.workspace / "inbox"
+        tabbed = self.write(inbox / "captures/lesson_tab.md", "---\nstatus:\tpending-review\n---\n# Tab\n")
+        crlf = self.write(inbox / "captures/lesson_crlf.md", "---\r\nstatus: pending-review\r\n---\r\n# CRLF\r\n")
+        result = self.shell(f'standalone_capture_files {shlex.quote(str(inbox))}')
+        self.assertEqual(result.stdout.splitlines(), [str(crlf), str(tabbed)])
+
+    def test_run_inbox_check_isolated_counts_standalone_alongside_monthly(self):
+        # End-to-end: the shell-level pending count feeding run_inbox_check_isolated
+        # must add both sources together, not just one of them.
+        inbox = self.workspace / "inbox"
+        self.write(inbox / "captures/2026-09.md", "### Monthly pending\nBody\n")
+        self.write(inbox / "captures/lesson_x.md", "---\nstatus: pending-review\n---\n# X\n")
+        result = self.shell(
+            'capture_sources=(); EXTRACTOR_CAPTURE_PATHS=(); '
+            'while IFS= read -r src; do capture_sources+=("$src"); done < <(capture_source_files "$WORKSPACE/inbox"); '
+            'standalone_sources=(); '
+            'while IFS= read -r src; do standalone_sources+=("$src"); done < <(standalone_capture_files "$WORKSPACE/inbox"); '
+            'actual_pending=0; '
+            '[ "${#capture_sources[@]}" -gt 0 ] && actual_pending=$(pending_capture_count "${capture_sources[@]}"); '
+            'actual_pending=${actual_pending:-0}; '
+            'echo $((actual_pending + ${#standalone_sources[@]}))'
+        )
+        self.assertEqual(result.stdout.strip(), "2")
+
     def test_pack_snapshot_uses_remote_default_not_stale_local_head(self):
         canonical, publisher, _ = self.make_pack()
         old_head = self.git(canonical, "rev-parse", "HEAD")
@@ -283,6 +353,37 @@ reports.mkdir()
         self.assertEqual(self.git(remote, "show", "main:inbox/captures/pattern_helper.md"), "helper must remain")
         self.assertNotIn("inbox/captures/2026-10.md", self.git(remote, "ls-tree", "-r", "--name-only", "main").splitlines())
         self.assertNotIn("[analyzed", (governance / "inbox/fleeting-notes.md").read_text())
+
+    def test_run_inbox_check_isolated_publishes_standalone_capture(self):
+        # True end-to-end (not the hand-copied counting snippet in
+        # test_run_inbox_check_isolated_counts_standalone_alongside_monthly):
+        # a real standalone browser-source pending file goes all the way
+        # through capture_source_files/standalone_capture_files wiring ->
+        # EXTRACTOR_CAPTURE_PATHS -> LLM context -> git worktree staging ->
+        # commit --only -> publish. The fake CLI plays the LLM's part: it
+        # flips the file's own frontmatter status (not an inline heading
+        # marker, since this source has none) and writes an extraction
+        # report, exactly as Step 4 of inbox-check.md instructs.
+        self.make_pack()
+        governance, _, remote = self.published_repo("DS-fixture", {
+            "inbox/captures/lesson_x.md": "---\nstatus: pending-review\n---\n# X\nBody\n",
+        })
+        cli = self.write(self.base / "fake-cli-standalone", f"#!{sys.executable}\n" + '''from pathlib import Path
+import sys
+assert "inbox/captures/lesson_x.md" in sys.argv[-1]
+repo = Path("DS-fixture")
+source = repo / "inbox/captures/lesson_x.md"
+source.write_text(source.read_text().replace("status: pending-review", "status: analyzed"))
+reports = repo / "inbox/extraction-reports"
+reports.mkdir()
+(reports / "2026-09-12-inbox-check.md").write_text("# Fixture report\\n**Источник capture:** lesson_x.md\\n**Проверено:** DP.M.001\\n")
+''')
+        cli.chmod(0o700)
+        result = self.run_inbox(cli)
+        self.assertEqual(result.returncode, 0)
+        published = self.git(remote, "show", "main:inbox/captures/lesson_x.md")
+        self.assertIn("status: analyzed", published)
+        self.assertNotIn("status: pending-review", published)
 
     def test_empty_inbox_skips_cli_and_creates_no_publication(self):
         _, _, remote = self.published_repo("DS-fixture", {"README.md": "empty inbox\n"})
