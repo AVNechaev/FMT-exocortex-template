@@ -216,6 +216,160 @@ notify_telegram() {
     [ -f "$notify_script" ] && "$notify_script" strategist "$scenario" >> "$LOG_FILE" 2>&1 || true
 }
 
+# WP-561 Ф25: a scenario that must deliver a document proves it on origin/main, not by the
+# CLI exit code. 28.09: week-review wrote WeekReport/WeekPlan, could not commit (the commit
+# guard refused its session), was logged "SUCCESS", sent the "завершён" message and marked the
+# day done -- the pilot learned of it from the model's own last lines.
+# Proof: origin/main taken before the run is an ancestor of origin/main after it, and the
+# range between them changes the scenario's exact expected path.
+# Known limit: without a run id in the commit this cannot tell THIS run's commit from a
+# foreign one that touches the same file -- the exact path keeps that window narrow.
+DELIVERY_POSTCONDITION_RC=70
+WEEK_REVIEW_MAX_FAILED_RUNS=2
+
+expected_delivery_path() {  # <scenario> -> :(glob) pathspec in the governance repo, empty = none
+    case "$1" in
+        week-review) echo 'current/WeekReport W*' ;;
+    esac
+}
+
+# Bounded: an unattended run must not hang on the network. Assumes a remote named `origin` and
+# a default branch `main` (the publish step below assumes the same); a repo without them gets no
+# baseline and the run is reported as unproven, which is loud rather than silently green.
+fetch_delivery_origin() {
+    timeout 120 git -C "$WORKSPACE" fetch -q origin main 2>>"$LOG_FILE"
+}
+
+delivery_baseline() {  # <scenario> -> origin/main sha before the run; empty = no contract or origin not freshly read
+    [ -n "$(expected_delivery_path "$1")" ] || return 0
+    # A failed fetch must NOT fall back to the old local origin/main: a stale baseline would let
+    # an earlier report commit pass as this run's delivery.
+    fetch_delivery_origin || return 0
+    git -C "$WORKSPACE" rev-parse origin/main 2>/dev/null || true
+}
+
+verify_delivery_postcondition() {  # <scenario> <origin/main sha before the run>; 0 = delivered or none required
+    local scenario="$1" pre_origin="$2" spec post_origin
+    spec=$(expected_delivery_path "$scenario")
+    [ -n "$spec" ] || return 0
+    if [ -z "$pre_origin" ]; then
+        log "POSTCONDITION scenario: $scenario -- origin/main перед запуском прочитать не удалось (нужны remote origin и ветка main, сеть), доставку проверить нельзя"
+        return 1
+    fi
+    if ! fetch_delivery_origin; then
+        log "POSTCONDITION scenario: $scenario -- git fetch не удался (нужны remote origin и ветка main, сеть), доставку проверить нельзя"
+        return 1
+    fi
+    post_origin=$(git -C "$WORKSPACE" rev-parse origin/main 2>/dev/null) || post_origin=""
+    if [ -z "$post_origin" ] || ! git -C "$WORKSPACE" merge-base --is-ancestor "$pre_origin" "$post_origin" 2>/dev/null; then
+        log "POSTCONDITION scenario: $scenario -- origin/main не продолжает состояние до запуска (${pre_origin:0:12} не предок ${post_origin:0:12}): расхождение или force-push"
+        return 1
+    fi
+    # ACMRT: a deletion of the report file is a change, not a delivery.
+    if [ -z "$(git -C "$WORKSPACE" diff --name-only --diff-filter=ACMRT "$pre_origin" "$post_origin" -- ":(glob)$spec")" ]; then
+        log "POSTCONDITION scenario: $scenario -- за запуск на origin/main не появилось созданного или изменённого файла '$spec': отчёт не доставлен"
+        return 1
+    fi
+    return 0
+}
+
+# WP-561 Ф25: a scenario whose result is committed under the session guard gets a session owned by
+# THIS script, opened as a scheduled runner (--canonical-owner: on a frozen checkout only that mode
+# may open a housekeeping session). The guard's scope gate does not look at who commits: a live
+# semaphore covering a path authorises it, so the model needs no session of its own and cannot
+# invent one (28.09: `--wp week-review-w39`). A housekeeping semaphore has no wp and is skipped by
+# the commit barrier: it grants rights, it never blocks anyone.
+SESSION_OPEN_FAILED_RC=71
+RUNNER_SESSION_OPEN=0
+RUNNER_SESSION_CLEANUP_REGISTERED=0
+RUNNER_GUARD=""
+RUNNER_SESSION_AGENT=""
+RUNNER_SESSION_REASON=""
+
+runner_session_scope() {  # <scenario> -> repo-relative path the scenario may commit under; empty = no session
+    case "$1" in
+        week-review) echo 'current/' ;;
+    esac
+}
+
+runner_guard_path() {  # -> path of session-guard.sh; empty when this install has none
+    local guard="${IWE_SCRIPTS:-}/session-guard.sh"
+    [ -f "$guard" ] || guard="${IWE_WORKSPACE:-$HOME/IWE}/scripts/session-guard.sh"
+    if [ -f "$guard" ]; then echo "$guard"; fi
+    return 0
+}
+
+runner_guard() {  # <guard args...>; root and governance repo are explicit: the guard aborts without them
+    ( cd "$WORKSPACE" && IWE_ROOT="${IWE_WORKSPACE:-$HOME/IWE}" IWE_GOVERNANCE_REPO="${IWE_GOVERNANCE_REPO:-DS-strategy}" \
+        bash "$RUNNER_GUARD" "$@" ) >> "$LOG_FILE" 2>&1
+}
+
+close_runner_session() {  # once per open; a failed close is logged and never replaces the run's own exit status
+    [ "$RUNNER_SESSION_OPEN" = 1 ] || return 0
+    RUNNER_SESSION_OPEN=0
+    runner_guard close --housekeeping "$RUNNER_SESSION_REASON" --agent "$RUNNER_SESSION_AGENT" \
+        || log "WARN: служебная сессия $RUNNER_SESSION_AGENT не закрыта (см. строки выше); следующий запуск закроет остаток"
+    return 0
+}
+
+# Hygiene, never a precondition of the new run: close what earlier runs of this scenario left
+# behind when they died. A semaphore whose recorded owner pid is still alive belongs to a live run
+# (possibly one that started before midnight) and is left alone; a dead owner's is closed by its own
+# reason (parsed from the file name). A failed close only means the lease will expire.
+close_dead_runner_sessions() {  # <agent> <sessions dir>
+    local agent="$1" dir="$2" sem reason pid
+    for sem in "$dir/${agent}-housekeeping-"*.open; do
+        [ -e "$sem" ] || continue
+        pid=$(sed -n 's/^pid: //p' "$sem" 2>/dev/null | head -1)
+        if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
+            continue
+        fi
+        reason="${sem##*/}"
+        reason="${reason#"${agent}-housekeeping-"}"
+        reason="${reason%.open}"
+        log "SESSION: остаточная сессия $agent/$reason (владелец не жив), закрываю"
+        runner_guard close --housekeeping "$reason" --agent "$agent" \
+            || log "WARN: остаточную сессию $reason закрыть не удалось, она истечёт по сроку аренды"
+    done
+}
+
+# 0 = session open, or none required, or this install has no guard at all (old behaviour, WARN).
+# 1 = a guard IS installed but did not give the session (refused, or too old to know the mode): the
+# run must not start, it could only burn model time and end in a refused commit.
+open_runner_session() {  # <scenario>
+    local scenario="$1" scope agent reason
+    scope=$(runner_session_scope "$scenario")
+    [ -n "$scope" ] || return 0
+    RUNNER_GUARD=$(runner_guard_path)
+    if [ -z "$RUNNER_GUARD" ]; then
+        log "WARN: session-guard.sh не найден, сценарий $scenario идёт без сессии охраны"
+        return 0
+    fi
+    agent="strategist-$scenario"
+    # The reason names the session file, so it is unique per run: a guard that keeps a closed-session
+    # receipt for a name (older installs) would refuse to reopen the same name, and two runs that
+    # overlap (one started after midnight while another is still in the model) must not collide.
+    reason="$scenario-$DATE-$$"
+    close_dead_runner_sessions "$agent" "${IWE_WORKSPACE:-$HOME/IWE}/.iwe-runtime/sessions"
+    runner_guard open --housekeeping "$reason" --agent "$agent" --canonical-owner "$scenario" --owner-pid "$$" || return 1
+    RUNNER_SESSION_AGENT="$agent"
+    RUNNER_SESSION_REASON="$reason"
+    RUNNER_SESSION_OPEN=1
+    if [ "$RUNNER_SESSION_CLEANUP_REGISTERED" != 1 ]; then
+        add_exit_cleanup 'close_runner_session'
+        RUNNER_SESSION_CLEANUP_REGISTERED=1
+    fi
+    # Without the directory the guard records the scope as the literal path `current` (no trailing
+    # slash), which covers no file below it.
+    mkdir -p "$WORKSPACE/$scope"
+    if ! runner_guard note-file "$scope" --agent "$agent"; then
+        close_runner_session
+        return 1
+    fi
+    log "SESSION: открыта служебная сессия $agent, область $scope"
+    return 0
+}
+
 run_claude() {
     local command_file="$1"
     # Опциональная модель: второй аргумент или IWE_STRATEGIST_MODEL из env.
@@ -263,6 +417,15 @@ ${prompt}"
 
     cd "$WORKSPACE"
 
+    # WP-561 Ф25: origin/main до запуска модели, точка отсчёта для постусловия доставки.
+    local delivery_pre_origin
+    delivery_pre_origin=$(delivery_baseline "$command_file")
+
+    if ! open_runner_session "$command_file"; then
+        log "FAILED scenario: $command_file (rc=$SESSION_OPEN_FAILED_RC) -- сессия охраны не открыта (причина в строках выше), модель не запускалась"
+        return "$SESSION_OPEN_FAILED_RC"
+    fi
+
     # Запуск Claude Code с содержимым команды как промпт (с timeout-защитой)
     local rc=0
     local model_args=()
@@ -300,12 +463,6 @@ ${prompt}"
         log "WARN: Claude CLI exited with code $rc for scenario: $command_file"
     fi
 
-    if [ $rc -eq 0 ]; then
-        log "SUCCESS scenario: $command_file"
-    else
-        log "FAILED scenario: $command_file (rc=$rc)"
-    fi
-
     # Push changes to GitHub (чтобы бот мог читать через API)
     if git -C "$WORKSPACE" diff --quiet origin/main..HEAD 2>/dev/null; then
         log "No unpushed commits"
@@ -328,6 +485,19 @@ ${prompt}"
     # НЕ трогаем working tree — только unstage orphaned changes
     git -C "$WORKSPACE" reset --quiet 2>/dev/null || true
     log "Cleared staging area after Claude session"
+
+    close_runner_session
+
+    # WP-561 Ф25: SUCCESS is written only after delivery is proven -- already_ran_today() keys
+    # on it, so an undelivered run must not mark the day done (a manual rerun stays possible).
+    if [ $rc -eq 0 ] && ! verify_delivery_postcondition "$command_file" "$delivery_pre_origin"; then
+        rc=$DELIVERY_POSTCONDITION_RC
+    fi
+    if [ $rc -eq 0 ]; then
+        log "SUCCESS scenario: $command_file"
+    else
+        log "FAILED scenario: $command_file (rc=$rc)"
+    fi
 
     # macOS notification
     local summary
@@ -613,12 +783,29 @@ case "$1" in
         # transiently unavailable. Retry auth failures with backoff and leave a
         # status file so the morning traffic light can distinguish fresh from
         # stale failures.
-        run_claude_with_retry "week-review" "claude-opus-4-7" 3 60 300
+        # WP-561 Ф25: `set -e` would end the script silently on a failed run (no message at
+        # all); keep the code, alarm the pilot, then exit with it.
+        week_review_rc=0
+        run_claude_with_retry "week-review" "claude-opus-4-7" 3 60 300 || week_review_rc=$?
         # Fallback push for Knowledge Index (week-review creates a post there)
         # KI_REPO may not exist for all users — guard with [ -d ]
         KI_REPO="$HOME/IWE/DS-Knowledge-Index"
         if [ -d "$KI_REPO/.git" ] && git -C "$KI_REPO" log --oneline -1 --since="1 hour ago" --grep="week-review" 2>/dev/null | grep -q .; then
             git -C "$KI_REPO" push >> "$LOG_FILE" 2>&1 && log "Pushed Knowledge Index (fallback)" || log "WARN: KI push failed"
+        fi
+        if [ "$week_review_rc" -ne 0 ]; then
+            notify_telegram "week-review-failed" || true  # the alarm must never replace the run's own exit code
+            # The scheduler reruns every non-zero exit at its next dispatch (about ten a day, 30
+            # min of model time each). An undelivered report is usually structural (a refused
+            # session, a frozen checkout), so after the second failed run today stop retrying:
+            # the alarms and the FAILED status already tell the owner (exit 0 makes the scheduler
+            # mark the week done, so a rerun after the fix is by hand). RECORDED is written once
+            # per dispatch, unlike FAILED, which repeats on every auth retry inside one.
+            if [ "$(grep -c 'RECORDED: week-review failed' "$LOG_FILE")" -ge "$WEEK_REVIEW_MAX_FAILED_RUNS" ]; then
+                log "GAVE UP scenario: week-review after $WEEK_REVIEW_MAX_FAILED_RUNS failed runs today; exit 0 marks the week done for the scheduler, so rerun it by hand once the cause is fixed"
+                exit 0
+            fi
+            exit "$week_review_rc"
         fi
         notify_telegram "week-review"
         ;;
