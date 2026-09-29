@@ -825,15 +825,15 @@
     },
     {
       "path": "AGENTS.md",
-      "sha256": "08401337942bfbb8469007f2a9d7d68465ec6c64037442fbd25d3b16c5e25035"
+      "sha256": "0779094c25b777fc0799b53d51e0655b1bc68dcc82b792bb783b52d6b9dc2bb5"
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "4ba8640f06b29fa356c46475313495c56fdd8569eac37ffda8f94b2329c6fb31"
+      "sha256": "b434abb6293b12003ebd8639d3dded0963b99e469685deb94b2c282ce1206ea2"
     },
     {
       "path": "CLAUDE.md",
-      "sha256": "5ebc30c328ee52c487505a11c31d855055bfd1c25c1118a9611d58f810377a3b"
+      "sha256": "3287380faf5424da28168e547ef5b13cc8755ea88ca544ae1d02f86217411830"
     },
     {
       "path": "ONTOLOGY.md",
