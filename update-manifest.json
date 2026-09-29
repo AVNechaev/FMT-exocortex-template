@@ -829,7 +829,7 @@
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "b434abb6293b12003ebd8639d3dded0963b99e469685deb94b2c282ce1206ea2"
+      "sha256": "9ad5d579349b367a30041c685c12c524fb6034a0b13bc56305684de477f75784"
     },
     {
       "path": "CLAUDE.md",
@@ -3065,7 +3065,7 @@
     },
     {
       "path": "setup.sh",
-      "sha256": "32e873a6063a9a5870110fc8e8505c0f9b1323ce116824167e1422cee19d2554"
+      "sha256": "9480d07cc9f57698bbdf2b9c23e5d32ccbbf693f6bf3f7c9fdc066df55019b18"
     },
     {
       "path": "setup/build-runtime.sh",
@@ -3140,6 +3140,7 @@
     "scripts/tests/session-guard-isolate-t1-t20-smoke.sh",
     "scripts/tests/test-captures-write-lock-840.sh",
     "scripts/tests/test-iwe-audit-fpf-copy.sh",
+    "scripts/tests/test-setup-git-identity-precheck.sh",
     "scripts/tests/test-update-extractor-feeders.sh",
     "scripts/tests/test-update-fpf-refresh.sh",
     "scripts/tests/test_adopt_governance.sh",
