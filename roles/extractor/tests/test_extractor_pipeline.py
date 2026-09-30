@@ -668,6 +668,118 @@ block = "%s"
         self.assertNotIn("git add inbox", (prompts / "session-close-feed.md").read_text())
         self.assertNotIn("git commit -m", (prompts / "session-close-feed.md").read_text())
 
+    # --- isolated knowledge audit (audit / audit-scheduled): read-only contract --
+
+    def audit_fixture(self, agent_body):
+        """Canonical DS-fixture + a Pack; fake CLI = the audit agent."""
+        self.make_pack()
+        governance, _, remote = self.published_repo("DS-fixture", {
+            "README.md": "fixture\n",
+            "inbox/captures/2026-09.md": "# Captures 2026-09\n### Pending [feed:git-diff 2026-09-01]\n",
+            "inbox/extraction-reports/2026-09-01-inbox-check.md": "old report\n",
+        })
+        cli = self.write(self.base / "fake-audit-cli", f"#!{sys.executable}\n" + """from pathlib import Path
+import subprocess
+import sys
+assert Path("PACK-fixture").is_symlink(), "Packs must be readable in the audit workspace"
+assert Path("DS-fixture").is_symlink()
+assert "Scope: только Pack 'PACK-fixture'" in sys.argv[-1]
+assert "Не выполняй git add/commit/push" in sys.argv[-1]
+assert "аудит только читает" in sys.argv[-1]
+repo = Path("DS-fixture")
+print("Knowledge Audit Report (printed, not written)")
+""" + agent_body)
+        cli.chmod(0o700)
+        return governance, remote, cli
+
+    def run_audit(self, cli, *, check=True, variables=None):
+        scope = "Scope: только Pack 'PACK-fixture' (headless)"
+        return self.shell(f'run_feed_isolated knowledge-audit {shlex.quote(scope)} audit isolated-audit', variables={
+            "AI_CLI": str(cli), "AI_CLI_PROMPT_FLAG": "-p", "AI_CLI_EXTRA_FLAGS": "",
+            **(variables or {}),
+        }, check=check)
+
+    def leftover_audit_dirs(self):
+        return list((self.base / "runs").glob("iwe-extractor-audit.*"))
+
+    def test_isolated_audit_clean_tree_is_success_without_commit(self):
+        governance, remote, cli = self.audit_fixture("pass\n")
+        head_before = self.git(governance, "rev-parse", "HEAD")
+        before = self.git(remote, "rev-parse", "main")
+        result = self.run_audit(cli)
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("governance tree is clean", result.stdout)
+        self.assertIn("Completed process: knowledge-audit (no_changes)", result.stdout)
+        self.assertEqual(self.git(remote, "rev-parse", "main"), before)
+        self.assert_canonical_untouched(governance, head_before)
+        self.assertEqual(self.leftover_audit_dirs(), [])
+        self.assertEqual(self.git(governance, "worktree", "list").count("\n"), 0)
+        self.assertEqual(self.git(governance, "branch", "--list", "extractor/audit-*"), "")
+        self.assertTrue((self.workspace / "PACK-fixture/pack/known.md").exists())
+        self.assertTrue((self.workspace / "PACK-fixture/.git").exists())
+
+    def assert_audit_blocked(self, governance, remote, cli, expected_message, variables=None):
+        head_before = self.git(governance, "rev-parse", "HEAD")
+        before = self.git(remote, "rev-parse", "main")
+        result = self.run_audit(cli, check=False, variables=variables)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn(expected_message, result.stdout)
+        self.assertNotIn("Completed process:", result.stdout)
+        self.assertEqual(self.git(remote, "rev-parse", "main"), before)
+        self.assert_canonical_untouched(governance, head_before)
+        # Nothing is lost: the worktree is preserved for review.
+        self.assertEqual(len(self.leftover_audit_dirs()), 1)
+
+    def test_isolated_audit_new_file_blocks_publication(self):
+        # Even a well-meant report file is a change: the audit is read-only.
+        governance, remote, cli = self.audit_fixture(
+            '(repo / "inbox/extraction-reports").mkdir(exist_ok=True)\n'
+            '(repo / "inbox/extraction-reports/2026-09-12-knowledge-audit.md").write_text("report\\n")\n')
+        self.assert_audit_blocked(governance, remote, cli, "read-only contract): inbox/extraction-reports/2026-09-12-knowledge-audit.md")
+
+    def test_isolated_audit_changed_captures_blocks_publication(self):
+        governance, remote, cli = self.audit_fixture(
+            '(repo / "inbox/captures/2026-09.md").write_text("# Captures 2026-09\\n### Pending [analyzed 2026-09-12]\\n")\n')
+        self.assert_audit_blocked(governance, remote, cli, "read-only contract): inbox/captures/2026-09.md")
+
+    def test_isolated_audit_changed_readme_blocks_publication(self):
+        governance, remote, cli = self.audit_fixture('(repo / "README.md").write_text("edited\\n")\n')
+        self.assert_audit_blocked(governance, remote, cli, "read-only contract): README.md")
+
+    def test_isolated_audit_deleted_file_blocks_publication(self):
+        governance, remote, cli = self.audit_fixture('(repo / "README.md").unlink()\n')
+        self.assert_audit_blocked(governance, remote, cli, "read-only contract): README.md")
+
+    def test_isolated_audit_agent_self_commit_is_normalised_and_blocks(self):
+        # The agent commits despite the ban: reset --mixed exposes the change, nothing is published.
+        governance, remote, cli = self.audit_fixture(
+            '(repo / "README.md").write_text("committed by the agent\\n")\n'
+            'subprocess.run(["git", "-C", "DS-fixture", "add", "--", "README.md"], check=True)\n'
+            'subprocess.run(["git", "-C", "DS-fixture", "commit", "-m", "agent self-commit"], check=True)\n')
+        self.assert_audit_blocked(governance, remote, cli, "read-only contract): README.md")
+
+    def test_isolated_audit_cli_failure_publishes_nothing(self):
+        governance, remote, cli = self.audit_fixture("sys.exit(3)\n")
+        self.assert_audit_blocked(governance, remote, cli, "AI CLI failed")
+
+    def test_isolated_audit_git_status_failure_blocks_instead_of_clean(self):
+        governance, remote, cli = self.audit_fixture("pass\n")
+        real_git = shutil.which("git")
+        stubs = self.base / "stubs"
+        stub = self.write(stubs / "git", f"#!/bin/sh\n"
+            'for a in "$@"; do [ "$a" = status ] && exit 1; done\n'
+            f'exec {real_git} "$@"\n')
+        stub.chmod(0o700)
+        self.assert_audit_blocked(governance, remote, cli, "git status failed in audit worktree",
+                                  variables={"PATH": f"{stubs}:{os.environ['PATH']}"})
+
+    def test_audit_subcommands_use_isolated_mode(self):
+        text = RUNNER.read_text()
+        self.assertEqual(text.count('run_feed_isolated "knowledge-audit"'), 2)
+        self.assertNotIn('run_claude "knowledge-audit"', text)
+        self.assertIn('"audit-scheduled")', text)
+        self.assertIn("audit-scheduled requires a Pack name", text)
+
 
 if __name__ == "__main__":
     unittest.main()
