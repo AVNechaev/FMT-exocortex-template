@@ -849,7 +849,7 @@
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "7782e1a25368159e5906d1f0da50b9c8af44b325c236772f7b084646d32abf43"
+      "sha256": "555d9fcde655754d13bb225ca709e3693a9c2f01e5bda3f38324bd820f8ffcab"
     },
     {
       "path": "CLAUDE.md",
@@ -1733,7 +1733,7 @@
     },
     {
       "path": "roles/extractor/scripts/extractor.sh",
-      "sha256": "3f41550e2178736995fd66b7a49da8eebccbeb71a217f430ab172fa543ba3aee"
+      "sha256": "7ec5189acd7cf438616f5aef61e51ce0ebea388d3da21de7b1e2f6a2eddb9778"
     },
     {
       "path": "roles/extractor/scripts/launchd/com.extractor.inbox-check.plist",
@@ -3183,6 +3183,7 @@
     "scripts/tests/test_delivery_content.py",
     "scripts/tests/test_delivery_formal.py",
     "scripts/tests/test_dry_run_gate.py",
+    "scripts/tests/test_extractor_branch_cleanup.sh",
     "scripts/tests/test_generate_manifest_deprecated_excluded.sh",
     "scripts/tests/test_governance_ambiguity.sh",
     "scripts/tests/test_issue_529_owner_integrity.sh",
