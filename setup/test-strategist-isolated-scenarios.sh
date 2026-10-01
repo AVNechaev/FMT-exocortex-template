@@ -68,6 +68,9 @@ make_env() {
     git init -q --bare -b main "$ORIGIN"
     git clone -q "$ORIGIN" "$CANON" 2>/dev/null
     mkdir -p "$CANON/inbox" "$CANON/archive/notes" "$CANON/docs" "$CANON/scripts" "$CANON/exocortex"
+    # The stamp of the plain old note is one that extract_note_date() of the cleanup script cannot parse, so its
+    # "younger than 24 h" guard never applies and the note is archived on every day of the year (the former stamp
+    # "1 янв, 10:00" was read as a time of the current year and protected the note on 1 and 2 January)
     cat > "$CANON/inbox/fleeting-notes.md" <<'EOF'
 ---
 title: Fleeting
@@ -83,8 +86,12 @@ title: Fleeting
 
 ---
 
+**Already proposed note** ✅предложено
+
+---
+
 Plain old note
-<sub>1 янв, 10:00</sub>
+<sub>10.09.2026, 10:00</sub>
 EOF
     printf '# Archive\n' > "$CANON/archive/notes/Notes-Archive.md"
     printf 'other\n' > "$CANON/docs/other.md"
@@ -116,6 +123,12 @@ case "${STUB_MODE:-noop}" in
     outside-edit) echo x >> docs/other.md ;;
     commit-outside) echo x > docs/committed-outside.md; git add docs/committed-outside.md; git commit -q -m "model commit" ;;
     commit-inside) echo x >> inbox/fleeting-notes.md; git add inbox/fleeting-notes.md; git commit -q -m "model commit" ;;
+    # a healthy Note-Review (#961): the new note is marked, its bold stays
+    mark-proposed) sed 's/^\*\*Bold new note\*\*$/**Bold new note** ✅предложено/' inbox/fleeting-notes.md > "$TMPDIR/fleeting.marked" && cat "$TMPDIR/fleeting.marked" > inbox/fleeting-notes.md ;;
+    # the same mark typed with a space and a capital (a model does not copy the prompt letter for letter)
+    mark-variant) sed 's/^\*\*Bold new note\*\*$/**Bold new note** ✅ Предложено/' inbox/fleeting-notes.md > "$TMPDIR/fleeting.marked" && cat "$TMPDIR/fleeting.marked" > inbox/fleeting-notes.md ;;
+    # a model that marks the note but drops its bold: the safety net must not sweep it up
+    mark-nobold) sed 's/^\*\*Bold new note\*\*$/Bold new note ✅предложено/' inbox/fleeting-notes.md > "$TMPDIR/fleeting.marked" && cat "$TMPDIR/fleeting.marked" > inbox/fleeting-notes.md ;;
     fail) exit 3 ;;
 esac
 exit 0
@@ -294,9 +307,15 @@ check "model ran in the copy, not in the canon" "1" "$(grep -c 'iwe-strategist-n
 check "origin got exactly one commit" "1" "$(origin_commits)"
 check "the commit touches exactly the two allowlisted files" "archive/notes/Notes-Archive.md inbox/fleeting-notes.md" "$(origin_paths)"
 check "cleanup archived the plain note on origin" "0" "$(git -C "$ORIGIN" show main:inbox/fleeting-notes.md | grep -c 'Plain old note')"
+check "cleanup left the already proposed note (bold + ✅предложено) on origin, it is not the script's to archive" "1" "$(git -C "$ORIGIN" show main:inbox/fleeting-notes.md | grep -c 'Already proposed note')"
 check "cleanup script edited the copy: canon still holds the plain note" "1" "$(fleeting_has_plain "$CANON")"
 check "prompt points the model at the copy's workspace" "1" "$(grep -c 'iwe-strategist-note-review.*/workspace/DS-strategy/inbox/' "$E/stub-args" | awk '{print ($1 > 0)}')"
 check "prompt never mentions the canonical path" "0" "$(grep -c "$CANON" "$E/stub-args")"
+# a run from the script has no chat: the model is TOLD so (#961), it does not have to guess that step 10 is off.
+# The runner adds the mode as a line of its own; the prompt file quotes the same sentence inside a longer line, so the
+# whole line is compared (grep -x): one hit = the runner's line, the quote does not count
+MODE_LINE='РЕЖИМ: запуск из скрипта без чата; шаг 10 и архив не выполнять, только пометки и предложения'
+check "the model is told this is a run without a chat (isolated)" "1" "$(grep -c -x -F "$MODE_LINE" "$E/stub-args")"
 canon_untouched "isolated happy path"
 check "copy removed after publication" "0" "$(iso_copies)"
 
@@ -346,6 +365,7 @@ check "legacy: the cleanup commit is made in the canon" "1" "$([ "$(canon_head)"
 check "legacy: the publisher got the canon path" "$CANON" "$(head -1 "$PUBLOG")"
 check "legacy: origin got one commit with the two files" "1|archive/notes/Notes-Archive.md inbox/fleeting-notes.md" "$(origin_commits)|$(origin_paths)"
 check "legacy: the model ran in the canon" "$CANON" "$(cat "$E/stub-cwd")"
+check "legacy: the model is told this is a run without a chat" "1" "$(grep -c -x -F "$MODE_LINE" "$E/stub-args")"
 make_env
 run_runner outside-file ""
 check "legacy: an outside file is NOT blocked (behaviour unchanged)" "0" "$RC"
@@ -425,6 +445,7 @@ run_runner noop "" week-review
 check "flag off: nothing delivered, the delivery proof still reports 70" "70" "$RC"
 check "flag off: the guard session was opened and closed by the runner" "1/1" "$(grep -c '^open --housekeeping' "$GUARD_LOG")/$(grep -c '^close --housekeeping' "$GUARD_LOG")"
 check "flag off: the model ran in the canon (legacy path)" "$CANON" "$(cat "$E/stub-cwd")"
+check "control: another scenario (week-review) does not get the no-chat line" "0" "$(grep -c -F 'РЕЖИМ: запуск из скрипта без чата' "$E/stub-args")"
 check "flag off: no isolated copy was created" "0" "$(ls "$ISO_TMP" | wc -l | tr -d ' ')"
 make_week_review_env
 GUARD_OPEN_RC=1 run_runner noop "" week-review
@@ -454,6 +475,7 @@ git -C "$CANON" worktree add -q -b cleanup-wt "$E/wt" origin/main
 run_cleanup IWE_CLEANUP_ISOLATED=1 IWE_CLEANUP_REPO_DIR="$E/wt"
 check "isolated, dir = a linked worktree: runs" "0" "$CRC"
 check "isolated worktree run archived the note in the copy only" "0/1" "$(grep -c 'Plain old note' "$E/wt/inbox/fleeting-notes.md")/$(canon_has_plain)"
+check "isolated worktree run kept the proposed note in the copy" "1" "$(grep -c 'Already proposed note' "$E/wt/inbox/fleeting-notes.md")"
 make_env
 run_cleanup
 check "not isolated, no dir: legacy default still edits the canon path" "0/0" "$CRC/$(canon_has_plain)"
@@ -496,6 +518,46 @@ EXTRA_SHIM="$E/shim-sed" run_runner noop note-review
 check "sed (prompt read) fails: runner exits non-zero" "1" "$([ "$RC" -ne 0 ] && echo 1 || echo 0)"
 check "sed fails: the model never ran" "0" "$([ -e "$E/stub-cwd" ] && echo 1 || echo 0)"
 check "sed fails: origin unchanged, copy preserved" "0/1" "$(origin_commits)/$(iso_copies)"
+
+echo "== B10: the canary and the safety net understand ✅предложено (#961): a healthy run is silent, a run that processed nothing still alarms =="
+# The canary used to expect the plain bold count to drop. Since the template owner's decision of July 2026 a processed
+# note keeps its bold and gets the ✅предложено mark, so every healthy run looked like a failed one and sent a false
+# alarm. The model double marks the new note exactly as the prompt says, with a space and a capital, or with the mark
+# but without bold (all healthy), or does nothing (the control); a recording curl double stands for the Telegram API,
+# so an alert is observable. The legacy and the isolated path share the canary code: both are run.
+log_count() { cat "$HOME_DIR"/logs/strategist/*.log 2>/dev/null | grep -c -- "$1" || true; }
+alert_count() { if [ -f "$E/curl.log" ]; then grep -c 'Note-Review canary' "$E/curl.log" || true; else echo 0; fi; }
+published_count() { git -C "$ORIGIN" show main:inbox/fleeting-notes.md | grep -c -- "$1" || true; }
+make_canary_env() {
+    make_env
+    mkdir -p "$HOME_DIR/.config/aist"
+    printf 'TELEGRAM_BOT_TOKEN=canary-test\nTELEGRAM_CHAT_ID=1\n' > "$HOME_DIR/.config/aist/env"
+    printf '#!/bin/bash\nprintf "%%s\\n" "$*" >> "%s"\nexit 0\n' "$E/curl.log" > "$E/shim/curl"
+    chmod +x "$E/shim/curl"
+}
+for scenario_flag in "" "note-review"; do
+    mode_label="flag off"; [ -z "$scenario_flag" ] || mode_label="isolated"
+    for model_mode in mark-proposed mark-variant mark-nobold; do
+        case "$model_mode" in
+            mark-proposed) marked_line='^\*\*Bold new note\*\* ✅предложено$' ;;
+            mark-variant)  marked_line='^\*\*Bold new note\*\* ✅ Предложено$' ;;
+            *)             marked_line='^Bold new note ✅предложено$' ;;
+        esac
+        make_canary_env
+        run_runner "$model_mode" "$scenario_flag" note-review
+        check "$mode_label, healthy run ($model_mode): runner exits 0" "0" "$RC"
+        check "$mode_label, healthy run ($model_mode): the canary logged no warning" "0" "$(log_count 'WARN: Note-Review')"
+        check "$mode_label, healthy run ($model_mode): no canary alert was sent" "0" "$(alert_count)"
+        check "$mode_label, healthy run ($model_mode): the marked note is published and nothing is archived on its own" "1" "$(published_count "$marked_line")"
+        check "$mode_label, healthy run ($model_mode): the earlier proposed note is still in the box" "1" "$(published_count '^\*\*Already proposed note\*\* ✅предложено$')"
+        check "$mode_label, healthy run ($model_mode): the plain old note was archived by the safety net, as before" "0" "$(published_count 'Plain old note')"
+    done
+    make_canary_env
+    run_runner noop "$scenario_flag" note-review
+    check "$mode_label, control, the model processed nothing: runner exits 0" "0" "$RC"
+    check "$mode_label, control: the canary logged its warning" "1" "$(log_count 'WARN: Note-Review')"
+    check "$mode_label, control: the canary alert was sent (the recording double is wired in)" "1" "$(alert_count)"
+done
 
 echo
 echo "Passed: $PASS_COUNT, failed: $FAIL_COUNT"

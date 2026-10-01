@@ -1073,17 +1073,69 @@ render_scout() {
 }
 
 # --- Section: Разбор заметок (fleeting-notes) ---
-# Парсит inbox/fleeting-notes.md на наличие непрочитанных заметок (строки **Title**).
+# Парсит inbox/fleeting-notes.md на наличие заметок, ждущих решения пилота: строки **Title**
+# (новые) и заметки с пометкой ✅предложено в первой строке (агент записал предложение, решение
+# за пилотом; модель могла уронить жирный или дописать хвост, #961). Отложенные 🔄 не считаются.
 # Если пусто → "нет заметок" без маркера PENDING → LLM секцию не трогает.
 # Если есть → строки таблицы с реальными заголовками и PENDING на Тип/Предложение.
 # Bold **text** в GitHub не создаёт якорей — ссылки без #якорь.
 render_fleeting_notes() {
   local notes_file="$IWE/${IWE_GOVERNANCE_REPO:-DS-strategy}/inbox/fleeting-notes.md"
 
-  # Extract titles of new unprocessed notes (lines matching **Title**)
+  # One decision with the safety net (cleanup-processed-notes.py should_keep) and the canary (strategist.sh
+  # count_new_bold_notes): the mark "✅предложено" counts in the FIRST line of a note (the line after a --- rule),
+  # with or without bold, wherever it stands in that line. A first line that is a quote, a heading, a timestamp, a
+  # struck-through note (~~) or a list item is no note title. A bold title alone on a line (**Title**), or followed
+  # by the mark, is taken wherever it stands (the legacy rule): a bold line inside a note body is listed, and counted
+  # by the canary, too; the safety net looks at the first line only. The printed title has the mark and 🔄 cut out;
+  # a title without them stays as typed, and a line with nothing but the mark keeps it so that the row has a name.
+  # awk, not grep -i / tolower: Cyrillic case folding depends on the locale, so the mark is spelled out in
+  # (п|П) pairs; the no-break space is spelled in octal because [[:space:]] does not cover it in every locale.
   local new_notes
-  new_notes=$(grep -E '^\*\*[^*]+\*\*[[:space:]]*$' "$notes_file" 2>/dev/null \
-    | sed 's/^\*\*//; s/\*\*[[:space:]]*$//')
+  new_notes=$(awk '
+    # the title without the mark and without 🔄; as typed when it has neither, whole when nothing else is left
+    function clean(t,   c) {
+      c = t
+      gsub("[[:space:]]*" mark, "", c)
+      gsub(/[[:space:]]*🔄/, "", c)
+      if (c == t) return t
+      gsub(/^[[:space:]]+|[[:space:]]+$/, "", c)
+      return (c == "") ? t : c
+    }
+    BEGIN {
+      mark = "✅([[:space:]]|\302\240)*(п|П)(р|Р)(е|Е)(д|Д)(л|Л)(о|О)(ж|Ж)(е|Е)(н|Н)(о|О)"
+      bold = "^[*][*][^*]+[*][*][[:space:]]*(" mark ".*)?$"
+      no_title = "^([>#<]|~~|[-+*][[:space:]]|[0-9]+[.)][[:space:]])"
+      first = 1
+    }
+    { sub(/\r$/, "") }
+    /^---[[:space:]]*$/ { first = 1; next }
+    /^[[:space:]]*$/ { next }
+    {
+      starts_block = first
+      first = 0
+      title = ""
+      if ($0 ~ bold) {
+        title = $0
+        sub(/^[*][*]/, "", title)
+        sub("[*][*][[:space:]]*(" mark ".*)?$", "", title)
+      } else if (starts_block) {
+        line = $0
+        sub(/^[[:space:]]+/, "", line)
+        if (line ~ mark && line !~ no_title) {
+          title = line
+          sub(mark ".*$", "", title)
+          gsub(/[*][*]/, "", title)
+          gsub(/^[[:space:]]+|[[:space:]]+$/, "", title)
+          if (title == "") {
+            title = line
+            gsub(/[*][*]/, "", title)
+          }
+        }
+      }
+      if (title != "") print clean(title)
+    }
+  ' "$notes_file" 2>/dev/null)
 
   if [ -z "$new_notes" ]; then
     printf '| нет заметок | — | — | ✅ |\n'
@@ -1540,7 +1592,7 @@ ${DAY_CLOSE_CARRY_OVER:-нет (Day Close не найден)}
 <details>
 <summary><b>Разбор заметок</b></summary>
 
-<!-- Источник: inbox/fleeting-notes.md. Строки **Title** = непрочитанные. Ссылки без якоря — bold не создаёт GitHub-якорей. -->
+<!-- Источник: inbox/fleeting-notes.md. В списке заметки, ждущие решения пилота: жирные (**Title**, ещё не разобраны) и с пометкой ✅предложено (предложение записано, решение за пилотом; жирный мог пропасть). Отложенные 🔄 не считаются. Ссылки без якоря — bold не создаёт GitHub-якорей. -->
 
 | Заметка | Тип | Предложение | ✅ |
 |---------|-----|-------------|---|

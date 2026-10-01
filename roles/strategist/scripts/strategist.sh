@@ -711,6 +711,14 @@ run_claude() {
         script) calendar_note=" Календарь берётся только из scripts/server-calendar.sh (params.yaml: calendar_source: script): календарный коннектор не запрашивай." ;;
     esac
 
+    # #961: note-review started from this script has no chat with the pilot. One line says so, the way the
+    # calendar sentence above is added, so that skipping step 10 (the archive) does not rest on the model's guess.
+    # A live session (the Day Open mini-review, a request in a chat) never passes here and gets no such line.
+    local mode_line=""
+    case "$command_file" in
+        note-review) mode_line=$'\n'"РЕЖИМ: запуск из скрипта без чата; шаг 10 и архив не выполнять, только пометки и предложения" ;;
+    esac
+
     # Inject current date + day of week (prevents LLM calendar arithmetic errors)
     local ru_date_context
     ru_date_context=$(python3 -c "
@@ -720,7 +728,7 @@ months = ['января','февраля','марта','апреля','мая','
 d = datetime.date.today()
 print(f'{d.day} {months[d.month-1]} {d.year}, {days[d.weekday()]}')
 ") || { log "ERROR: не удалось получить дату для контекста (python3)"; return 1; }
-    prompt="[Системный контекст] Сегодня: ${ru_date_context}. ISO: ${DATE}. День недели №${DAY_OF_WEEK} (1=Пн..7=Вс). Первый Пн месяца: ${IS_FIRST_MONDAY_OF_MONTH} (посчитано командой date, не выводи это значение сам — issue #616).${calendar_note} ЯЗЫК: отвечай ТОЛЬКО на русском. Украинский, английский и другие языки запрещены.
+    prompt="[Системный контекст] Сегодня: ${ru_date_context}. ISO: ${DATE}. День недели №${DAY_OF_WEEK} (1=Пн..7=Вс). Первый Пн месяца: ${IS_FIRST_MONDAY_OF_MONTH} (посчитано командой date, не выводи это значение сам — issue #616).${calendar_note} ЯЗЫК: отвечай ТОЛЬКО на русском. Украинский, английский и другие языки запрещены.${mode_line}
 
 ${prompt}"
 
@@ -889,6 +897,22 @@ run_claude_with_retry() {
 already_ran_today() {
     local scenario="$1"
     [ -f "$LOG_FILE" ] && grep -q "SUCCESS scenario: $scenario" "$LOG_FILE"
+}
+
+# Note-Review canary (#961): number of NEW notes in fleeting-notes.md, i.e. bold titles that carry
+# neither 🔄 (deferred) nor ✅предложено (proposal already written). Since the template owner's
+# decision of July 2026 a processed note stays bold and gets the ✅предложено mark instead of losing
+# its bold, so a healthy run lowers THIS count, not the plain bold count. The mark is matched the way
+# a model types it: spaces after ✅ (a no-break one too) and any mix of capitals. The letters are
+# spelled out in (п|П) pairs instead of using grep -i, because folding Cyrillic case depends on the
+# locale of the runner. The same mark means "waiting for the pilot" in cleanup-processed-notes.py
+# (re.IGNORECASE) and in the Day Open scanner (day-open-scaffold.sh, the same pairs); the line is one
+# line on purpose, the test harness cuts it out by name. Prints 0 for a missing file.
+PROPOSED_MARK_ERE='✅([[:space:]]|'$'\302\240'')*(п|П)(р|Р)(е|Е)(д|Д)(л|Л)(о|О)(ж|Ж)(е|Е)(н|Н)(о|О)'
+count_new_bold_notes() {  # <fleeting-notes.md>
+    local count
+    count=$(grep '^\*\*' "$1" 2>/dev/null | grep -vcE -e '🔄' -e "$PROPOSED_MARK_ERE" || true)
+    echo "${count:-0}"
 }
 
 # File-based lock to prevent concurrent execution (RunAtLoad + CalendarInterval race)
@@ -1149,18 +1173,19 @@ case "$1" in
         ;;
     "note-review")
         acquire_lock "note-review"
-        log "Evening: running note review"
+        log "Manual: running note review"
         # WP-530 Ф72: opt-in isolation (STRATEGIST_ISOLATED_SCENARIOS); off = the legacy path below.
         if isolation_enabled "note-review"; then
             isolated_begin "note-review" || { log "FAILED scenario: note-review (rc=$ISOLATION_BLOCKED_RC) -- изолированная копия не создана, канон не тронут"; exit "$ISOLATION_BLOCKED_RC"; }
         fi
-        # Canary: count bold notes before (exclude 🔄 — deferred ideas stay bold by design)
+        # Canary: count bold notes before. "New" = bold without 🔄 (deferred ideas stay bold by design)
+        # and without ✅предложено (already proposed; stays bold until the pilot closes it, #961).
         # NB: `grep -c` при exit 1 (no matches) печатает "0" до `||`, так что `|| echo 0`
         # давал двухстрочный "0\n0" и ломал арифметику. Используем `|| true` + fallback.
         FLEETING="$WORKSPACE/inbox/fleeting-notes.md"
         BOLD_BEFORE=$(grep -c '^\*\*' "$FLEETING" 2>/dev/null || true); BOLD_BEFORE=${BOLD_BEFORE:-0}
-        BOLD_NEW_BEFORE=$(grep -vc '🔄' <(grep '^\*\*' "$FLEETING" 2>/dev/null) 2>/dev/null || true); BOLD_NEW_BEFORE=${BOLD_NEW_BEFORE:-0}
-        log "Canary: $BOLD_BEFORE bold total ($BOLD_NEW_BEFORE new, $(( BOLD_BEFORE - BOLD_NEW_BEFORE )) deferred 🔄)"
+        BOLD_NEW_BEFORE=$(count_new_bold_notes "$FLEETING")
+        log "Canary: $BOLD_BEFORE bold total ($BOLD_NEW_BEFORE new, $(( BOLD_BEFORE - BOLD_NEW_BEFORE )) deferred 🔄 or ✅предложено)"
 
         acquire_captures_write_lock || true
         if [ "$ISOLATED_RUN" = 1 ]; then
@@ -1174,20 +1199,21 @@ case "$1" in
             run_claude "note-review" "claude-haiku-4-5-20251001"
         fi
 
-        # Canary: count bold notes after (needs to be visible for alert at line ~274)
+        # Canary: count bold notes after (needs to be visible for the alert further below)
         BOLD_AFTER=$(grep -c '^\*\*' "$FLEETING" 2>/dev/null || true); BOLD_AFTER=${BOLD_AFTER:-0}
-        BOLD_NEW_AFTER=$(grep -vc '🔄' <(grep '^\*\*' "$FLEETING" 2>/dev/null) 2>/dev/null || true); BOLD_NEW_AFTER=${BOLD_NEW_AFTER:-0}
+        BOLD_NEW_AFTER=$(count_new_bold_notes "$FLEETING")
         # Non-blocking diagnostic (isolated from set -e to protect cleanup below)
         (
             log "Canary: $BOLD_AFTER bold total ($BOLD_NEW_AFTER new)"
             NON_BOLD=$(grep -c '^[^*#>-]' "$FLEETING" 2>/dev/null || true); NON_BOLD=${NON_BOLD:-0}
             log "Non-bold content lines: $NON_BOLD"
             if [ "$BOLD_NEW_AFTER" -ge "$BOLD_NEW_BEFORE" ] && [ "$BOLD_NEW_BEFORE" -gt 0 ]; then
-                log "WARN: Note-Review Step 10 may have failed — new bold notes did not decrease ($BOLD_NEW_BEFORE → $BOLD_NEW_AFTER)"
+                log "WARN: Note-Review did not mark new notes ✅предложено — new bold notes did not decrease ($BOLD_NEW_BEFORE → $BOLD_NEW_AFTER)"
             fi
         ) || true
 
-        # Deterministic cleanup: archive non-bold, non-🔄 notes (safety net for LLM Step 10)
+        # Deterministic cleanup: archive non-bold, non-🔄 notes (safety net: only notes the pilot closed
+        # by hand — bold removed or struck through; ✅предложено notes are never swept up, bold or not)
         # cleanup-processed-notes.py has no placeholders, so it is read-only
         # data from FMT (same rule as notify.sh above) and build-runtime does
         # not deliver it next to this runtime copy of strategist.sh — resolving
@@ -1256,12 +1282,12 @@ case "$1" in
             log "Cleanup: no changes to commit"
         fi
 
-        # Alert if LLM failed AND cleanup was needed (only for NEW bold, not deferred 🔄)
+        # Alert if the LLM did not process the new notes (only NEW bold: not deferred 🔄, not already ✅предложено)
         if [ "$BOLD_NEW_AFTER" -ge "$BOLD_NEW_BEFORE" ] && [ "$BOLD_NEW_BEFORE" -gt 0 ]; then
             ENV_FILE="$HOME/.config/aist/env"
             if [ -f "$ENV_FILE" ]; then
                 set -a; source "$ENV_FILE"; set +a
-                ALERT_TEXT="⚠️ <b>Note-Review canary</b>: Step 10 не сработал ($BOLD_NEW_BEFORE → $BOLD_NEW_AFTER new bold). Deterministic cleanup applied."
+                ALERT_TEXT="⚠️ <b>Note-Review canary</b>: разбор не пометил новые заметки ✅предложено ($BOLD_NEW_BEFORE → $BOLD_NEW_AFTER новых жирных). Заметки остаются в inbox до решения пилота."
                 ALERT_JSON=$(printf '%s' "$ALERT_TEXT" | python3 -c 'import sys,json; print(json.dumps(sys.stdin.read()))')
                 curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
                     -H "Content-Type: application/json" \
@@ -1286,7 +1312,7 @@ case "$1" in
         echo ""
         echo "Scenarios:"
         echo "  morning           - 4:00 EET daily (session-prep on Mon, day-plan others)"
-        echo "  note-review       - 23:00 EET daily (review fleeting notes + clean inbox)"
+        echo "  note-review       - manual only: marks notes ✅предложено and writes proposals; the archive needs a live session with the pilot"
         echo "  week-review       - Sunday 19:00 EET review for club"
         echo "  session-prep      - Manual session prep (headless preparation)"
         echo "  strategy-session  - Manual strategy session (interactive with user)"
