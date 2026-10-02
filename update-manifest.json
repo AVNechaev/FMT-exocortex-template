@@ -853,7 +853,7 @@
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "5ba990a57130c2ba09bbd076c09e378150aa349faceedf75acd58eca9ba24557"
+      "sha256": "45e06b21ed6073862dd82956d2dc835cccbe26d71ed132524431f091f9378d2e"
     },
     {
       "path": "CLAUDE.md",
@@ -3153,7 +3153,7 @@
     },
     {
       "path": "update.sh",
-      "sha256": "baa595dcbd9320fd5dc9957f56f276167b065630168b92a0e90cc03bd0af5a51"
+      "sha256": "951253ca27a463d69bca0d9a71db48c12bbe0b8986df7fb13aa81344fb7eb353"
     }
   ],
   "excluded_paths": [
@@ -3271,6 +3271,7 @@
     "scripts/tests/test_issue_974_day_open_pipeline_layout.sh",
     "scripts/tests/test_issue_975_completion_reminder_r23.sh",
     "scripts/tests/test_issue_979_weekplan_table.py",
+    "scripts/tests/test_issue_989_snapshot_cross_api.py",
     "scripts/tests/test_issue_extensions_dir_missing.sh",
     "scripts/tests/test_issue_python_resolver_contract.sh",
     "scripts/tests/test_issues_942_944_day_open.sh",
