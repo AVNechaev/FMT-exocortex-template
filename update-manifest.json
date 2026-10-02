@@ -853,7 +853,7 @@
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "c4a54178c6298ab8c3a2dfcf33e98e4118678e6a98729e1afa02a036b9406d77"
+      "sha256": "a35790888ffe21aa9b119e25cf68a0dcfed0dfdb64447a01568f804af43187d8"
     },
     {
       "path": "CLAUDE.md",
@@ -1913,7 +1913,7 @@
     },
     {
       "path": "roles/strategist/scripts/strategist.sh",
-      "sha256": "85f46c2875b456da2c664bd28b5f5c54c78ad765637a13f36d7e06cb98590fdd"
+      "sha256": "3579bc153d30aeb02cd87188513e943786940e02a0993b6f0664e87288fdc047"
     },
     {
       "path": "roles/strategist/scripts/systemd/iwe-strategist-morning.service",
@@ -1997,7 +1997,7 @@
     },
     {
       "path": "roles/synchronizer/scripts/templates/strategist.sh",
-      "sha256": "9230568c2ed6578b6d400cb6d6b36be3c76f575bf70f1eb7b4c20c5b1d8bb9f2"
+      "sha256": "dbde0b28018d96113fdff3e75d099d194a18326e86ef6b2a428200fbca9f1980"
     },
     {
       "path": "roles/synchronizer/scripts/templates/synchronizer.sh",
@@ -2269,7 +2269,7 @@
     },
     {
       "path": "scripts/day-open-pipeline.sh",
-      "sha256": "adcdd0ff2fc44559ceab91dd4c8f8e57bdfbcd765b81a8c7627332888deafb68"
+      "sha256": "d7f0388030f85b3d38c4e6a4924932169b37167621e637ab27cca57852d78560"
     },
     {
       "path": "scripts/day-open-preflight.sh",
@@ -2281,7 +2281,7 @@
     },
     {
       "path": "scripts/day-open-scaffold.sh",
-      "sha256": "13afe30cecccc48074dc772c64e24569b44cf52c52e0af2f20b440e519004ede"
+      "sha256": "0387f48ade1aa4a28a2bd60909b47bed1b1f62e5a846796d8dfc695bb472b630"
     },
     {
       "path": "scripts/day-open-smoke-extended.sh",
@@ -3017,7 +3017,7 @@
     },
     {
       "path": "seed/strategy/scripts/day-open-pipeline.sh",
-      "sha256": "9fcfc08d7566bfc0d3c5d57b9c258d984b5aa58650559619a3a2c0a81ea7fcb2"
+      "sha256": "fd721fc22a40d48d8f0f9a7f2e73aa85f644d3da8620bbde038aad60233fdfa7"
     },
     {
       "path": "seed/strategy/scripts/day-open-priorities-patch.py",
@@ -3025,7 +3025,7 @@
     },
     {
       "path": "seed/strategy/scripts/day-open-scaffold.sh",
-      "sha256": "acf865f63af704904077a7e33a30fde8f6e83f376ad2ea353dc065e7e682ca39"
+      "sha256": "4aa5cfc3b50a8221a33540c85b6469ce86faa423414f69ba0c8cbe9d1f74479e"
     },
     {
       "path": "seed/strategy/scripts/day-open-version-check-patch.py",
