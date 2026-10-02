@@ -449,7 +449,7 @@
     },
     {
       "path": ".claude/skills/day-open/SKILL.md",
-      "sha256": "6a92b02abbbc9563b1f259b3163deee7b024a633269c7386f134d546bd891fdf"
+      "sha256": "d74f4a4fae63e730637031982adfa951e393dd2b5ff97d3f0cd8a346cb91e382"
     },
     {
       "path": ".claude/skills/day-open/day-open-details.md",
@@ -773,7 +773,7 @@
     },
     {
       "path": ".claude/skills/week-close/SKILL.md",
-      "sha256": "db8fa64b97df2b38db10b352dbc03f7c0ee78e57421c72c068a6fba5c0e2a761"
+      "sha256": "28852639dbbc975a9bc5add07c8670d630c8b470d37d832fa0ec10376c9e33d4"
     },
     {
       "path": ".claude/skills/week-close/week-close/SKILL.md",
@@ -853,7 +853,7 @@
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "d8a6b8520d10f8c16c301e4c895cd37703b89b8410b32efd0e4c4b1cfb848150"
+      "sha256": "3d8174d40b7a55a2b1789760aca3ee6babd9b31c28a345de11be89a45a1181d8"
     },
     {
       "path": "CLAUDE.md",
