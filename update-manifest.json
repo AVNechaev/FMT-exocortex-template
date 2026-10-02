@@ -853,7 +853,7 @@
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "45e06b21ed6073862dd82956d2dc835cccbe26d71ed132524431f091f9378d2e"
+      "sha256": "a0b7e06a83f9ee75554c22ecb5f06458e300983425febbea0af44ef6eec4b22a"
     },
     {
       "path": "CLAUDE.md",
@@ -1609,7 +1609,7 @@
     },
     {
       "path": "memory/t-checklist.md",
-      "sha256": "216361a0b1be8e00ec2c024a0480a7f697126b6d1aa81cb22a5a5724a4fb46f5"
+      "sha256": "7f423fddf2eccab668642785255176751401d4cbc3074c3713b191479053fab1"
     },
     {
       "path": "memory/templates-dayplan.md",
