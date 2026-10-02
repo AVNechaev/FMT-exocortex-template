@@ -21,7 +21,7 @@ metadata:
   upstream_author: "Evgeny Seliverstov (external Red Team, WP-529)"
   revised: "2026-08-26"
   compatibility: "Requires repository read access, Git, and Bash; GitHub CLI and disposable containers are optional."
-  iwe_integration_revised: "2026-08-27 (peer-session 2026-08-27-05, Claude+Codex)"
+  iwe_integration_revised: "2026-08-27 (peer-session 2026-08-27-05, Claude+Codex); 2026-10-02 (WP-529 F19 finding disposition)"
 ---
 
 # IWE Platform Red Team
@@ -30,8 +30,9 @@ Audit the product as an adversary trying to disprove its release, upgrade, safet
 
 ## IWE Integration Contract (read first)
 
-> Эта секция — обёртка IWE поверх методики Евгения ниже. Методическое ядро (Scope
-> Boundary … Final Output) сохранено как есть; здесь только правила встраивания.
+> Эта секция — обёртка IWE поверх методики Евгения ниже. Дополнение Ф19 к
+> Finding Contract и Final Output требует для существенной находки исполняемую
+> проверку или явно принятую оговорку; остальная методика сохранена.
 
 - **Статус — experimental (не autonomous).** До появления принудительного
   платформенного хука границы (PreToolUse guard уровня платформы) этот скилл
@@ -227,10 +228,13 @@ For every material finding record:
 - regression test and release-blocking status.
 - crystallization disposition: exact executable detector, fixture, or runtime
   test plus its failing bad-artifact/mutation and passing candidate evidence;
-  alternatively an explicit accepted exception with owner, scope, reason, and
-  re-review trigger. An unfixed finding without either remains open, even when
-  the audit report itself is complete. An exception does not turn an unproven
-  required release gate into `PASS`.
+  alternatively an exception explicitly accepted by the product owner or a
+  designated release approver who is not the finding author. Record that
+  person's decision with a permanent issue, PR, or decision-record link,
+  scope, reason, and re-review trigger. Without the decision and link the
+  exception is only proposed, and the finding remains open even if the audit
+  report is complete. An exception does not turn an unproven required release
+  gate into `PASS`.
 
 Use `cannot_verify` instead of inference when isolation, access, or evidence is missing.
 
@@ -246,7 +250,7 @@ GO / CAUTION / BLOCKED — exact tag/SHA and audit time
 | Gate | Result | Exact evidence |
 
 ## Findings
-| ID | Severity | Contract | Evidence | Impact | Owner | Confidence | Falsifier | Executable check or accepted exception |
+| ID | Severity | Contract | Evidence | Impact | Owner | Confidence | Falsifier | Executable check or exception decision link |
 
 ## Release Boundary
 - Safe to publish/use:
@@ -259,7 +263,7 @@ GO / CAUTION / BLOCKED — exact tag/SHA and audit time
 - installed projection:
 - supported OS/shell matrix:
 - second-run/idempotency:
-- per-finding executable check or accepted exception:
+- per-finding executable check or exception decision link:
 ```
 
 Report skipped and unavailable checks explicitly. Do not bury a blocker below secondary observations.

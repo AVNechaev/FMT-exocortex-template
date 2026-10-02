@@ -489,7 +489,7 @@
     },
     {
       "path": ".claude/skills/iwe-platform-redteam/SKILL.md",
-      "sha256": "3612921ccf1dd76c996990c64917ec7887300e4a302acfeb38261db0116e0841"
+      "sha256": "257bd6c1e7acb4681027a870657b5c2eb212eb746bdc4128586e92a3a53b41e5"
     },
     {
       "path": ".claude/skills/iwe-platform-redteam/boundary-guard.sh",
@@ -825,7 +825,7 @@
     },
     {
       "path": ".github/workflows/post-release-audit.yml",
-      "sha256": "a32cc774167735554b00c00190a2c08e7cdfd7dd49ed79bdcb8bb07acbe3516f"
+      "sha256": "a79ae3ead2ea8c7e3f8d0968705eb088a6b8bce84b4e3b3cb353d4097c50a745"
     },
     {
       "path": ".gitignore",
@@ -1037,7 +1037,7 @@
     },
     {
       "path": "docs/release-audit-log.md",
-      "sha256": "792d353c17698d3350853aa6fcd99cbe01a3331a0c07e4c9b06551a5e6dd8486"
+      "sha256": "4a030024795c4f01c81c2183477e5e341816d8c85a2fe39fd94e2c9d2df42b5f"
     },
     {
       "path": "docs/roles-catalog.md",
