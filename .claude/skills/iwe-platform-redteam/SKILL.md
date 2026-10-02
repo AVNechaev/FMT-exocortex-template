@@ -235,6 +235,10 @@ For every material finding record:
   exception is only proposed, and the finding remains open even if the audit
   report is complete. An exception does not turn an unproven required release
   gate into `PASS`.
+- unresolved material finding: link a separate open issue in this repository
+  for each one, including a proposed exception. The audit reminder is not its
+  tracker. Do not close the reminder until every unresolved material finding
+  has that durable open issue and the audit result links to it.
 
 Use `cannot_verify` instead of inference when isolation, access, or evidence is missing.
 
@@ -250,7 +254,7 @@ GO / CAUTION / BLOCKED — exact tag/SHA and audit time
 | Gate | Result | Exact evidence |
 
 ## Findings
-| ID | Severity | Contract | Evidence | Impact | Owner | Confidence | Falsifier | Executable check or exception decision link |
+| ID | Severity | Contract | Evidence | Impact | Owner | Confidence | Falsifier | Executable check or exception decision link | Open issue if unresolved |
 
 ## Release Boundary
 - Safe to publish/use:
@@ -264,6 +268,7 @@ GO / CAUTION / BLOCKED — exact tag/SHA and audit time
 - supported OS/shell matrix:
 - second-run/idempotency:
 - per-finding executable check or exception decision link:
+- separate open issue for each unresolved material finding:
 ```
 
 Report skipped and unavailable checks explicitly. Do not bury a blocker below secondary observations.
