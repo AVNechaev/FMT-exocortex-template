@@ -43,6 +43,17 @@
 #  16 a failed copy of the new file stops the run (no false "updated")
 #  17 the proof for the copy in place survives a copy that fails (the record keeps the previous hash)
 #  18 several failed deliveries in a row do not push the proof for the copy in place out of the record
+#  19 a FIFO standing where the record belongs does not hang the update (red team of the 0.41.1 candidate)
+#  20 a symlink in place of the record vouches for nothing, even when the file it points to holds the copy's hash
+#  21 a record far bigger than four hashes vouches for nothing
+#  22 a record with junk in it is ignored and rewritten clean
+#  23 a directory standing at the record's path is left alone and the update goes on
+#  24 hex lines of a wrong length are not carried into the new record, a well-formed foreign one is
+#  25 a NUL byte in the record is not dropped on the way in: it does not vouch for an edited copy
+#  26 a record saved with CRLF line ends is replaced by a clean one
+#  27 a failing filter (tr) in the record check means "not usable", it is not hidden by the wc after it
+#  28 an edit of the template copy that the pilot COMMITTED in the clone is replaced by the release, the edit stays in
+#     the clone's history (a bounded limitation named by the red team of the 0.41.1 candidate, now pinned and told)
 #
 # Usage: bash scripts/tests/test_issue_541_workspace_base.sh
 #        KEEP=1 ... keeps the temporary tree for inspection.
@@ -52,7 +63,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 UPDATE_SH="$ROOT/update.sh"
 SETUP_SH="$ROOT/setup.sh"
 FIXTURE_SHA="3333333333333333333333333333333333333333"
-B1_LINE="обновлён (копия в каталоге шаблона не правилась)"
+B1_LINE="обновлён (копия в каталоге шаблона совпадает с доставленной ранее или с закоммиченной в клоне"
 REFUSAL_LINE="CLAUDE.md НЕ тронут — базовый файл для слияния отсутствовал"
 PILOT_LINE="- Pilot rule: this line must survive every update."
 EDIT_LINE="Local edit made in the template copy."
@@ -93,6 +104,10 @@ lacks_text() { ! grep -qF -- "$2" "$1"; }
 log_has() { grep -qF -- "$1" "$RUN_LOG"; }
 log_lacks() { ! grep -qF -- "$1" "$RUN_LOG"; }
 rc_is() { [ "$RUN_RC" -eq "$1" ]; }
+regular_file() { [ -f "$1" ] && [ ! -L "$1" ]; }
+# a record that is not a regular file is never read here: a FIFO would block the test itself
+regular_has_line() { regular_file "$1" && grep -qxF -- "$2" "$1"; }
+only_hashes() { ! grep -qvE '^[0-9a-f]{64}$' "$1"; }
 
 # --- setup.sh's own install helpers (the workspace copy and its merge base) ---
 SETUP_FUNCS="$TEST_ROOT/setup-funcs.sh"
@@ -378,7 +393,10 @@ build_case() {
 # run_update — the real update.sh --yes on channel main, under the same bash that
 # runs this test (so /bin/bash on macOS checks bash 3.2); sets RUN_RC and RUN_LOG.
 # EXTRA_PATH=<dir> run_update puts <dir> in front of the stubs (a broken git).
+# RUN_LIMIT=<seconds> kills a run that has not finished by then (RUN_RC 124): a read that hangs must fail its
+# case, not the whole suite.
 run_update() {
+    local pid dog
     RUN_N=$((RUN_N + 1))
     RUN_LOG="$CASE_DIR/run-$RUN_N.log"
     env -i PATH="${EXTRA_PATH:+$EXTRA_PATH:}$SHIM_DIR:$PATH" HOME="$CASE_DIR/home" TMPDIR="$CASE_DIR/tmp" \
@@ -387,8 +405,16 @@ run_update() {
         GIT_COMMITTER_NAME=test GIT_COMMITTER_EMAIL=test@example.com \
         IWE_UPDATE_CHANNEL=main UPSTREAM_FIXTURE="$UP" FIXTURE_SHA="$FIXTURE_SHA" \
         STUB_LOG="$TEST_ROOT/stub-calls.log" \
-        "$BASH" "$SD/update.sh" --yes > "$RUN_LOG" 2>&1
+        "$BASH" "$SD/update.sh" --yes > "$RUN_LOG" 2>&1 &
+    pid=$!
+    ( sleep "${RUN_LIMIT:-900}"; pkill -9 -P "$pid" 2>/dev/null; kill -9 "$pid" 2>/dev/null ) > /dev/null 2>&1 &
+    dog=$!
+    wait "$pid" 2>/dev/null
     RUN_RC=$?
+    pkill -P "$dog" 2>/dev/null
+    kill "$dog" 2>/dev/null
+    wait "$dog" 2>/dev/null
+    [ "$RUN_RC" -ne 137 ] || RUN_RC=124
 }
 
 # tree_digest DIR — checksum per regular file, git internals excluded.
@@ -728,6 +754,134 @@ else
     check "18 retry: the shortcut ran, not the refusal" log_has "$B1_LINE"
     check "18 retry: the template copy is upstream's latest" same "$SD/CLAUDE.md" "$UP/CLAUDE.md"
 fi
+
+echo "=== case 19: a FIFO standing where the record belongs does not hang the update ==="
+# Red team of the 0.41.1 candidate: the record was read by a plain grep, so a FIFO (or a symlink to an endless source)
+# in its place blocked update.sh for good. A record that is not a small regular file counts as absent and is replaced.
+build_case fiforecord modern
+mkfifo "$WS/.claude.md.delivered"
+RUN_LIMIT=30 run_update
+# frees a reader that a hung run left blocked on the FIFO (opening it read-write does not block)
+if [ -p "$WS/.claude.md.delivered" ]; then exec 9<> "$WS/.claude.md.delivered"; exec 9>&-; fi
+check "19 run 1: finished in time" test "$RUN_RC" -ne 124
+check "19 run 1: exit 0" rc_is 0
+check "19 run 1: the shortcut ran" log_has "$B1_LINE"
+check "19 run 1: the template copy is upstream's v2" same "$SD/CLAUDE.md" "$UP/CLAUDE.md"
+check "19 run 1: a regular file stands where the FIFO was" regular_file "$WS/.claude.md.delivered"
+check "19 run 1: it holds the delivered copy" regular_has_line "$WS/.claude.md.delivered" "$(sha256_of "$UP/CLAUDE.md")"
+
+echo "=== case 20: a symlink in place of the record vouches for nothing ==="
+# The file the link points to holds the hash of an EDITED template copy: followed, it would arm the shortcut and the
+# edit would be replaced by upstream.
+build_case symlinkrecord modern
+printf '%s\n' "$EDIT_LINE" >> "$SD/CLAUDE.md"
+cp "$SD/CLAUDE.md" "$CASE_DIR/template-before.md"
+sha256_of "$SD/CLAUDE.md" > "$CASE_DIR/elsewhere.record"
+ln -s "$CASE_DIR/elsewhere.record" "$WS/.claude.md.delivered"
+run_update
+check "20 exit 49 (the refusal)" rc_is 49
+check "20 the refusal line is printed" log_has "$REFUSAL_LINE"
+check "20 upstream is not taken as is" log_lacks "$B1_LINE"
+check "20 the edited template copy is untouched" same "$SD/CLAUDE.md" "$CASE_DIR/template-before.md"
+check "20 the link was not rewritten" test -L "$WS/.claude.md.delivered"
+
+echo "=== case 21: a record far bigger than four hashes vouches for nothing ==="
+build_case hugerecord modern
+printf '%s\n' "$EDIT_LINE" >> "$SD/CLAUDE.md"
+cp "$SD/CLAUDE.md" "$CASE_DIR/template-before.md"
+# well-formed lines only (hash, then thirty more): the size is what is wrong with it, not the format
+{ sha256_of "$SD/CLAUDE.md"; for _ in $(seq 1 30); do printf 'b%.0s' $(seq 1 64); echo; done; } > "$WS/.claude.md.delivered"
+run_update
+check "21 exit 49 (the refusal)" rc_is 49
+check "21 upstream is not taken as is" log_lacks "$B1_LINE"
+check "21 the edited template copy is untouched" same "$SD/CLAUDE.md" "$CASE_DIR/template-before.md"
+
+echo "=== case 22: a record with junk in it is ignored and rewritten clean ==="
+build_case junkrecord modern
+printf '%s\n' "not a hash" "$(printf 'a%.0s' $(seq 1 64))" "" "NOT-A-HASH-BUT-64-CHARACTERS-LONG-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" > "$WS/.claude.md.delivered"
+run_update
+check "22 exit 0" rc_is 0
+check "22 the shortcut ran" log_has "$B1_LINE"
+check "22 every line of the record is a sha256" only_hashes "$WS/.claude.md.delivered"
+check "22 at most four lines" test "$(wc -l < "$WS/.claude.md.delivered" | tr -d ' ')" -le 4
+check "22 the junk text is gone" lacks_text "$WS/.claude.md.delivered" "NOT-A-HASH"
+check "22 so is the earlier well-formed line (the whole record was ignored)" lacks_text "$WS/.claude.md.delivered" "$(printf 'a%.0s' $(seq 1 64))"
+check "22 the delivered copy is on record" regular_has_line "$WS/.claude.md.delivered" "$(sha256_of "$UP/CLAUDE.md")"
+
+echo "=== case 23: a directory standing at the record's path is left alone ==="
+# mv of the temp file onto a directory moves it INTO the directory.
+build_case dirrecord modern
+mkdir "$WS/.claude.md.delivered"
+run_update
+check "23 exit 0" rc_is 0
+check "23 the shortcut ran" log_has "$B1_LINE"
+check "23 the template copy is upstream's v2" same "$SD/CLAUDE.md" "$UP/CLAUDE.md"
+check "23 the directory is still there" test -d "$WS/.claude.md.delivered"
+check "23 and nothing was moved into it" test -z "$(ls -A "$WS/.claude.md.delivered")"
+
+echo "=== case 24: hex lines of a wrong length are not carried, a well-formed foreign one is ==="
+build_case shortlines modern
+printf '%s\n' "abc" "$(printf 'a%.0s' $(seq 1 64))" > "$WS/.claude.md.delivered"
+run_update
+check "24 exit 0" rc_is 0
+check "24 every line of the record is a sha256" only_hashes "$WS/.claude.md.delivered"
+check "24 the short line is gone" lacks_text "$WS/.claude.md.delivered" "abc"
+check "24 the well-formed earlier line is kept" regular_has_line "$WS/.claude.md.delivered" "$(printf 'a%.0s' $(seq 1 64))"
+check "24 the delivered copy is on record" regular_has_line "$WS/.claude.md.delivered" "$(sha256_of "$UP/CLAUDE.md")"
+
+echo "=== case 25: a NUL byte in the record is not dropped on the way in ==="
+# The shell drops NUL when it reads command output: "<hash><NUL>" would become a valid line and vouch for an edited copy.
+build_case nulrecord modern
+printf '%s\n' "$EDIT_LINE" >> "$SD/CLAUDE.md"
+cp "$SD/CLAUDE.md" "$CASE_DIR/template-before.md"
+printf '%s\000\n' "$(sha256_of "$SD/CLAUDE.md")" > "$WS/.claude.md.delivered"
+run_update
+check "25 exit 49 (the refusal)" rc_is 49
+check "25 upstream is not taken as is" log_lacks "$B1_LINE"
+check "25 the edited template copy is untouched" same "$SD/CLAUDE.md" "$CASE_DIR/template-before.md"
+
+echo "=== case 26: a record saved with CRLF line ends is replaced by a clean one ==="
+build_case crlfrecord modern
+printf '%s\r\n' "$(sha256_of "$SD/CLAUDE.md")" > "$WS/.claude.md.delivered"
+run_update
+check "26 exit 0" rc_is 0
+check "26 the shortcut ran" log_has "$B1_LINE"
+check "26 every line of the record is a sha256" only_hashes "$WS/.claude.md.delivered"
+check "26 the delivered copy is on record" regular_has_line "$WS/.claude.md.delivered" "$(sha256_of "$UP/CLAUDE.md")"
+
+echo "=== case 27: a failing filter in the record check means the record is not usable ==="
+# update.sh runs without pipefail: in `tr ... | wc -c` a failed tr would show up as "no stray bytes" and the NUL-ridden
+# record of case 25 would pass (round 34 peer review). A stub tr fails only for the filter of the record check.
+build_case trfails modern
+printf '%s\n' "$EDIT_LINE" >> "$SD/CLAUDE.md"
+cp "$SD/CLAUDE.md" "$CASE_DIR/template-before.md"
+printf '%s\000\n' "$(sha256_of "$SD/CLAUDE.md")" > "$WS/.claude.md.delivered"
+mkdir -p "$CASE_DIR/trfail"
+{
+    echo '#!/bin/bash'
+    echo 'for a in "$@"; do case "$a" in *0-9a-f*) exit 1 ;; esac; done'
+    echo "exec \"$(command -v tr)\" \"\$@\""
+} > "$CASE_DIR/trfail/tr"
+chmod +x "$CASE_DIR/trfail/tr"
+EXTRA_PATH="$CASE_DIR/trfail" run_update
+check "27 exit 49 (the refusal)" rc_is 49
+check "27 upstream is not taken as is" log_lacks "$B1_LINE"
+check "27 the edited template copy is untouched" same "$SD/CLAUDE.md" "$CASE_DIR/template-before.md"
+
+echo "=== case 28: an edit committed in the clone is replaced by the release, the commit stays ==="
+# The "committed in the clone" test cannot tell such an edit from the delivered file (it is what heals installs that
+# never took a CLAUDE.md update). Bounded and told: the message names it, HEAD keeps the pilot's text, and an
+# edit that is not committed is still refused (cases 3, 14, 20, 21).
+build_case committededit modern
+printf '%s\n' "$EDIT_LINE" >> "$SD/CLAUDE.md"
+git -C "$SD" add CLAUDE.md
+git -C "$SD" -c user.name=test -c user.email=test@example.com commit -q -m "pilot edit of the template copy"
+run_update
+check "28 exit 0" rc_is 0
+check "28 the shortcut ran" log_has "$B1_LINE"
+check "28 the message tells the edit stays in the clone's history" log_has "остаётся в его истории git"
+check "28 the template copy is upstream's v2" same "$SD/CLAUDE.md" "$UP/CLAUDE.md"
+check "28 the pilot's commit is untouched: HEAD still holds the edit" test -n "$(git -C "$SD" show HEAD:CLAUDE.md | grep -xF -- "$EDIT_LINE")"
 
 echo
 echo "Result: $PASS_COUNT PASS, $FAIL_COUNT FAIL"

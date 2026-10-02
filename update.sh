@@ -2439,6 +2439,7 @@ print_extra_write_targets() {
     echo "  • $CLAUDE_MEMORY_DIR — рабочие копии memory-файлов"
     echo "  • $WORKSPACE_DIR/.iwe-runtime/ — пересобирается целиком из шаблона"
     echo "  • $WORKSPACE_DIR/.exocortex.env, $SCRIPT_DIR/.claude.md.base, $SCRIPT_DIR/update-manifest.json"
+    echo "  • $WORKSPACE_DIR/.claude.md.base и $WORKSPACE_DIR/.claude.md.delivered — база слияния CLAUDE.md и запись хешей доставленной копии"
     echo "  • $WORKSPACE_DIR/.iwe-paths и $HOME/.zshenv — пересоздаваемое окружение путей"
     echo "  • local core.hooksPath в git-репозиториях с .githooks под $WORKSPACE_DIR"
     echo "  • $governance_dir/scripts/install-hooks.sh — установщик platform hooks"
@@ -3292,6 +3293,25 @@ claude_template_copy_is_replaceable() {
     claude_template_copy_is_pristine "$1"
 }
 
+# claude_record_usable FILE — the delivered record is trusted only when it looks exactly like what
+# claude_record_delivered writes: a small regular file (not a symlink, FIFO or directory) made of lowercase hex
+# digits and newlines. Anything else would hang the read (an endless source), flood it, vouch with text nobody
+# here wrote or be bent by the shell on the way in (NUL bytes are dropped, a CR sticks to the line), so it counts
+# as absent: the other two tests still apply and the next replacement writes a fresh record in its place (red
+# team round 32: a FIFO in its place hung update.sh). A well-formed file can not be told apart from one this
+# script wrote: whoever can write the workspace can edit the copy too.
+claude_record_usable() {
+    local size stray
+    [ -f "$1" ] && [ ! -L "$1" ] || return 1
+    size=$(wc -c < "$1" 2>/dev/null) || return 1
+    size=${size//[[:space:]]/}
+    case "$size" in '' | *[!0-9]*) return 1 ;; esac
+    [ "$size" -le 1024 ] || return 1
+    # pipefail inside the substitution: a failing tr must not be hidden by the wc after it (update.sh runs without pipefail)
+    stray=$(set -o pipefail; LC_ALL=C tr -d '0-9a-f\n' < "$1" 2>/dev/null | wc -c) || return 1
+    [ "${stray//[[:space:]]/}" = 0 ]
+}
+
 # claude_template_copy_is_pristine FILE — proof that FILE was never edited. Equality with the
 # workspace base is no proof: the #541 refusal leaves an edited copy in place,
 # sync_workspace_claude_md() then advances the base to that edited copy, and on the next run
@@ -3305,10 +3325,11 @@ claude_template_copy_is_replaceable() {
 #   - the file update.sh itself wrote into the template repo last time (claude_record_delivered):
 #     a run that replaced the copy and then stopped before Step 6e replaced the manifest (a later
 #     step failed, an interrupt) leaves the manifest on the OLD release, and update.sh commits nothing,
-#     so HEAD stays old too; the next release would find the copy vouched for by neither.
+#     so HEAD stays old too; the next release would find the copy vouched for by neither (the record
+#     is read only when claude_record_usable accepts it).
 # A copy edited and then committed by hand passes the second test; its text stays in the history.
 claude_template_copy_is_pristine() {
-    local copy="$1" delivered committed copy_hash
+    local copy="$1" delivered committed copy_hash record
     CLAUDE_PROVEN_COPY_HASH=""
     # One read: the hash the proof is about is the one the record keeps (the copy must not be edited while
     # update.sh runs; an editor saving between two reads is outside what this can promise).
@@ -3319,7 +3340,8 @@ claude_template_copy_is_pristine() {
         CLAUDE_PROVEN_COPY_HASH="$copy_hash"
         return 0
     fi
-    if grep -qxF -- "$copy_hash" "${WORKSPACE_DIR:-/nonexistent}/.claude.md.delivered" 2>/dev/null; then
+    record="${WORKSPACE_DIR:-/nonexistent}/.claude.md.delivered"
+    if claude_record_usable "$record" && grep -qxF -- "$copy_hash" <<< "$(head -c 1024 -- "$record" 2>/dev/null)"; then
         CLAUDE_PROVEN_COPY_HASH="$copy_hash"
         return 0
     fi
@@ -3342,15 +3364,27 @@ claude_template_copy_is_pristine() {
 # effort: no failure here stops the update, and without the record the other two tests still apply. Not
 # promised: two update.sh at once (the script has no lock anywhere), an editor saving the template copy
 # while update.sh runs, a kill in the middle of cp itself (a half-written copy matches nothing and is refused).
+# The earlier lines are carried over only from a record claude_record_usable accepts; whatever else stands there
+# (a symlink, a FIFO, junk, CRLF text) is replaced, a directory is left alone.
 claude_record_delivered() {
     [ -n "${WORKSPACE_DIR:-}" ] && [ -d "$WORKSPACE_DIR" ] || return 0
-    local record="$WORKSPACE_DIR/.claude.md.delivered" tmp hash hashes=""
+    local record="$WORKSPACE_DIR/.claude.md.delivered" tmp hash hashes="" kept="" line
+    # mv would move the temp file INTO a directory standing at that path: leave such a path alone
+    [ ! -d "$record" ] || return 0
     [ -z "${CLAUDE_PROVEN_COPY_HASH:-}" ] || hashes="$CLAUDE_PROVEN_COPY_HASH"$'\n'
     hash=$(hash_file "$1" 2>/dev/null) || hash=""
     [ -z "$hash" ] || hashes="$hashes$hash"$'\n'
     [ -n "$hashes" ] || return 0
-    tmp="$record.tmp.$$"
-    if { { grep -vxF -f <(printf '%s' "$hashes") "$record" 2>/dev/null || true; }; printf '%s' "$hashes"; } | tail -n 4 > "$tmp" 2>/dev/null; then
+    if claude_record_usable "$record"; then
+        # earlier lines (a sha256 each, and not one this run writes again); a hex line of another length is dropped
+        while IFS= read -r line || [ -n "$line" ]; do
+            [ "${#line}" -eq 64 ] || continue
+            case $'\n'"$hashes" in *$'\n'"$line"$'\n'*) continue ;; esac
+            kept="$kept$line"$'\n'
+        done < <(head -c 1024 -- "$record" 2>/dev/null)
+    fi
+    tmp=$(mktemp "$record.tmp.XXXXXX" 2>/dev/null) || return 0
+    if printf '%s%s' "$kept" "$hashes" | tail -n 4 > "$tmp" 2>/dev/null; then
         mv -f "$tmp" "$record" 2>/dev/null || rm -f "$tmp" 2>/dev/null || true
     else
         rm -f "$tmp" 2>/dev/null || true
@@ -4416,7 +4450,7 @@ for f in "${UPDATED_FILES[@]}"; do
             # side of && a failure would not stop the run under set -e and "обновлён" would be a lie.
             claude_record_delivered "$NEW_FILE"
             cp "$NEW_FILE" "$CURRENT_FILE"
-            echo "  ~ $f обновлён (копия в каталоге шаблона не правилась)"
+            echo "  ~ $f обновлён (копия в каталоге шаблона совпадает с доставленной ранее или с закоммиченной в клоне; ваша правка, закоммиченная в клоне, остаётся в его истории git)"
         else
             # issue #336: no base file (first migration or lost .claude.md.base) — a
             # blind `cp $NEW_FILE $CURRENT_FILE` silently discarded any pilot edit to
