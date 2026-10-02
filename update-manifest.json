@@ -573,7 +573,7 @@
     },
     {
       "path": ".claude/skills/iwe-update/SKILL.md",
-      "sha256": "add0e5142c38f3e840ffa5afd69335318d2392daa22a88663d006c9b83442a16"
+      "sha256": "9631799428bd730b88358ad31b9508c5dd0ef4fa867913868a863c543f7fb455"
     },
     {
       "path": ".claude/skills/ke/SKILL.md",
@@ -853,7 +853,7 @@
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "4eb97122bb51cc3026bd650f48a4e4d86f7c1239fadb4d6ffae78deb319242a3"
+      "sha256": "539f099e23efae7f65c10941265e0e3537c85b0dbff597ae34adc5944e9e8653"
     },
     {
       "path": "CLAUDE.md",
@@ -3113,7 +3113,7 @@
     },
     {
       "path": "setup.sh",
-      "sha256": "3a0f4917669898f7473b99f815d7c7c29883b45288afff9f4012e82ddc6c10c0"
+      "sha256": "fb174dca3e2f011c5ebc0487d6d52718a1782ac0420f2f2212d3e8819619cd78"
     },
     {
       "path": "setup/build-runtime.sh",
@@ -3153,7 +3153,7 @@
     },
     {
       "path": "update.sh",
-      "sha256": "ee2e273f6e69bc3e1304d81799ab2c0bcd64c60ae5f0e139126019d04c5d0a70"
+      "sha256": "55ae15ac8a2cc570c1d3132ca4c24ed5198b7ee22922a05b913d1789ae1f7d21"
     }
   ],
   "excluded_paths": [

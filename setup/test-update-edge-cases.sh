@@ -7,7 +7,7 @@
 #   T3: CLAUDE.md with pre-existing conflict markers blocks update (stacking guard)
 #   T4: role install failure surfaces a visible warning (not silently swallowed)
 #   T5: network-independent --check works with a cached manifest
-#   T6: memory file with owner: user survives a hash mismatch (issue #229)
+#   T6: the owner: marker is read correctly but no longer decides a memory update (issues #229/#965)
 #   T7: hot-budget sum over threshold is detectable (issue #228)
 #   T8: build-runtime.sh does not clobber an edited params.yaml (issue #327)
 #   T9: .mcp.json migration preserves a third-party server like ext-figma (issue #335)
@@ -22,7 +22,8 @@
 #   T18: decision-log consumers share one canonical path and define cold-start/migration behavior (issue #351)
 #   T19: orphan detection resolves the template independently of CWD and fails open (issue #353)
 #   T20: index-health skip suppresses size checks but keeps semantic checks (issue #357)
-#   T21: legacy owner:user protocols migrate once with backup; other user files stay protected (issue #354)
+#   T21: legacy owner:user protocols follow the memory policy: untouched ones migrate once with a
+#        backup, edited ones are kept (issues #354/#965/#967)
 #   T22: Quick Close requires a runner card only when the runner and graph exist (issue #356)
 #   T23: wp-sync-bundle handles canonical cards, phase statuses, relation shapes, titles, and linked worktrees
 #   T24-T27: update safety, bootstrap/path contracts, multiplier opt-out, #384/#387/#388
@@ -41,11 +42,22 @@
 #        (upstream moved on) is discarded, not silently accepted (issue #846)
 #   T42: memory/*.md stale-repair backs up the workspace copy before
 #        overwriting it, like .claude/rules/* already does (issue #847)
-#   T43: Step 6 (the main apply path) backs up a modified platform memory file
-#        before replacing it and names the replaced files (issue #967)
+#   T43: Step 6 (the main apply path) keeps a memory file the pilot edited, backs up and names
+#        a file it replaces because the pilot never changed it (issues #967/#965)
 #   T44: the author_mode "stale" hint runs on exactly the printed paths (a space, quotes,
 #        $(...), backticks and a backslash in them) and two runs keep two copies
-#   T45: the same for the owner:user drift hint (cold review of #967)
+#   T45: the same for the memory policy's command for a kept copy; a refreshed copy on such
+#        paths gets its backup (cold review of #967)
+#   T46: one memory policy for every owner: untouched copies refreshed with a backup (proof by
+#        the version installed last time or by the clone's history), edited or unverifiable
+#        ones kept with a command; shallow clone, failed backup, repeated update, migration,
+#        odd paths, author_mode, the record of installed versions (issues #965/#967)
+#   T47: the record of installed memory versions (.memory-deployed.tsv): a broken-off run and a
+#        copy several releases behind, an unusable record, setup.sh's first record, author_mode
+#        in Step 6 and the repair pass (review of #965/#967)
+#   T48: the record before Step 5 (a run broken off before Step 6), atomic writes of the record and
+#        of memory copies, unreadable or linked record, every file left as it was in the summary
+#        (review-12 of #965/#967)
 #
 # Exit: 0 = all PASS, N = N tests failed
 #
@@ -130,6 +142,17 @@ with open('$manifest_file', 'w') as f:
     json.dump(manifest, f)
 " 2>/dev/null
     echo "$manifest_file"
+}
+
+# update_sh_functions NAME... — the definitions of the named top-level functions of update.sh, in
+# the given order. A name update.sh does not define prints nothing: a run of the extracted code
+# then fails on its observable result, not on the extraction. One-line functions (py_available)
+# cannot be extracted this way; tests define their own stand-ins.
+update_sh_functions() {
+    local fn
+    for fn in "$@"; do
+        awk -v fn="$fn" '$0 ~ "^" fn "\\(\\) \\{" {copy=1} copy{print} copy && /^}/{exit}' "$TEMPLATE_DIR/update.sh"
+    done
 }
 
 # ============================================================
@@ -288,9 +311,11 @@ fi
 rm -f "$CACHE_MANIFEST"
 
 # ============================================================================
-# T6: memory file with owner: user survives a hash mismatch (issue #229)
+# T6: the owner: marker is read correctly, and it no longer decides whether a memory copy is
+# refreshed (issue #229, then #965/#967: an edited owner: user copy survives because it is
+# edited — T46 runs that — and an untouched one is refreshed like any other)
 # ============================================================================
-echo "--- T6: owner:user memory file is not stale-repaired ---"
+echo "--- T6: owner: marker is read, but the memory policy decides (issues #229/#965) ---"
 
 source "$TEMPLATE_DIR/.claude/lib/frontmatter.sh"
 
@@ -313,29 +338,27 @@ horizon: hot
 Pilot's own edit — must never be overwritten by stale-repair.
 HEREDOC
 
-# Same conditional update.sh's repair_pass() / Step 6 propagation use: owner:user guard first.
 if [ "$(get_field "$T6_DEPLOYED" owner)" = "user" ]; then
-    T6_PROTECTED=true
+    pass "T6: get_field detects owner:user (single-quoted)"
 else
-    T6_PROTECTED=false
+    fail "T6: get_field failed to detect owner:user"
 fi
 
-if [ "$T6_PROTECTED" = "true" ]; then
-    pass "T6: get_field detects owner:user (single-quoted) — repair_pass would skip this file"
+# Wiring check: no owner: guard is left at either memory site — the marker used to keep an
+# untouched owner: user file behind forever (#965) and let an edited owner: platform file be
+# replaced (#967) — and both sites go through the one policy helper: Step 6 with the version
+# installed last time, the repair pass without it (nothing was replaced in its run).
+T6_OWNER_GUARDS=$(grep -cE 'get_field "\$[a-z_]*dst" owner' "$TEMPLATE_DIR/update.sh")
+# shellcheck disable=SC2016  # literal update.sh code, nothing is meant to expand
+T6_STEP6_WIRED=$(grep -cF 'elif apply_memory_policy "$f" "$dst" "$(memory_old_hash "$f")"; then' "$TEMPLATE_DIR/update.sh")
+# shellcheck disable=SC2016
+T6_REPAIR_WIRED=$(grep -cF 'elif apply_memory_policy "$fpath" "$mem_dst"; then' "$TEMPLATE_DIR/update.sh")
+# The decision itself never reads the marker; only author_mode's report does (is_user_owned_memory).
+T6_DECISION_READS=$(update_sh_functions apply_memory_policy memory_copy_verdict | grep -cE 'get_field|is_user_owned_memory' || true)
+if [ "$T6_OWNER_GUARDS" -eq 0 ] && [ "$T6_STEP6_WIRED" -eq 1 ] && [ "$T6_REPAIR_WIRED" -eq 1 ] && [ "$T6_DECISION_READS" -eq 0 ]; then
+    pass "T6: no owner: guard decides any more; Step 6 and repair_pass() both call apply_memory_policy"
 else
-    fail "T6: get_field failed to detect owner:user — file would be clobbered"
-fi
-
-# Wiring check: the helper working in isolation doesn't prove update.sh still
-# calls it in the right place. Grep for the actual guard at both call sites
-# (repair_pass() and the Step 6 memory-copy loop) so a future refactor that
-# drops or reorders the check fails this test even though get_field itself
-# is untouched.
-T6_WIRED_COUNT=$(grep -cE 'get_field "\$[a-z_]*dst" owner' "$TEMPLATE_DIR/update.sh")
-if [ "$T6_WIRED_COUNT" -eq 2 ]; then
-    pass "T6: owner:user guard is wired into both repair_pass() and Step 6 propagation"
-else
-    fail "T6: expected owner:user guard at 2 call sites in update.sh, found $T6_WIRED_COUNT"
+    fail "T6: expected no owner: guard and the policy at both memory sites, found guards=$T6_OWNER_GUARDS step6=$T6_STEP6_WIRED repair=$T6_REPAIR_WIRED decision-reads=$T6_DECISION_READS"
 fi
 
 # ============================================================================
@@ -1364,91 +1387,60 @@ else
     fail "T21: $T21_OWNER_FAILURES shared memory file(s) still have the wrong owner"
 fi
 
-T21_WIRED_COUNT=$(grep -cE 'migrate_platform_memory "\$(fpath|f)" "\$(mem_dst|dst)"' "$TEMPLATE_DIR/update.sh")
-if [ "$T21_WIRED_COUNT" -eq 2 ]; then
-    pass "T21: migration is wired into repair-pass and normal propagation"
+# issues #965/#967: the one-time owner:user -> owner:platform migration is no second overwrite
+# path any more. The memory policy decides it like any other file: an untouched legacy copy is
+# replaced (its marker changes with the file), an edited one is kept — so navigation.md with the
+# installation's own addresses survives the update. author_mode keeps its branch (T46, world E).
+T21_SECOND_PATH=$(grep -cE '^(migrate_platform_memory|is_migrated_platform_memory_path)\(\)' "$TEMPLATE_DIR/update.sh")
+if [ "$T21_SECOND_PATH" -eq 0 ]; then
+    pass "T21: the migration has no overwrite path of its own"
 else
-    fail "T21: expected migration at both memory propagation sites, found $T21_WIRED_COUNT"
+    fail "T21: update.sh still defines a separate migration overwrite path ($T21_SECOND_PATH function(s))"
 fi
 
+# Every check ends with "|| exit 1": set -e has no effect inside a subshell that an `if` tests.
 if (
-    eval "$(awk '/^hash_file\(\)/{copy=1} copy{print} copy && /^}/{exit}' "$TEMPLATE_DIR/update.sh")"
-    eval "$(awk '/^is_author_mode\(\)/{copy=1} copy{print} copy && /^}/{exit}' "$TEMPLATE_DIR/update.sh")"
-    eval "$(awk '/^is_migrated_platform_memory_path\(\)/{copy=1} copy{print} copy && /^}/{exit}' "$TEMPLATE_DIR/update.sh")"
-    eval "$(awk '/^migrate_platform_memory\(\)/{copy=1} copy{print} copy && /^}/{exit}' "$TEMPLATE_DIR/update.sh")"
-
+    set +u
+    eval "$(update_sh_functions hash_file saving_cp_command backup_memory_file_before_overwrite apply_memory_policy \
+        memory_record_put memory_record_get remember_memory_deployed memory_decided_once memory_reason_text \
+        memory_copy_verdict replace_memory_copy)"
     SCRIPT_DIR="$TEMPLATE_DIR"
     WORKSPACE_DIR="$TEST_WS/t21-workspace"
+    MEMORY_BACKUP_RUN=""
+    # shellcheck disable=SC2034  # read by the eval'd update.sh functions
+    MEMORY_DEPLOYED_RECORD="$WORKSPACE_DIR/.memory-deployed.tsv"
     mkdir -p "$WORKSPACE_DIR"
 
+    # The copy an old release installed (owner: user), untouched since: proven by its hash.
     target="$TEST_WS/t21-protocol-open.md"
-    cat > "$target" <<'HEREDOC'
----
-owner: user
----
-Pilot custom protocol content.
-HEREDOC
+    printf -- '---\nowner: user\n---\nLegacy protocol text as an old release shipped it.\n' > "$target"
+    installed_hash=$(hash_file "$target")
+    apply_memory_policy memory/protocol-open.md "$target" "$installed_hash" || exit 1
+    cmp -s "$target" "$TEMPLATE_DIR/memory/protocol-open.md" || exit 1
+    [ "$(get_field "$target" owner)" = "platform" ] || exit 1
+    backup=$(find "$WORKSPACE_DIR/.backups/memory-pre-update" -type f -name protocol-open.md -print -quit)
+    grep -q 'Legacy protocol text as an old release shipped it' "$backup" || exit 1
 
-    migrate_platform_memory memory/protocol-open.md "$target"
-    backup="$WORKSPACE_DIR/.backups/protocol-owner-migration/protocol-open.md"
-    grep -q 'Pilot custom protocol content' "$backup"
-    cmp -s "$target" "$TEMPLATE_DIR/memory/protocol-open.md"
-    backup_hash=$(hash_file "$backup")
-
-    # The deployed copy is now owner:platform, so a repeat must be a no-op and
-    # must not replace the saved user version.
-    if migrate_platform_memory memory/protocol-open.md "$target"; then
+    # The next update finds the copy current: nothing is replaced or backed up again.
+    # shellcheck disable=SC2034  # read by the eval'd update.sh function
+    MEMORY_POLICY_SEEN=""
+    if apply_memory_policy memory/protocol-open.md "$target" "$installed_hash"; then
         exit 1
     fi
-    [ "$backup_hash" = "$(hash_file "$backup")" ]
+    [ "$(find "$WORKSPACE_DIR/.backups" -type f | wc -l | tr -d ' ')" = "1" ] || exit 1
 
-    # A platform-owned source outside the exact migration allowlist must not
-    # weaken the general owner:user protection from issue #229.
-    unrelated="$TEST_WS/t21-unrelated.md"
-    cat > "$unrelated" <<'HEREDOC'
----
-owner: user
----
-Unrelated user content.
-HEREDOC
-    if migrate_platform_memory memory/protocol-dt-integration.md "$unrelated"; then
+    # An edited legacy copy is kept: the installation's addresses must survive.
+    edited="$TEST_WS/t21-navigation.md"
+    printf -- '---\nowner: user\n---\nRepository addresses of this installation.\n' > "$edited"
+    if apply_memory_policy memory/navigation.md "$edited" "$installed_hash"; then
         exit 1
     fi
-    grep -q 'Unrelated user content' "$unrelated"
-
-    # author_mode remains fail-closed even for an allowlisted legacy protocol.
-    printf 'author_mode: true\n' > "$WORKSPACE_DIR/params.yaml"
-    author_target="$TEST_WS/t21-author-protocol.md"
-    cat > "$author_target" <<'HEREDOC'
----
-owner: user
----
-Author unpublished content.
-HEREDOC
-    if migrate_platform_memory memory/protocol-work.md "$author_target"; then
-        exit 1
-    fi
-    grep -q 'Author unpublished content' "$author_target"
-
-    # #384 extends the exact migration to platform-maintained references without
-    # weakening user-owned FPF snapshots and author distinctions.
-    rm -f "$WORKSPACE_DIR/params.yaml"
-    reference_target="$TEST_WS/t21-agent-core.md"
-    cat > "$reference_target" <<'HEREDOC'
----
-owner: user
----
-Legacy platform reference with a pilot note.
-HEREDOC
-    migrate_platform_memory memory/reference/agent-core.md "$reference_target"
-    cmp -s "$reference_target" "$TEMPLATE_DIR/memory/reference/agent-core.md"
-    if migrate_platform_memory memory/fpf-reference.md "$unrelated"; then
-        exit 1
-    fi
-); then
-    pass "T21: migration preserves the user copy, is idempotent, allowlisted and author-safe"
+    grep -q 'Repository addresses of this installation' "$edited" || exit 1
+    [ "$(find "$WORKSPACE_DIR/.backups" -type f | wc -l | tr -d ' ')" = "1" ] || exit 1
+) > /dev/null 2>&1; then
+    pass "T21: an untouched legacy copy migrates with a backup, once; an edited one is kept"
 else
-    fail "T21: platform protocol migration contract failed"
+    fail "T21: legacy owner: user memory did not follow the memory policy"
 fi
 
 # ============================================================
@@ -2696,13 +2688,15 @@ IWE_GOVERNANCE_REPO=""
 print_extra_write_targets
 EOF
 T37_OUT=$(bash "$T37_RUNNER" 2>&1)
-if printf '%s\n' "$T37_OUT" | grep -Fq "$T37_WS/legacy-governance/scripts/install-hooks.sh" && \
-   printf '%s\n' "$T37_OUT" | grep -Fq "$T37_WS/legacy-governance/.githooks/pre-commit" && \
-   printf '%s\n' "$T37_OUT" | grep -Fq "$T37_WS/legacy-governance/scripts/update-derived-snapshot.py" && \
-   printf '%s\n' "$T37_OUT" | grep -Fq "$T37_WS/legacy-governance/scripts/executor-catalog.yaml" && \
-   printf '%s\n' "$T37_OUT" | grep -Fq "$T37_WS/.iwe-paths" && \
-   printf '%s\n' "$T37_OUT" | grep -Fq '/.zshenv' && \
-   printf '%s\n' "$T37_OUT" | grep -Fq 'local core.hooksPath'; then
+# Here-strings, not `printf | grep -q`: with pipefail, grep -q leaving after an early match makes
+# printf die of SIGPIPE once the preview outgrows the pipe buffer, and the check fails at random.
+if grep -Fq -- "$T37_WS/legacy-governance/scripts/install-hooks.sh" <<<"$T37_OUT" && \
+   grep -Fq -- "$T37_WS/legacy-governance/.githooks/pre-commit" <<<"$T37_OUT" && \
+   grep -Fq -- "$T37_WS/legacy-governance/scripts/update-derived-snapshot.py" <<<"$T37_OUT" && \
+   grep -Fq -- "$T37_WS/legacy-governance/scripts/executor-catalog.yaml" <<<"$T37_OUT" && \
+   grep -Fq -- "$T37_WS/.iwe-paths" <<<"$T37_OUT" && \
+   grep -Fq -- '/.zshenv' <<<"$T37_OUT" && \
+   grep -Fq -- 'local core.hooksPath' <<<"$T37_OUT"; then
     pass "T37: preview resolves legacy config and lists every governance backfill target"
 else
     fail "T37: preview omits or mis-resolves governance backfill targets: $T37_OUT"
@@ -4387,14 +4381,16 @@ else
 fi
 
 # ============================================================================
-# T43: Step 6 (the main apply path) backs up a modified platform memory file
-# before replacing it, and names the replaced files (issue #967)
+# T43: Step 6 (the main apply path) keeps a memory file the pilot edited, and backs up and
+# names a file it replaces because the pilot never changed it (issues #967/#965)
 # ============================================================================
-echo "--- T43: Step 6 memory/* replacement is backed up and reported (issue #967) ---"
+echo "--- T43: Step 6 keeps the edited memory file, backs up and reports the replaced one (issues #967/#965) ---"
 
-# T42 covers the repair pass. Step 6 replaced a changed memory/*.md with a bare `cp`:
-# a pilot's edit to a platform-owned file (memory/navigation.md holds per-installation
-# notes) vanished with every release that touched the file, with no backup and no word.
+# T42 covers the backup itself. Step 6 replaced a changed memory/*.md with a bare `cp`: a
+# pilot's edit to a platform-owned file (memory/navigation.md holds per-installation notes)
+# vanished with every release that touched the file (#967). Now Step 6 refreshes only a copy
+# that equals the version installed last time (recorded in Step 2), after a backup, and keeps an
+# edited one with a ready command to accept the release version.
 # The Step 6 loop is inline code, not a function: it is extracted by the comment above
 # it and the closing `fi` of its outer `if`, and run for real on a fixture.
 T43_BLOCK=$(awk '
@@ -4405,7 +4401,9 @@ T43_BLOCK=$(awk '
 ' "$TEMPLATE_DIR/update.sh")
 T43_FUNCS=""
 T43_MISSING=""
-for t43_fn in hash_file is_author_mode is_migrated_platform_memory_path migrate_platform_memory is_personal_config backup_memory_file_before_overwrite; do
+for t43_fn in hash_file is_author_mode is_personal_config saving_cp_command backup_memory_file_before_overwrite \
+    apply_memory_policy record_memory_old_hash memory_old_hash report_memory_policy_summary \
+    memory_record_put memory_record_get remember_memory_deployed memory_decided_once memory_reason_text memory_copy_verdict replace_memory_copy; do
     t43_src=$(awk -v fn="$t43_fn" '$0 ~ "^" fn "\\(\\) \\{" {copy=1} copy{print} copy && /^}/{exit}' "$TEMPLATE_DIR/update.sh")
     if [ -z "$t43_src" ]; then
         T43_MISSING="$T43_MISSING $t43_fn"
@@ -4418,23 +4416,31 @@ if [ -z "$T43_BLOCK" ] || [ -n "$T43_MISSING" ]; then
 else
     T43_DIR="$TEST_WS/t43-step6-memory"
     T43_TEMPLATE="$T43_DIR/template"
+    T43_PREVIOUS="$T43_DIR/previous"
     T43_WORKSPACE="$T43_DIR/workspace"
     T43_MEMORY="$T43_DIR/claude-memory"
-    mkdir -p "$T43_TEMPLATE/memory" "$T43_WORKSPACE" "$T43_MEMORY"
+    mkdir -p "$T43_TEMPLATE/memory" "$T43_PREVIOUS/memory" "$T43_WORKSPACE" "$T43_MEMORY"
 
-    # The release: a changed navigation.md, a file that is new here, one that is identical
-    # to the pilot's copy, and one the pilot owns.
+    # The release: a changed navigation.md, a changed file the pilot never touched, a file that
+    # is new here, one that is identical to the pilot's copy, and one the pilot rewrote.
     printf -- '---\nowner: platform\n---\nTemplate v2 navigation\n' > "$T43_TEMPLATE/memory/navigation.md"
+    printf -- '---\nowner: platform\n---\nTemplate v2 untouched\n' > "$T43_TEMPLATE/memory/untouched.md"
     printf -- '---\nowner: platform\n---\nBrand new platform file\n' > "$T43_TEMPLATE/memory/brand-new.md"
     printf -- '---\nowner: platform\n---\nSame text on both sides\n' > "$T43_TEMPLATE/memory/same.md"
     printf -- '---\nowner: platform\n---\nTemplate text for a pilot-owned file\n' > "$T43_TEMPLATE/memory/user-owned.md"
+    # The versions the previous update installed (what Step 2 records before Step 5 replaces them).
+    printf -- '---\nowner: platform\n---\nTemplate v1 navigation\n' > "$T43_PREVIOUS/memory/navigation.md"
+    printf -- '---\nowner: platform\n---\nTemplate v1 untouched\n' > "$T43_PREVIOUS/memory/untouched.md"
+    printf -- '---\nowner: user\n---\nTemplate v1 text for a pilot-owned file\n' > "$T43_PREVIOUS/memory/user-owned.md"
     # The pilot's deployed copies.
     printf -- '---\nowner: platform\n---\nTemplate v1 navigation\nPilot notes about this installation\n' > "$T43_MEMORY/navigation.md"
+    cp "$T43_PREVIOUS/memory/untouched.md" "$T43_MEMORY/untouched.md"
     cp "$T43_TEMPLATE/memory/same.md" "$T43_MEMORY/same.md"
     printf -- '---\nowner: user\n---\nPilot-owned text\n' > "$T43_MEMORY/user-owned.md"
 
     # t43_run_step6 "NEW FILES" "UPDATED FILES" — the extracted loop, in a subshell (it is
-    # update.sh code and runs without -u); prints what the loop printed.
+    # update.sh code and runs without -u), after the Step 2 record of the previous versions and
+    # followed by the memory summary that closes the pass; prints what they printed.
     t43_run_step6() {
         local new_list="$1" updated_list="$2"
         (
@@ -4447,63 +4453,77 @@ else
             # shellcheck disable=SC2034  # read by the eval'd update.sh code
             CLAUDE_MEMORY_DIR="$T43_MEMORY"
             MEMORY_BACKUP_RUN=""
+            MEMORY_OLD_HASHES="$T43_DIR/old-hashes.tsv"
+            : > "$MEMORY_OLD_HASHES"
+            # shellcheck disable=SC2034  # read by the eval'd update.sh code
+            MEMORY_DEPLOYED_RECORD="$T43_WORKSPACE/.memory-deployed.tsv"
             # shellcheck disable=SC2034,SC2206  # word splitting of a list of plain paths is intended
             NEW_FILES=($new_list)
             # shellcheck disable=SC2034,SC2206
             UPDATED_FILES=($updated_list)
+            for t43_f in "${UPDATED_FILES[@]}"; do
+                if [ -f "$T43_PREVIOUS/$t43_f" ]; then
+                    record_memory_old_hash "$t43_f" "$(hash_file "$T43_PREVIOUS/$t43_f")"
+                fi
+            done
             eval "$T43_BLOCK"
+            report_memory_policy_summary
         ) 2>&1
     }
-    T43_OUT=$(t43_run_step6 "memory/brand-new.md" "memory/navigation.md memory/same.md memory/user-owned.md")
+    T43_OUT=$(t43_run_step6 "memory/brand-new.md" "memory/navigation.md memory/untouched.md memory/same.md memory/user-owned.md")
 
-    T43_BACKUP=$(find "$T43_WORKSPACE/.backups/memory-pre-update" -type f -name navigation.md -print -quit 2>/dev/null || true)
-    if [ -n "$T43_BACKUP" ] && grep -q 'Pilot notes about this installation' "$T43_BACKUP"; then
-        pass "T43: the pilot's navigation.md is backed up before Step 6 replaces it"
+    T43_NAV_LINE=$(grep -F -- 'memory/navigation.md — НЕ обновлён: ' <<<"$T43_OUT" || true)
+    if grep -q 'Pilot notes about this installation' "$T43_MEMORY/navigation.md" \
+        && grep -qF -- 'Если ваших правок там нет, примите версию шаблона (прежняя копия останется рядом): ' <<<"$T43_NAV_LINE"; then
+        pass "T43: the pilot's edited navigation.md is kept, with one line and a ready command"
     else
-        fail "T43: no backup holding the pilot's edit of navigation.md (found: ${T43_BACKUP:-none})"
+        fail "T43: the edited navigation.md was replaced or reported without a command: '${T43_NAV_LINE:-<no line>}'"
     fi
-    if cmp -s "$T43_MEMORY/navigation.md" "$T43_TEMPLATE/memory/navigation.md"; then
-        pass "T43: navigation.md is replaced with the release version"
+    T43_BACKUP=$(find "$T43_WORKSPACE/.backups/memory-pre-update" -type f -name untouched.md -print -quit 2>/dev/null || true)
+    if cmp -s "$T43_MEMORY/untouched.md" "$T43_TEMPLATE/memory/untouched.md" \
+        && [ -n "$T43_BACKUP" ] && grep -q 'Template v1 untouched' "$T43_BACKUP"; then
+        pass "T43: a file the pilot never changed is replaced with the release version, after a backup"
     else
-        fail "T43: navigation.md was not replaced with the release version"
+        fail "T43: the untouched file was not replaced after a backup (backup: ${T43_BACKUP:-none})"
     fi
-    T43_SUMMARY=$(printf '%s\n' "$T43_OUT" | grep -F 'Заменено файлов памяти платформы' || true)
-    if grep -qF -- 'Заменено файлов памяти платформы: 1' <<<"$T43_SUMMARY" \
-        && grep -qF -- 'memory/navigation.md' <<<"$T43_SUMMARY" \
+    T43_SUMMARY=$(printf '%s\n' "$T43_OUT" | grep -F 'Заменено файлов памяти' || true)
+    if grep -qF -- 'Заменено файлов памяти: 1' <<<"$T43_SUMMARY" \
+        && grep -qF -- 'memory/untouched.md' <<<"$T43_SUMMARY" \
         && grep -qF -- "$T43_WORKSPACE/.backups/memory-pre-update" <<<"$T43_SUMMARY"; then
         pass "T43: the summary names the replaced file, their number and the backup directory"
     else
         fail "T43: replaced-files summary is missing or wrong: '${T43_SUMMARY:-<none>}'"
     fi
-    if grep -qE -- 'brand-new|same\.md|user-owned' <<<"$T43_SUMMARY"; then
+    if grep -qE -- 'navigation|brand-new|same\.md|user-owned' <<<"$T43_SUMMARY"; then
         fail "T43: the summary lists a file that was not replaced: $T43_SUMMARY"
     else
-        pass "T43: new, identical and pilot-owned files are not in the summary"
+        pass "T43: kept, new and identical files are not in the replaced-files summary"
     fi
     if [ -f "$T43_MEMORY/brand-new.md" ] \
-        && [ -z "$(find "$T43_WORKSPACE/.backups/memory-pre-update" -type f \( -name brand-new.md -o -name same.md -o -name user-owned.md \) -print 2>/dev/null)" ]; then
-        pass "T43: a new file is copied, and nothing is backed up for new or identical files"
+        && [ -z "$(find "$T43_WORKSPACE/.backups/memory-pre-update" -type f \( -name brand-new.md -o -name same.md -o -name user-owned.md -o -name navigation.md \) -print 2>/dev/null)" ]; then
+        pass "T43: a new file is copied, and nothing is backed up for new, identical or kept files"
     else
-        fail "T43: new file missing, or an unnecessary backup exists for a new/identical file"
+        fail "T43: new file missing, or an unnecessary backup exists for a new/identical/kept file"
     fi
     if grep -q 'Pilot-owned text' "$T43_MEMORY/user-owned.md"; then
-        pass "T43: a pilot-owned (owner: user) file is still left alone"
+        pass "T43: a pilot-owned (owner: user) file the pilot rewrote is still left alone"
     else
-        fail "T43: the owner: user guard no longer protects the file"
+        fail "T43: the pilot's rewrite of user-owned.md was replaced"
     fi
 
-    # A second pass finds nothing that differs: nothing to back up, nothing to report.
-    T43_OUT2=$(t43_run_step6 "" "memory/navigation.md memory/same.md")
-    if grep -qF -- 'Заменено файлов памяти платформы' <<<"$T43_OUT2"; then
+    # A second pass finds nothing to replace: no replaced-files summary.
+    T43_OUT2=$(t43_run_step6 "" "memory/navigation.md memory/same.md memory/untouched.md")
+    if grep -qF -- 'Заменено файлов памяти' <<<"$T43_OUT2"; then
         fail "T43: a pass that replaces nothing still prints the replaced-files summary"
     else
-        pass "T43: no summary when no file is replaced"
+        pass "T43: no replaced-files summary when no file is replaced"
     fi
 fi
 
 # ============================================================================
-# T44/T45: the cp command that the drift reports offer for a copy that equals a committed
-# version runs on exactly the printed paths and keeps every earlier copy (cold review of #967)
+# T44/T45: the cp command that update.sh offers (the author_mode stale hint; the memory policy's
+# command for a kept copy) runs on exactly the printed paths and keeps every earlier copy (cold
+# review of #967)
 # ============================================================================
 # A bare cp loses the copy when the verdict misleads (an edit committed into the clone looks like
 # an older version too). The printed command is run by the user's shell, so a path with a double
@@ -4593,75 +4613,889 @@ else
     fi
 fi
 
-echo "--- T45: owner:user drift hint: odd paths, two runs keep two copies ---"
-T45_FUNCS=""
-T45_MISSING=""
-for t45_fn in hash_file is_migrated_platform_memory_path report_owner_user_memory_drift; do
-    t45_src=$(awk -v fn="$t45_fn" '$0 ~ "^" fn "\\(\\) \\{" {copy=1} copy{print} copy && /^}/{exit}' "$TEMPLATE_DIR/update.sh")
-    if [ -z "$t45_src" ]; then
-        T45_MISSING="$T45_MISSING $t45_fn"
-    fi
-    T45_FUNCS="$T45_FUNCS
-$t45_src"
-done
-# The command builder, when update.sh has it (see T44).
-T45_FUNCS="$T45_FUNCS
-$(awk '/^saving_cp_command\(\) \{$/{found=1} found{print} found && /^}$/{exit}' "$TEMPLATE_DIR/update.sh")"
-if [ -n "$T45_MISSING" ]; then
-    fail "T45: could not extract from update.sh:$T45_MISSING"
+echo "--- T45: kept memory copy: odd paths, the hint's two runs keep two copies (issues #965/#967) ---"
+# The memory policy (apply_memory_policy) keeps a copy that matches no committed version and prints
+# the saving command for it; a copy that equals a committed older version it refreshes itself,
+# after a backup. Both on paths with a space, double quotes, a $(...), backticks and a backslash.
+T45_FUNCS=$(update_sh_functions hash_file saving_cp_command backup_memory_file_before_overwrite apply_memory_policy \
+    memory_record_put memory_record_get remember_memory_deployed memory_decided_once memory_reason_text memory_copy_verdict replace_memory_copy)
+if ! grep -q '^apply_memory_policy() {' <<<"$T45_FUNCS"; then
+    fail "T45: could not extract apply_memory_policy() from update.sh"
 else
     T45_DIR="$TEST_WS/t45-owner-hint"
     # shellcheck disable=SC2016
     T45_ODD='odd "q" $(printf EXPANDED) `b` back\slash'
     T45_TEMPLATE="$T45_DIR/template $T45_ODD"
     T45_MEMORY="$T45_DIR/memory $T45_ODD"
+    T45_WORKSPACE="$T45_DIR/workspace $T45_ODD"
     T45_EXPANDED="$T45_DIR/memory odd \"q\" EXPANDED \`b\` back\\slash"
-    # The memory file's own name has the odd characters too (no backslash: git reads one in a pathspec as an escape).
+    # The memory files' own names have the odd characters too (no backslash: git reads one in a pathspec as an escape).
     # shellcheck disable=SC2016
     T45_NAME='odd "q" $(printf EXPANDED) `b`.md'
+    # shellcheck disable=SC2016
+    T45_STALE_NAME='stale "q" $(printf EXPANDED) `b`.md'
     T45_FPATH="memory/$T45_NAME"
-    T45_MANIFEST="$T45_DIR/manifest.json"
+    T45_STALE_FPATH="memory/$T45_STALE_NAME"
     mkdir -p "$T45_TEMPLATE/memory" "$T45_TEMPLATE/.claude/scripts" "$T45_MEMORY"
     cp "$TEMPLATE_DIR/.claude/scripts/classify-workspace-copy.sh" "$T45_TEMPLATE/.claude/scripts/classify-workspace-copy.sh"
     git -C "$T45_TEMPLATE" init -q
     git -C "$T45_TEMPLATE" config user.email "test@test"
     git -C "$T45_TEMPLATE" config user.name "test"
-    printf -- '---\nowner: user\n---\ntemplate v1\n' > "$T45_TEMPLATE/$T45_FPATH"
-    git -C "$T45_TEMPLATE" add -- "$T45_FPATH"
-    git -C "$T45_TEMPLATE" commit -q -m "v1"
-    printf -- '---\nowner: user\n---\ntemplate v2\n' > "$T45_TEMPLATE/$T45_FPATH"
-    git -C "$T45_TEMPLATE" add -- "$T45_FPATH"
-    git -C "$T45_TEMPLATE" commit -q -m "v2"
-    printf -- '---\nowner: user\n---\ntemplate v1\n' > "$T45_MEMORY/$T45_NAME"   # equals the committed v1: verdict "stale"
-    python3 - "$T45_MANIFEST" "$T45_FPATH" <<'PY'
+    for t45_v in v1 v2; do
+        printf -- '---\nowner: user\n---\ntemplate %s\n' "$t45_v" > "$T45_TEMPLATE/$T45_FPATH"
+        printf -- '---\nowner: user\n---\nstale template %s\n' "$t45_v" > "$T45_TEMPLATE/$T45_STALE_FPATH"
+        git -C "$T45_TEMPLATE" add -- "$T45_FPATH" "$T45_STALE_FPATH"
+        git -C "$T45_TEMPLATE" commit -q -m "$t45_v"
+    done
+    printf -- '---\nowner: user\n---\nThe pilot edited this copy\n' > "$T45_MEMORY/$T45_NAME"   # no committed version: kept
+    printf -- '---\nowner: user\n---\nstale template v1\n' > "$T45_MEMORY/$T45_STALE_NAME"     # the committed v1: refreshed
+
+    T45_OUT=$(
+        exec 2>&1
+        set +u
+        eval "$T45_FUNCS"
+        SCRIPT_DIR="$T45_TEMPLATE"
+        # shellcheck disable=SC2034  # read by the eval'd update.sh functions
+        WORKSPACE_DIR="$T45_WORKSPACE"
+        # shellcheck disable=SC2034
+        MEMORY_BACKUP_RUN=""
+        apply_memory_policy "$T45_FPATH" "$T45_MEMORY/$T45_NAME"
+        apply_memory_policy "$T45_STALE_FPATH" "$T45_MEMORY/$T45_STALE_NAME"
+    ) || true
+    T45_BACKUP=$(find "$T45_WORKSPACE/.backups" -type f -name "$T45_STALE_NAME" -print -quit 2>/dev/null || true)
+    if cmp -s "$T45_MEMORY/$T45_STALE_NAME" "$T45_TEMPLATE/$T45_STALE_FPATH" \
+        && [ -n "$T45_BACKUP" ] && grep -q 'stale template v1' "$T45_BACKUP" && [ ! -e "$T45_EXPANDED" ]; then
+        pass "T45: a copy equal to a committed version is refreshed at exactly its odd path, after a backup"
+    else
+        fail "T45: the stale copy on an odd path was not refreshed with a backup: $(printf '%s' "$T45_OUT" | tr '\n' ' ')"
+    fi
+    T45_LINE=$(grep -F -- "$T45_FPATH — НЕ обновлён: " <<<"$T45_OUT" || true)
+    if grep -qF -- 'Если ваших правок там нет, примите версию шаблона (прежняя копия останется рядом): ' <<<"$T45_LINE"; then
+        T45_HINT="${T45_LINE#*прежняя копия останется рядом): }"
+        check_saving_hint "T45" "$T45_HINT" "$T45_MEMORY/$T45_NAME" "$(cat "$T45_MEMORY/$T45_NAME")" "$(cat "$T45_TEMPLATE/$T45_FPATH")" "$T45_EXPANDED"
+    else
+        fail "T45: apply_memory_policy() printed no saving command for a kept copy: '${T45_OUT:-<empty>}'"
+    fi
+fi
+
+# ============================================================================
+# T46: one rule for every memory/* file, whatever its owner: marker — a copy the pilot did not
+# change is refreshed after a backup, a changed or unverifiable one is kept with a ready command
+# to accept the template version (issues #965/#967)
+# ============================================================================
+echo "--- T46: memory policy — untouched copies refreshed, edited ones kept (issues #965/#967) ---"
+
+# The real Step 6 memory loop (extracted as in T43) and the real repair_pass() run on throwaway
+# fixtures, with every update.sh function they may call (see update_sh_functions).
+T46_FUNCS=$(update_sh_functions hash_file is_personal_config is_author_mode report_author_skip \
+    saving_cp_command backup_memory_file_before_overwrite sync_workspace_agents repair_pass \
+    is_migrated_platform_memory_path migrate_platform_memory report_owner_user_memory_drift \
+    record_memory_old_hash memory_old_hash apply_memory_policy report_memory_policy_summary \
+    memory_record_put memory_record_get remember_memory_deployed memory_decided_once memory_reason_text memory_copy_verdict replace_memory_copy is_user_owned_memory report_author_user_memory report_author_skip_summary apply_refresh_stale \
+    remember_untouched_memory_before_apply)
+T46_STEP6=$(awk '
+    /^# Copy memory files to Claude projects directory$/ { armed=1; next }
+    armed && /^if \[ -d "\$CLAUDE_MEMORY_DIR" \]; then$/ { found=1 }
+    found { print }
+    found && /^fi$/ { exit }
+' "$TEMPLATE_DIR/update.sh")
+
+# t46_doc OWNER TEXT — a memory file with an owner: marker.
+t46_doc() { printf -- '---\nowner: %s\n---\n%s\n' "$1" "$2"; }
+
+# t46_manifest FILE PATH... — a manifest listing PATH...: the paths repair_pass() walks.
+t46_manifest() {
+    local out="$1"
+    shift
+    python3 - "$out" "$@" <<'PY'
 import json
 import sys
 with open(sys.argv[1], "w", encoding="utf-8") as handle:
-    json.dump({"files": [{"path": sys.argv[2]}]}, handle)
+    json.dump({"files": [{"path": p} for p in sys.argv[2:]]}, handle)
 PY
+}
 
-    T45_OUT=$(
-        set +u
-        # shellcheck source=/dev/null
-        source "$TEMPLATE_DIR/.claude/lib/frontmatter.sh"
-        eval "$T45_FUNCS"
-        # shellcheck disable=SC2329  # called by the eval'd update.sh function
-        py_available() { return 0; }
-        # shellcheck disable=SC2034
-        PY_BIN=python3
-        SCRIPT_DIR="$T45_TEMPLATE"
-        # shellcheck disable=SC2034  # read by the eval'd update.sh function
-        CLAUDE_MEMORY_DIR="$T45_MEMORY"
-        # shellcheck disable=SC2034
-        MANIFEST="$T45_MANIFEST"
-        report_owner_user_memory_drift
-    )
-    T45_LINE=$(grep -F -- 'Обновить с сохранением копии: ' <<<"$T45_OUT" || true)
-    if [ -n "$T45_LINE" ]; then
-        T45_HINT="${T45_LINE#*Обновить с сохранением копии: }"
-        check_saving_hint "T45" "$T45_HINT" "$T45_MEMORY/$T45_NAME" "$(cat "$T45_MEMORY/$T45_NAME")" "$(cat "$T45_TEMPLATE/$T45_FPATH")" "$T45_EXPANDED"
+# t46_template DIR — a template copy that ships the real classifier.
+t46_template() {
+    mkdir -p "$1/memory" "$1/.claude/scripts"
+    cp "$TEMPLATE_DIR/.claude/scripts/classify-workspace-copy.sh" "$1/.claude/scripts/classify-workspace-copy.sh"
+    chmod +x "$1/.claude/scripts/classify-workspace-copy.sh"
+}
+
+# t46_prepare TEMPLATE WORKSPACE MEMORY MANIFEST — inside a run: the update.sh functions plus the
+# globals its memory code reads. update.sh itself runs under set -e only: no -u, no pipefail.
+# shellcheck disable=SC2329  # called by the world functions t46_run invokes
+t46_prepare() {
+    set +u +o pipefail
+    # shellcheck source=/dev/null
+    source "$TEMPLATE_DIR/.claude/lib/frontmatter.sh"
+    eval "$T46_FUNCS"
+    # shellcheck disable=SC2329  # called by the eval'd update.sh code
+    py_available() { return 0; }
+    # shellcheck disable=SC2034  # read by the eval'd update.sh code
+    PY_BIN=python3
+    SCRIPT_DIR="$1"
+    WORKSPACE_DIR="$2"
+    # shellcheck disable=SC2034
+    CLAUDE_MEMORY_DIR="$3"
+    # shellcheck disable=SC2034
+    MANIFEST="$4"
+    # shellcheck disable=SC2034
+    MEMORY_BACKUP_RUN=""
+    MEMORY_OLD_HASHES="$(dirname "$1")/old-hashes.tsv"
+    : > "$MEMORY_OLD_HASHES"
+    # shellcheck disable=SC2034
+    MEMORY_DEPLOYED_RECORD="$WORKSPACE_DIR/.memory-deployed.tsv"
+    mkdir -p "$WORKSPACE_DIR" "$CLAUDE_MEMORY_DIR"
+}
+
+# t46_release UPDATED_FILE... — what update.sh does to the template between Step 2 and Step 6:
+# remember the version each changed file had (Step 2), then lay the release over the template
+# (Step 5). The release lies next to the template, in DIR/release.
+# shellcheck disable=SC2329  # called by the world functions t46_run invokes
+t46_release() {
+    local f
+    for f in "$@"; do
+        # An update.sh without the recorder records nothing; its Step 6 still runs and is judged
+        # by what it does to the copies.
+        if declare -F record_memory_old_hash >/dev/null; then
+            record_memory_old_hash "$f" "$(hash_file "$SCRIPT_DIR/$f")"
+        fi
+    done
+    cp -R "$(dirname "$SCRIPT_DIR")/release/." "$SCRIPT_DIR/"
+}
+
+# t46_run BODY — one update.sh run: the function BODY in a subshell under set -e, the way
+# update.sh runs, stderr folded into stdout. T46_OUT gets the output, T46_RC the exit status.
+# Plain assignment, not "|| true": bash 5 ignores set -e inside a command substitution whose
+# status is tested. The caller's own errexit (this file runs under set -e from T25 on) is
+# restored afterwards.
+t46_run() {
+    local had_errexit=false
+    case $- in *e*) had_errexit=true ;; esac
+    set +e
+    T46_OUT=$(exec 2>&1; set -e; "$1")
+    T46_RC=$?
+    if $had_errexit; then set -e; fi
+    return 0
+}
+
+# t46_state DIR — the content of every file under DIR, to compare two runs.
+t46_state() { { find "$1" -type f -exec cksum {} + 2>/dev/null || true; } | sort; }
+
+# t46_files DIR — how many files lie under DIR (0 when it does not exist).
+t46_files() { { find "$1" -type f 2>/dev/null || true; } | wc -l | tr -d ' '; }
+
+# t46_count TEXT OUTPUT — how many lines of OUTPUT contain TEXT.
+t46_count() { grep -cF -- "$1" <<<"$2" || true; }
+
+# --- World A: an update that changes eight memory files (Step 6 + the repair pass after it),
+# proof by the version installed last time, no git history to help. The memory directory, the
+# workspace and one file name carry a space, double quotes, a $(...) and backticks.
+T46A_DIR="$TEST_WS/t46-a"
+# shellcheck disable=SC2016  # literal characters, nothing is meant to expand
+T46_ODD='odd "q" $(printf EXPANDED) `b`'
+T46A_TEMPLATE="$T46A_DIR/template"
+T46A_WS="$T46A_DIR/workspace $T46_ODD"
+T46A_MEM="$T46A_DIR/memory $T46_ODD"
+T46A_ODD_FILE="memory/note $T46_ODD.md"
+T46A_MANIFEST="$T46A_DIR/manifest.json"
+t46_template "$T46A_TEMPLATE"
+mkdir -p "$T46A_DIR/release/memory" "$T46A_MEM"
+# Release one is in the template (installed last time), release two lies in release/.
+for t46_pair in user:user-untouched user:user-edited platform:platform-untouched platform:platform-edited platform:same; do
+    t46_doc "${t46_pair%%:*}" "${t46_pair#*:} release one" > "$T46A_TEMPLATE/memory/${t46_pair#*:}.md"
+    t46_doc "${t46_pair%%:*}" "${t46_pair#*:} release two" > "$T46A_DIR/release/memory/${t46_pair#*:}.md"
+done
+# Old releases shipped these two platform protocols as owner: user (#354/#384).
+t46_doc user "protocol-open release one" > "$T46A_TEMPLATE/memory/protocol-open.md"
+t46_doc platform "protocol-open release two" > "$T46A_DIR/release/memory/protocol-open.md"
+t46_doc user "protocol-work release one" > "$T46A_TEMPLATE/memory/protocol-work.md"
+t46_doc platform "protocol-work release two" > "$T46A_DIR/release/memory/protocol-work.md"
+t46_doc platform "odd release one" > "$T46A_TEMPLATE/$T46A_ODD_FILE"
+t46_doc platform "odd release two" > "$T46A_DIR/release/$T46A_ODD_FILE"
+t46_doc platform "brand new in release two" > "$T46A_DIR/release/memory/brand-new.md"
+# The pilot's copies: untouched ones equal release one, edited ones carry the pilot's lines.
+for t46_name in user-untouched platform-untouched protocol-open; do
+    cp "$T46A_TEMPLATE/memory/$t46_name.md" "$T46A_MEM/$t46_name.md"
+done
+cp "$T46A_TEMPLATE/$T46A_ODD_FILE" "$T46A_MEM/${T46A_ODD_FILE#memory/}"
+for t46_name in user-edited platform-edited protocol-work; do
+    { cat "$T46A_TEMPLATE/memory/$t46_name.md"; echo "Pilot line in $t46_name"; } > "$T46A_MEM/$t46_name.md"
+done
+cp "$T46A_DIR/release/memory/same.md" "$T46A_MEM/same.md"
+t46_manifest "$T46A_MANIFEST" memory/user-untouched.md memory/user-edited.md memory/platform-untouched.md \
+    memory/platform-edited.md memory/protocol-open.md memory/protocol-work.md memory/same.md \
+    memory/brand-new.md "$T46A_ODD_FILE"
+
+# t46a_update — the update that brings release two: Step 2 and 5, Step 6, then the repair pass.
+# shellcheck disable=SC2329  # invoked through t46_run
+t46a_update() {
+    t46_prepare "$T46A_TEMPLATE" "$T46A_WS" "$T46A_MEM" "$T46A_MANIFEST"
+    # shellcheck disable=SC2034  # read by the eval'd Step 6 loop
+    NEW_FILES=(memory/brand-new.md)
+    # shellcheck disable=SC2034
+    UPDATED_FILES=(memory/user-untouched.md memory/user-edited.md memory/platform-untouched.md
+        memory/platform-edited.md memory/protocol-open.md memory/protocol-work.md memory/same.md
+        "$T46A_ODD_FILE")
+    t46_release "${UPDATED_FILES[@]}"
+    eval "$T46_STEP6"
+    repair_pass
+}
+# t46a_repeat — the next update brings nothing new: only the repair pass runs.
+# shellcheck disable=SC2329  # invoked through t46_run
+t46a_repeat() {
+    t46_prepare "$T46A_TEMPLATE" "$T46A_WS" "$T46A_MEM" "$T46A_MANIFEST"
+    repair_pass
+}
+t46_run t46a_update
+T46A_OUT="$T46_OUT"
+T46A_RC="$T46_RC"
+
+# t46_backup NAME — the backup of memory file NAME this world's runs made, if any.
+t46_backup() { find "$T46A_WS/.backups" -type f -name "$1" -print -quit 2>/dev/null || true; }
+
+if [ "$T46A_RC" -eq 0 ]; then
+    pass "T46: the update runs to its end under set -e"
+else
+    fail "T46: the update ended with status $T46A_RC: $(printf '%s' "$T46A_OUT" | tail -3 | tr '\n' ' ')"
+fi
+t46_replaced_ok=true
+for t46_name in user-untouched.md platform-untouched.md protocol-open.md "${T46A_ODD_FILE#memory/}"; do
+    t46_bak=$(t46_backup "$t46_name")
+    if ! cmp -s "$T46A_MEM/$t46_name" "$T46A_DIR/release/memory/$t46_name" \
+        || [ -z "$t46_bak" ] || ! grep -q 'release one' "$t46_bak"; then
+        t46_replaced_ok=false
+        fail "T46: untouched $t46_name was not refreshed with a backup of the previous version (backup: ${t46_bak:-none})"
+    fi
+done
+if $t46_replaced_ok; then
+    pass "T46: untouched copies are refreshed after a backup — owner: user and owner: platform alike, odd paths included"
+fi
+if grep -qF -- 'owner: platform' "$T46A_MEM/protocol-open.md" \
+    && grep -qF -- 'memory/protocol-open.md → memory/ — обновлён (не менялся: равен прошлой версии шаблона; если в клоне шаблона была ваша правка, она в прежней версии)' <<<"$T46A_OUT"; then
+    pass "T46: an untouched legacy owner: user protocol migrates to the platform version, the line naming the proof"
+else
+    fail "T46: the untouched legacy protocol-open.md did not migrate with its line"
+fi
+if [ -z "$(find "$T46A_DIR" -name '*EXPANDED*' ! -name "*\$(printf EXPANDED)*" 2>/dev/null)" ]; then
+    pass "T46: no shell expanded the odd paths (no '…EXPANDED…' path appeared)"
+else
+    fail "T46: an odd path was expanded by a shell: $(find "$T46A_DIR" -name '*EXPANDED*' ! -name "*\$(printf EXPANDED)*")"
+fi
+
+t46_kept_ok=true
+for t46_name in user-edited platform-edited protocol-work; do
+    t46_line=$(grep -F -- "memory/$t46_name.md — НЕ обновлён: " <<<"$T46A_OUT" || true)
+    if ! grep -q "Pilot line in $t46_name" "$T46A_MEM/$t46_name.md" || [ -n "$(t46_backup "$t46_name.md")" ] \
+        || ! grep -qF -- '. Сам он не обновится. Сверьте: diff ' <<<"$t46_line" || ! grep -qF -- 'Если ваших правок там нет, примите версию шаблона (прежняя копия останется рядом): ' <<<"$t46_line"; then
+        t46_kept_ok=false
+        fail "T46: edited $t46_name.md was replaced, backed up, or got no one-line reason with a command: '${t46_line:-<no line>}'"
+    fi
+    t46_times=$(t46_count "memory/$t46_name.md — НЕ обновлён" "$T46A_OUT")
+    if [ "$t46_times" != "1" ]; then
+        t46_kept_ok=false
+        fail "T46: edited $t46_name.md is reported $t46_times times in one run (Step 6 and the repair pass must report it once)"
+    fi
+done
+if $t46_kept_ok; then
+    pass "T46: edited copies are kept — owner: user, owner: platform and a legacy protocol — each with one line and a ready command"
+fi
+
+if [ -f "$T46A_MEM/brand-new.md" ] && [ -z "$(t46_backup brand-new.md)" ] && [ -z "$(t46_backup same.md)" ] \
+    && ! grep -qF -- 'memory/same.md' <<<"$T46A_OUT"; then
+    pass "T46: a missing copy is copied and an identical one left alone, neither backed up"
+else
+    fail "T46: the new file is missing, or a new/identical file was backed up or reported"
+fi
+
+T46A_SUMMARY=$(grep -F -- 'Заменено файлов памяти' <<<"$T46A_OUT" || true)
+T46A_KEPT_SUMMARY=$(grep -F -- 'Не обновлено файлов памяти' <<<"$T46A_OUT" || true)
+if grep -qF -- 'Заменено файлов памяти: 4 (' <<<"$T46A_SUMMARY" \
+    && grep -qF -- 'memory/user-untouched.md' <<<"$T46A_SUMMARY" \
+    && grep -qF -- "$T46A_WS/.backups/memory-pre-update" <<<"$T46A_SUMMARY" \
+    && ! grep -qE -- 'edited|protocol-work|brand-new|same\.md' <<<"$T46A_SUMMARY" \
+    && grep -qF -- ': 3 (' <<<"$T46A_KEPT_SUMMARY"; then
+    pass "T46: the summary names all four replaced files and the backup directory, and counts the three kept ones"
+else
+    fail "T46: summary is missing or wrong: replaced '${T46A_SUMMARY:-<none>}', kept '${T46A_KEPT_SUMMARY:-<none>}'"
+fi
+
+# The record: a line for every copy the update put in place or found equal to the template, with
+# the template's hash; none for a kept copy (it must stay provably edited).
+T46A_RECORD="$T46A_WS/.memory-deployed.tsv"
+t46_record_ok=true
+for t46_name in user-untouched.md platform-untouched.md protocol-open.md brand-new.md same.md "${T46A_ODD_FILE#memory/}"; do
+    t46_want=$(printf 'memory/%s\t%s' "$t46_name" "$(shasum -a 256 "$T46A_TEMPLATE/memory/$t46_name" | cut -d' ' -f1)")
+    grep -qxF -- "$t46_want" "$T46A_RECORD" 2>/dev/null || t46_record_ok=false
+done
+for t46_name in user-edited platform-edited protocol-work; do
+    ! grep -qF -- "memory/$t46_name.md" "$T46A_RECORD" 2>/dev/null || t46_record_ok=false
+done
+if $t46_record_ok; then
+    pass "T46: the record names the template version of every refreshed, new and identical copy, and no kept one"
+else
+    fail "T46: the record is missing a line or names a kept copy: $(tr '\n' '|' < "$T46A_RECORD" 2>/dev/null)"
+fi
+
+# The next update brings nothing new: only the repair pass runs. It changes nothing.
+T46A_RECORD_STATE=$(cksum < "$T46A_RECORD" 2>/dev/null || true)
+T46A_STATE=$(t46_state "$T46A_MEM")
+T46A_BACKUPS=$(t46_files "$T46A_WS/.backups")
+t46_run t46a_repeat
+if [ "$T46_RC" -eq 0 ] && [ "$T46A_STATE" = "$(t46_state "$T46A_MEM")" ] \
+    && [ "$T46A_BACKUPS" = "$(t46_files "$T46A_WS/.backups")" ] \
+    && [ "$T46A_RECORD_STATE" = "$(cksum < "$T46A_RECORD" 2>/dev/null || true)" ] \
+    && ! grep -qF -- 'Заменено файлов памяти' <<<"$T46_OUT" \
+    && [ "$(t46_count '— НЕ обновлён: ' "$T46_OUT")" = "3" ]; then
+    pass "T46: a repeated update changes nothing — copies, backups, record; the three kept files are reported again"
+else
+    fail "T46: the repeated update changed files or backups, or lost the kept-file lines (status $T46_RC): $(printf '%s' "$T46_OUT" | tr '\n' ' ')"
+fi
+
+# --- World B: the repair pass (no version from this run) on a clone with full history.
+T46B_DIR="$TEST_WS/t46-b"
+T46B_TEMPLATE="$T46B_DIR/template"
+T46B_MEM="$T46B_DIR/memory"
+T46B_MANIFEST="$T46B_DIR/manifest.json"
+t46_template "$T46B_TEMPLATE"
+mkdir -p "$T46B_MEM"
+git -C "$T46B_TEMPLATE" init -q
+git -C "$T46B_TEMPLATE" config user.email "test@test"
+git -C "$T46B_TEMPLATE" config user.name "test"
+for t46_v in one two three; do
+    t46_doc user "stuck-user release $t46_v" > "$T46B_TEMPLATE/memory/stuck-user.md"
+    t46_doc platform "stuck-platform release $t46_v" > "$T46B_TEMPLATE/memory/stuck-platform.md"
+    t46_doc platform "authored release $t46_v" > "$T46B_TEMPLATE/memory/authored.md"
+    git -C "$T46B_TEMPLATE" add memory
+    git -C "$T46B_TEMPLATE" commit -q -m "release $t46_v"
+done
+t46_doc user "stuck-user release two" > "$T46B_MEM/stuck-user.md"          # a past release, not the last
+t46_doc platform "stuck-platform release two" > "$T46B_MEM/stuck-platform.md"
+t46_doc platform "The pilot rewrote this file" > "$T46B_MEM/authored.md"
+t46_manifest "$T46B_MANIFEST" memory/stuck-user.md memory/stuck-platform.md memory/authored.md
+# shellcheck disable=SC2329  # invoked through t46_run
+t46b_repair() {
+    t46_prepare "$T46B_TEMPLATE" "$T46B_DIR/workspace" "$T46B_MEM" "$T46B_MANIFEST"
+    repair_pass
+}
+t46_run t46b_repair
+T46B_BACKUP=$(find "$T46B_DIR/workspace/.backups" -type f -name stuck-user.md -print -quit 2>/dev/null || true)
+if [ "$T46_RC" -eq 0 ] && cmp -s "$T46B_MEM/stuck-user.md" "$T46B_TEMPLATE/memory/stuck-user.md" \
+    && cmp -s "$T46B_MEM/stuck-platform.md" "$T46B_TEMPLATE/memory/stuck-platform.md" \
+    && [ -n "$T46B_BACKUP" ] && grep -q 'release two' "$T46B_BACKUP" \
+    && grep -qF -- 'memory/stuck-user.md → memory/ — обновлён (не менялся: равен версии из истории клона шаблона' <<<"$T46_OUT"; then
+    pass "T46: a copy stuck on a past release is refreshed through the clone's history, with a backup"
+else
+    fail "T46: the stuck copy was not refreshed through history (status $T46_RC): $(grep -F 'stuck' <<<"$T46_OUT" | tr '\n' ' ')"
+fi
+if grep -q 'The pilot rewrote this file' "$T46B_MEM/authored.md" \
+    && grep -qF -- 'memory/authored.md — НЕ обновлён: не совпадает ни с одной версией в истории текущей ветки клона (ваши правки или уже применённый прошлый релиз). Сам он не обновится. Сверьте: diff ' <<<"$T46_OUT"; then
+    pass "T46: an owner: platform copy that matches no committed version is kept, naming both possible causes"
+else
+    fail "T46: the authored owner: platform copy was replaced or reported wrongly: $(grep -F 'authored' <<<"$T46_OUT" | tr '\n' ' ')"
+fi
+
+# --- World C: the same stuck copies in a clone made with --depth 1: nothing can be proven.
+T46C_DIR="$TEST_WS/t46-c"
+T46C_TEMPLATE="$T46C_DIR/template"
+T46C_MEM="$T46C_DIR/memory"
+T46C_MANIFEST="$T46C_DIR/manifest.json"
+mkdir -p "$T46C_DIR" "$T46C_MEM"
+git clone -q --depth 1 "file://$T46B_TEMPLATE" "$T46C_TEMPLATE" 2>/dev/null
+t46_template "$T46C_TEMPLATE"
+t46_doc user "stuck-user release two" > "$T46C_MEM/stuck-user.md"
+t46_doc platform "stuck-platform release two" > "$T46C_MEM/stuck-platform.md"
+t46_manifest "$T46C_MANIFEST" memory/stuck-user.md memory/stuck-platform.md
+# shellcheck disable=SC2329  # invoked through t46_run
+t46c_repair() {
+    t46_prepare "$T46C_TEMPLATE" "$T46C_DIR/workspace" "$T46C_MEM" "$T46C_MANIFEST"
+    repair_pass
+}
+t46_run t46c_repair
+if [ "$T46_RC" -eq 0 ] && grep -q 'stuck-platform release two' "$T46C_MEM/stuck-platform.md" \
+    && grep -q 'stuck-user release two' "$T46C_MEM/stuck-user.md" && [ ! -d "$T46C_DIR/workspace/.backups" ] \
+    && grep -qF -- 'memory/stuck-platform.md — НЕ обновлён: не удалось проверить, менялся ли файл (клон шаблона сделан с --depth, его истории нет). Сам он не обновится. Сверьте: diff ' <<<"$T46_OUT"; then
+    pass "T46: in a --depth 1 clone a stuck copy is kept — owner: platform too — with the reason and a command"
+else
+    fail "T46: the shallow clone's stuck copy was replaced or not reported (status $T46_RC): $(grep -F 'stuck' <<<"$T46_OUT" | tr '\n' ' ')"
+fi
+
+# --- World D: the backup cannot be written (.backups is a file): no replacement, no abort.
+T46D_DIR="$TEST_WS/t46-d"
+T46D_TEMPLATE="$T46D_DIR/template"
+T46D_WS="$T46D_DIR/workspace"
+T46D_MEM="$T46D_DIR/memory"
+t46_template "$T46D_TEMPLATE"
+mkdir -p "$T46D_DIR/release/memory" "$T46D_MEM" "$T46D_WS"
+t46_doc platform "untouched release one" > "$T46D_TEMPLATE/memory/untouched.md"
+t46_doc platform "untouched release two" > "$T46D_DIR/release/memory/untouched.md"
+cp "$T46D_TEMPLATE/memory/untouched.md" "$T46D_MEM/untouched.md"
+printf 'a file where the backup directory would go\n' > "$T46D_WS/.backups"
+# shellcheck disable=SC2329  # invoked through t46_run
+t46d_update() {
+    t46_prepare "$T46D_TEMPLATE" "$T46D_WS" "$T46D_MEM" "$T46D_DIR/manifest.json"
+    # shellcheck disable=SC2034
+    NEW_FILES=()
+    # shellcheck disable=SC2034
+    UPDATED_FILES=(memory/untouched.md)
+    t46_release memory/untouched.md
+    eval "$T46_STEP6"
+    if declare -F report_memory_policy_summary >/dev/null; then report_memory_policy_summary; fi
+    echo "T46D: the run went on"
+}
+t46_run t46d_update
+if [ "$T46_RC" -eq 0 ] && grep -q 'untouched release one' "$T46D_MEM/untouched.md" \
+    && grep -qF -- 'T46D: the run went on' <<<"$T46_OUT" \
+    && grep -qF -- 'memory/untouched.md — НЕ обновлён: не удалось сохранить прежнюю версию' <<<"$T46_OUT" \
+    && ! grep -qE -- 'Заменено файлов памяти|memory-файлов обновлено' <<<"$T46_OUT" \
+    && grep -qF -- 'Не обновлено файлов памяти: 1 (memory/untouched.md)' <<<"$T46_OUT"; then
+    pass "T46: a failed backup leaves the copy as it was, warns, counts it among the files not updated and does not end the run"
+else
+    fail "T46: failed backup: copy replaced, run ended (status $T46_RC), no warning, or counted: $(printf '%s' "$T46_OUT" | tr '\n' ' ')"
+fi
+
+# --- World E: author_mode keeps its own branch — the policy never writes the author's copies.
+T46E_DIR="$TEST_WS/t46-e"
+T46E_TEMPLATE="$T46E_DIR/template"
+T46E_WS="$T46E_DIR/workspace"
+T46E_MEM="$T46E_DIR/memory"
+t46_template "$T46E_TEMPLATE"
+mkdir -p "$T46E_DIR/release/memory" "$T46E_MEM" "$T46E_WS"
+printf 'author_mode: true\n' > "$T46E_WS/params.yaml"
+t46_doc user "author copy release one" > "$T46E_TEMPLATE/memory/untouched.md"
+t46_doc user "author copy release two" > "$T46E_DIR/release/memory/untouched.md"
+cp "$T46E_TEMPLATE/memory/untouched.md" "$T46E_MEM/untouched.md"
+# shellcheck disable=SC2329  # invoked through t46_run
+t46e_update() {
+    t46_prepare "$T46E_TEMPLATE" "$T46E_WS" "$T46E_MEM" "$T46E_DIR/manifest.json"
+    # shellcheck disable=SC2034
+    NEW_FILES=()
+    # shellcheck disable=SC2034
+    UPDATED_FILES=(memory/untouched.md)
+    t46_release memory/untouched.md
+    eval "$T46_STEP6"
+}
+t46_run t46e_update
+if grep -q 'author copy release one' "$T46E_MEM/untouched.md" && [ ! -e "$T46E_WS/.backups" ] \
+    && grep -qF -- 'memory/untouched.md — author_mode, owner: user: рабочая копия не тронута' <<<"$T46_OUT"; then
+    pass "T46: author_mode keeps its own branch — the author's copy is reported, not refreshed"
+else
+    fail "T46: author_mode copy was written or not reported (status $T46_RC): $(printf '%s' "$T46_OUT" | tr '\n' ' ')"
+fi
+
+# ============================================================================
+# T47: the record of installed memory versions (.memory-deployed.tsv), proof (a) of the memory
+# policy: it outlives a broken-off run and a copy several releases behind, an edited copy never
+# enters it, an unusable record never stops the update, setup.sh writes the first one; author_mode
+# keeps its quiet report for owner: user copies, in Step 6 and in the repair pass (review of
+# #965/#967: С1, С2, М1, М5, М7)
+# ============================================================================
+echo "--- T47: memory record — broken-off run, lag, unusable record, setup, author_mode (#965/#967 review) ---"
+
+# t47_sha FILE — the sha256 the record keeps for FILE's content.
+t47_sha() { shasum -a 256 "$1" | cut -d' ' -f1; }
+# t47_line KEY FILE — the record line that says the deployed copy KEY holds FILE's content.
+t47_line() { printf '%s\t%s' "$1" "$(t47_sha "$2")"; }
+
+# --- 47a: setup.sh writes the record with the same writer and hash as update.sh.
+t47_same=true
+for t47_fn in memory_record_put hash_file; do
+    t47_u=$(awk -v fn="$t47_fn" '$0 ~ "^" fn "\\(\\) \\{" {c=1} c{print} c && /^}/{exit}' "$TEMPLATE_DIR/update.sh")
+    t47_s=$(awk -v fn="$t47_fn" '$0 ~ "^" fn "\\(\\) \\{" {c=1} c{print} c && /^}/{exit}' "$TEMPLATE_DIR/setup.sh")
+    if [ -z "$t47_u" ] || [ "$t47_u" != "$t47_s" ]; then
+        t47_same=false
+        fail "T47: $t47_fn differs between update.sh and setup.sh (or one of them lacks it)"
+    fi
+done
+if $t47_same; then
+    pass "T47: update.sh and setup.sh write the record with the same memory_record_put and hash_file"
+fi
+
+# --- 47b: a broken-off run. An earlier run recorded the copies (they equalled the template);
+# then the template moved on twice without Step 6 (code 49 or Ctrl-C, the run's own hashes gone
+# with its temporary directory), and the clone has no history that knows the copies. The next run
+# must refresh the untouched copy by the record and keep the edited one, its record line unchanged.
+T47F_DIR="$TEST_WS/t47-f"
+T47F_TEMPLATE="$T47F_DIR/template"
+T47F_WS="$T47F_DIR/workspace"
+T47F_MEM="$T47F_DIR/memory"
+T47F_MANIFEST="$T47F_DIR/manifest.json"
+t46_template "$T47F_TEMPLATE"
+mkdir -p "$T47F_MEM"
+t46_doc user "untouched release one" > "$T47F_TEMPLATE/memory/untouched.md"
+t46_doc platform "edited release one" > "$T47F_TEMPLATE/memory/edited.md"
+cp "$T47F_TEMPLATE/memory/untouched.md" "$T47F_TEMPLATE/memory/edited.md" "$T47F_MEM/"
+t46_manifest "$T47F_MANIFEST" memory/untouched.md memory/edited.md
+# shellcheck disable=SC2329  # invoked through t46_run
+t47f_repair() {
+    t46_prepare "$T47F_TEMPLATE" "$T47F_WS" "$T47F_MEM" "$T47F_MANIFEST"
+    repair_pass
+}
+t46_run t47f_repair        # in step with the template: the copies get their record lines
+echo "Pilot line in edited" >> "$T47F_MEM/edited.md"
+T47F_EDITED_LINE=$(t47_line memory/edited.md "$T47F_TEMPLATE/memory/edited.md")
+for t47_v in two three; do  # two releases land in the clone, memory never sees them
+    t46_doc user "untouched release $t47_v" > "$T47F_TEMPLATE/memory/untouched.md"
+    t46_doc platform "edited release $t47_v" > "$T47F_TEMPLATE/memory/edited.md"
+done
+t46_run t47f_repair
+T47F_RECORD="$T47F_WS/.memory-deployed.tsv"
+if [ "$T46_RC" -eq 0 ] && cmp -s "$T47F_MEM/untouched.md" "$T47F_TEMPLATE/memory/untouched.md" \
+    && grep -qF -- 'memory/untouched.md → memory/ — обновлён (не менялся: равен версии, установленной в прошлый раз' <<<"$T46_OUT" \
+    && grep -qxF -- "$(t47_line memory/untouched.md "$T47F_TEMPLATE/memory/untouched.md")" "$T47F_RECORD"; then
+    pass "T47: after a broken-off run a copy two releases behind is refreshed by the record, which then names the new version"
+else
+    fail "T47: the untouched copy left behind by a broken-off run was not refreshed by the record (status $T46_RC): $(grep -F 'untouched' <<<"$T46_OUT" | tr '\n' ' ')"
+fi
+if grep -q 'Pilot line in edited' "$T47F_MEM/edited.md" && grep -qxF -- "$T47F_EDITED_LINE" "$T47F_RECORD" \
+    && grep -qF -- 'memory/edited.md — НЕ обновлён: ' <<<"$T46_OUT"; then
+    pass "T47: an edited copy stays after a broken-off run, and its record line still names the version installed before"
+else
+    fail "T47: the edited copy was replaced, or its record line moved: $(grep -F 'edited' <<<"$T46_OUT" | tr '\n' ' ')"
+fi
+
+# --- 47c: a record that cannot be used never stops the update.
+# The record path is a directory: the run goes on under set -e, a copy proven by the version this
+# run replaced is still refreshed, one warning names the record, nothing lands inside the directory.
+T47G_DIR="$TEST_WS/t47-g"
+T47G_TEMPLATE="$T47G_DIR/template"
+T47G_WS="$T47G_DIR/workspace"
+T47G_MEM="$T47G_DIR/memory"
+t46_template "$T47G_TEMPLATE"
+mkdir -p "$T47G_DIR/release/memory" "$T47G_MEM" "$T47G_WS/.memory-deployed.tsv"
+t46_doc platform "proven release one" > "$T47G_TEMPLATE/memory/proven.md"
+t46_doc platform "proven release two" > "$T47G_DIR/release/memory/proven.md"
+cp "$T47G_TEMPLATE/memory/proven.md" "$T47G_MEM/proven.md"
+t46_manifest "$T47G_DIR/manifest.json" memory/proven.md
+# shellcheck disable=SC2329  # invoked through t46_run
+t47g_update() {
+    t46_prepare "$T47G_TEMPLATE" "$T47G_WS" "$T47G_MEM" "$T47G_DIR/manifest.json"
+    # shellcheck disable=SC2034
+    NEW_FILES=()
+    # shellcheck disable=SC2034
+    UPDATED_FILES=(memory/proven.md)
+    t46_release memory/proven.md
+    eval "$T46_STEP6"
+    repair_pass
+}
+t46_run t47g_update
+if [ "$T46_RC" -eq 0 ] && cmp -s "$T47G_MEM/proven.md" "$T47G_DIR/release/memory/proven.md" \
+    && [ "$(t46_count 'не удалось записать' "$T46_OUT")" = "1" ] && [ -z "$(ls -A "$T47G_WS/.memory-deployed.tsv")" ]; then
+    pass "T47: a record path that is a directory costs one warning; the update and its other proofs go on"
+else
+    fail "T47: an unusable record broke the update or went unreported (status $T46_RC): $(printf '%s' "$T46_OUT" | tr '\n' ' ')"
+fi
+# Lines that do not parse are ignored, and dropped when the record is written next.
+T47H_DIR="$TEST_WS/t47-h"
+T47H_TEMPLATE="$T47H_DIR/template"
+T47H_WS="$T47H_DIR/workspace"
+T47H_MEM="$T47H_DIR/memory"
+t46_template "$T47H_TEMPLATE"
+mkdir -p "$T47H_MEM" "$T47H_WS"
+for t47_name in good bad; do
+    t46_doc platform "$t47_name release one" > "$T47H_MEM/$t47_name.md"
+    t46_doc platform "$t47_name release two" > "$T47H_TEMPLATE/memory/$t47_name.md"
+done
+{
+    echo "a line that is no record"
+    printf 'memory/bad.md\tnot-a-sha256\n'
+    t47_line memory/good.md "$T47H_MEM/good.md"; echo
+} > "$T47H_WS/.memory-deployed.tsv"
+t46_manifest "$T47H_DIR/manifest.json" memory/good.md memory/bad.md
+# shellcheck disable=SC2329  # invoked through t46_run
+t47h_repair() {
+    t46_prepare "$T47H_TEMPLATE" "$T47H_WS" "$T47H_MEM" "$T47H_DIR/manifest.json"
+    repair_pass
+}
+t46_run t47h_repair
+if [ "$T46_RC" -eq 0 ] && cmp -s "$T47H_MEM/good.md" "$T47H_TEMPLATE/memory/good.md" \
+    && grep -q 'bad release one' "$T47H_MEM/bad.md" \
+    && ! grep -qE 'no record|not-a-sha256' "$T47H_WS/.memory-deployed.tsv" \
+    && grep -qxF -- "$(t47_line memory/good.md "$T47H_TEMPLATE/memory/good.md")" "$T47H_WS/.memory-deployed.tsv"; then
+    pass "T47: malformed record lines prove nothing and are dropped; a valid line still proves its copy"
+else
+    fail "T47: malformed record lines changed the outcome (status $T46_RC): $(printf '%s' "$T46_OUT" | tr '\n' ' ')"
+fi
+
+# --- 47d: author_mode, Step 6 and the repair pass: an owner: user copy keeps one quiet line and no
+# author_mode counter — the summary counts only the platform copy, --refresh-stale is not refused.
+T47A_DIR="$TEST_WS/t47-author"
+T47A_TEMPLATE="$T47A_DIR/template"
+T47A_WS="$T47A_DIR/workspace"
+T47A_MEM="$T47A_DIR/memory"
+T47A_MANIFEST="$T47A_DIR/manifest.json"
+t46_template "$T47A_TEMPLATE"
+mkdir -p "$T47A_MEM" "$T47A_WS"
+printf 'author_mode: true\n' > "$T47A_WS/params.yaml"
+git -C "$T47A_TEMPLATE" init -q
+git -C "$T47A_TEMPLATE" config user.email "test@test"
+git -C "$T47A_TEMPLATE" config user.name "test"
+for t47_v in one two; do
+    t46_doc platform "platform release $t47_v" > "$T47A_TEMPLATE/memory/platform.md"
+    git -C "$T47A_TEMPLATE" add memory/platform.md
+    git -C "$T47A_TEMPLATE" commit -q -m "release $t47_v"
+done
+t46_doc user "notes the template ships" > "$T47A_TEMPLATE/memory/notes.md"   # never committed
+t46_doc platform "platform release one" > "$T47A_MEM/platform.md"           # behind: stale
+t46_doc user "The author's own notes" > "$T47A_MEM/notes.md"
+t46_manifest "$T47A_MANIFEST" memory/platform.md memory/notes.md
+# shellcheck disable=SC2329  # invoked through t46_run
+t47a_update() {
+    t46_prepare "$T47A_TEMPLATE" "$T47A_WS" "$T47A_MEM" "$T47A_MANIFEST"
+    # shellcheck disable=SC2034  # read by the eval'd update.sh code
+    AUTHOR_SKIP_AUTHORED=0 AUTHOR_SKIP_STALE=0 AUTHOR_SKIP_UNKNOWN=0 CLASSIFIER_DEGRADED_WARNED=false REFRESH_STALE=true
+    # shellcheck disable=SC2034
+    AUTHOR_STALE_PAIRS=()
+    # shellcheck disable=SC2034
+    NEW_FILES=()
+    # shellcheck disable=SC2034
+    UPDATED_FILES=(memory/platform.md memory/notes.md)
+    eval "$T46_STEP6"
+    repair_pass
+    report_author_skip_summary
+}
+t46_run t47a_update
+if [ "$T46_RC" -eq 0 ] && grep -q "The author's own notes" "$T47A_MEM/notes.md" \
+    && [ "$(t46_count 'memory/notes.md — author_mode, owner: user: рабочая копия не тронута' "$T46_OUT")" = "1" ] \
+    && [ "$(t46_count 'memory/notes.md' "$T46_OUT")" = "1" ] \
+    && grep -qF -- 'author_mode: пропущено 1 файл(ов) — авторских 0, отставших 1, неизвестно 0' <<<"$T46_OUT" \
+    && ! grep -qF -- 'refresh-stale отклонён' <<<"$T46_OUT" \
+    && cmp -s "$T47A_MEM/platform.md" "$T47A_TEMPLATE/memory/platform.md" && [ ! -e "$T47A_WS/.memory-deployed.tsv" ]; then
+    pass "T47: author_mode reports an owner: user copy once, outside its counters; --refresh-stale still refreshes the stale platform copy"
+else
+    fail "T47: author_mode changed for an owner: user copy (status $T46_RC): $(grep -E 'notes|пропущено|refresh' <<<"$T46_OUT" | tr '\n' ' ')"
+fi
+
+# --- 47e: setup.sh records what it installs: the copied files' lines replace older ones, lines for
+# files it does not copy stay, and --dry-run writes nothing. The workspace path has odd characters.
+T47S_SETUP=$(awk '
+    /^# === 3\. Copy memory to Claude projects directory ===$/ { on=1 }
+    /^# === 4\. / { exit }
+    on { print }
+' "$TEMPLATE_DIR/setup.sh")
+T47S_FUNCS=$(for t47_fn in hash_file memory_record_put; do
+    awk -v fn="$t47_fn" '$0 ~ "^" fn "\\(\\) \\{" {c=1} c{print} c && /^}/{exit}' "$TEMPLATE_DIR/setup.sh"
+done)
+T47S_DIR="$TEST_WS/t47-setup"
+T47S_TEMPLATE="$T47S_DIR/template"
+mkdir -p "$T47S_TEMPLATE/memory"
+t46_doc platform "a as shipped" > "$T47S_TEMPLATE/memory/a.md"
+t46_doc user "b as shipped" > "$T47S_TEMPLATE/memory/b.md"
+printf '# Index\n' > "$T47S_TEMPLATE/memory/MEMORY.md"
+printf 'calendar_ids: []\n' > "$T47S_TEMPLATE/memory/day-rhythm-config.yaml"
+# t47s_setup WORKSPACE HOME DRY_RUN — setup.sh's memory step in one t46_run, under set -e only, as
+# setup.sh runs (no -u, no pipefail).
+t47s_setup() {
+    T47S_ARGS_WS="$1" T47S_ARGS_HOME="$2" T47S_ARGS_DRY="$3"
+    t46_run t47s_body
+}
+# shellcheck disable=SC2329  # invoked through t46_run
+t47s_body() {
+    set +u +o pipefail
+    eval "$T47S_FUNCS"
+    # shellcheck disable=SC2034  # read by the eval'd setup.sh code
+    TEMPLATE_DIR="$T47S_TEMPLATE" WORKSPACE_DIR="$T47S_ARGS_WS" HOME="$T47S_ARGS_HOME" DRY_RUN="$T47S_ARGS_DRY" CLAUDE_PROJECT_SLUG="t47-slug"
+    mkdir -p "$WORKSPACE_DIR"
+    eval "$T47S_SETUP"
+}
+# shellcheck disable=SC2016  # literal characters, nothing is meant to expand
+T47S_WS="$T47S_DIR/workspace \"q\" \$(printf EXPANDED)"
+T47S_MEM="$T47S_DIR/home/.claude/projects/t47-slug/memory"
+mkdir -p "$T47S_WS"
+{
+    printf 'memory/reference/agent-core.md\t%s\n' "$(printf 'x' | shasum -a 256 | cut -d' ' -f1)"
+    printf 'memory/a.md\t%s\n' "$(printf 'old' | shasum -a 256 | cut -d' ' -f1)"
+} > "$T47S_WS/.memory-deployed.tsv"
+T47S_KEPT_LINE=$(head -1 "$T47S_WS/.memory-deployed.tsv")
+t47s_setup "$T47S_WS" "$T47S_DIR/home" false
+t47s_record_ok=true
+for t47_name in a.md b.md MEMORY.md day-rhythm-config.yaml; do
+    grep -qxF -- "$(t47_line "memory/$t47_name" "$T47S_MEM/$t47_name")" "$T47S_WS/.memory-deployed.tsv" || t47s_record_ok=false
+done
+if [ "$T46_RC" -eq 0 ] && $t47s_record_ok && grep -qxF -- "$T47S_KEPT_LINE" "$T47S_WS/.memory-deployed.tsv" \
+    && [ "$(grep -c '^memory/a\.md' "$T47S_WS/.memory-deployed.tsv")" = "1" ]; then
+    pass "T47: setup.sh records every memory file it installs, keeps other lines, replaces an older line"
+else
+    fail "T47: setup.sh did not write the record as expected (status $T46_RC): $(printf '%s' "$T46_OUT" | tr '\n' ' ')"
+fi
+T47S_DRY_WS="$T47S_DIR/dry-workspace"
+t47s_setup "$T47S_DRY_WS" "$T47S_DIR/dry-home" true
+if [ "$T46_RC" -eq 0 ] && [ ! -e "$T47S_DRY_WS/.memory-deployed.tsv" ] && [ ! -e "$T47S_DIR/dry-home/.claude" ]; then
+    pass "T47: setup.sh --dry-run writes no record"
+else
+    fail "T47: setup.sh --dry-run wrote memory or its record, or failed (status $T46_RC): $(printf '%s' "$T46_OUT" | tr '\n' ' ')"
+fi
+
+# ============================================================================
+# T48: the record before Step 5 and the safety of every write (review-12 of #965/#967: С1, М1-М3).
+# A copy equal to the version this run replaces gets its record line BEFORE Step 5, so a run broken
+# off between Step 5 and Step 6 cannot leave it unprovable; the record and the memory copies are
+# replaced by rename, never rewritten in place; a record that cannot be read, or is a link, is not
+# written; every file left as it was is listed in the closing summary.
+# ============================================================================
+echo "--- T48: record before Step 5, atomic writes, unusable record, closing summary (review-12 of #965/#967) ---"
+
+# t48_inode FILE — the inode number: a rename gives the path a new one, an in-place write does not.
+# shellcheck disable=SC2012  # ls -i is the portable inode reader (stat differs between BSD and GNU)
+t48_inode() { ls -i "$1" | awk '{print $1}'; }
+T48_ROOT=false
+[ "$(id -u)" -eq 0 ] && T48_ROOT=true   # root ignores file modes: the mode-based checks say so and stand aside
+
+# --- 48a: the record before Step 5. Untouched copies (owner: user and owner: platform) get the version
+# this run is about to replace; the edited copy, MEMORY.md and the personal config get nothing; author_mode
+# records nothing.
+T48A_DIR="$TEST_WS/t48-a"
+T48A_TEMPLATE="$T48A_DIR/template"
+T48A_WS="$T48A_DIR/workspace"
+T48A_MEM="$T48A_DIR/memory"
+t46_template "$T48A_TEMPLATE"
+mkdir -p "$T48A_MEM" "$T48A_WS"
+t46_doc user "user copy release one" > "$T48A_TEMPLATE/memory/user-copy.md"
+t46_doc platform "platform copy release one" > "$T48A_TEMPLATE/memory/platform-copy.md"
+t46_doc platform "edited copy release one" > "$T48A_TEMPLATE/memory/edited-copy.md"
+printf '# Index\n' > "$T48A_TEMPLATE/memory/MEMORY.md"
+printf 'calendar_ids: []\n' > "$T48A_TEMPLATE/memory/day-rhythm-config.yaml"
+cp "$T48A_TEMPLATE/memory/"* "$T48A_MEM/"
+echo "Pilot line in edited-copy" >> "$T48A_MEM/edited-copy.md"
+# shellcheck disable=SC2329  # invoked through t46_run
+t48a_before_apply() {
+    t46_prepare "$T48A_TEMPLATE" "$T48A_WS" "$T48A_MEM" "$T48A_DIR/manifest.json"
+    # shellcheck disable=SC2034
+    UPDATED_FILES=(memory/user-copy.md memory/platform-copy.md memory/edited-copy.md memory/MEMORY.md memory/day-rhythm-config.yaml)
+    for t48_f in "${UPDATED_FILES[@]}"; do
+        record_memory_old_hash "$t48_f" "$(hash_file "$SCRIPT_DIR/$t48_f")"
+    done
+    remember_untouched_memory_before_apply
+}
+t46_run t48a_before_apply
+T48A_RECORD="$T48A_WS/.memory-deployed.tsv"
+if [ "$T46_RC" -eq 0 ] \
+    && grep -qxF -- "$(t47_line memory/user-copy.md "$T48A_TEMPLATE/memory/user-copy.md")" "$T48A_RECORD" 2>/dev/null \
+    && grep -qxF -- "$(t47_line memory/platform-copy.md "$T48A_TEMPLATE/memory/platform-copy.md")" "$T48A_RECORD" 2>/dev/null \
+    && ! grep -qE 'edited-copy|MEMORY\.md|day-rhythm' "$T48A_RECORD" 2>/dev/null; then
+    pass "T48: before Step 5 untouched copies get their record line — owner: user and owner: platform; edited copy, MEMORY.md, personal config none"
+else
+    fail "T48: the record before Step 5 is wrong (status $T46_RC): '$(tr '\n' '|' < "$T48A_RECORD" 2>/dev/null)' $(printf '%s' "$T46_OUT" | tr '\n' ' ')"
+fi
+rm -f "$T48A_RECORD"
+printf 'author_mode: true\n' > "$T48A_WS/params.yaml"
+t46_run t48a_before_apply
+if [ "$T46_RC" -eq 0 ] && [ ! -e "$T48A_RECORD" ]; then
+    pass "T48: author_mode writes no record before Step 5"
+else
+    fail "T48: author_mode wrote a record before Step 5 (status $T46_RC)"
+fi
+
+# The functions below are update.sh's own; each check runs them in a subshell under set -e.
+T48_FUNCS=$(update_sh_functions hash_file memory_record_put memory_record_get remember_memory_deployed replace_memory_copy)
+T48_H1=$(printf one | shasum -a 256 | cut -d' ' -f1)
+T48_H2=$(printf two | shasum -a 256 | cut -d' ' -f1)
+T48_DIR="$TEST_WS/t48-units"
+mkdir -p "$T48_DIR"
+
+# --- 48b: the record is replaced by rename: a read-only record still takes the new line, and the path
+# gets a new inode (an in-place `cat >` fails on it, or keeps the inode).
+T48B_REC="$T48_DIR/readonly-record.tsv"
+printf 'memory/a.md\t%s\nmemory/b.md\t%s\n' "$T48_H1" "$T48_H2" > "$T48B_REC"
+chmod 444 "$T48B_REC"
+T48B_INODE=$(t48_inode "$T48B_REC")
+T48B_RC=0
+( set -e; eval "$T48_FUNCS"; memory_record_put "$T48B_REC" memory/c.md "$T48_H1" ) || T48B_RC=$?
+if [ "$T48B_RC" -eq 0 ] && grep -qxF -- "$(printf 'memory/c.md\t%s' "$T48_H1")" "$T48B_REC" \
+    && grep -qxF -- "$(printf 'memory/a.md\t%s' "$T48_H1")" "$T48B_REC" \
+    && [ "$(t48_inode "$T48B_REC")" != "$T48B_INODE" ]; then
+    pass "T48: the record is rewritten by rename — a read-only record still takes the line, under a new inode"
+else
+    fail "T48: the record was written in place or not at all (rc $T48B_RC, inode $T48B_INODE -> $(t48_inode "$T48B_REC")): $(tr '\n' '|' < "$T48B_REC")"
+fi
+rm -f "$T48B_REC"
+
+# --- 48c: a memory copy is replaced by rename too, keeping its mode: no moment shows it cut short.
+printf 'release two\n' > "$T48_DIR/src.md"
+printf 'release one\n' > "$T48_DIR/dst.md"
+chmod 640 "$T48_DIR/dst.md"
+T48C_INODE=$(t48_inode "$T48_DIR/dst.md")
+T48C_RC=0
+( set -e; eval "$T48_FUNCS"; replace_memory_copy "$T48_DIR/src.md" "$T48_DIR/dst.md" ) || T48C_RC=$?
+# shellcheck disable=SC2012  # the mode string of one known file
+T48C_MODE=$(ls -l "$T48_DIR/dst.md" | cut -c1-10)
+if [ "$T48C_RC" -eq 0 ] && cmp -s "$T48_DIR/src.md" "$T48_DIR/dst.md" \
+    && [ "$(t48_inode "$T48_DIR/dst.md")" != "$T48C_INODE" ] && [ "$T48C_MODE" = "-rw-r-----" ] \
+    && [ -z "$(find "$T48_DIR" -name 'dst.md.update-*')" ]; then
+    pass "T48: a memory copy is replaced by rename (new inode), keeps its mode and leaves no temporary file"
+else
+    fail "T48: the memory copy was rewritten in place or lost its mode (rc $T48C_RC, mode $T48C_MODE, inode $T48C_INODE -> $(t48_inode "$T48_DIR/dst.md"))"
+fi
+
+# --- 48d: a record that cannot be read, or that is a link, is not written: other files keep proof (a).
+T48D_REC="$T48_DIR/unreadable-record.tsv"
+for t48_n in 1 2 3 4 5 6; do printf 'memory/f%s.md\t%s\n' "$t48_n" "$T48_H1"; done > "$T48D_REC"
+if $T48_ROOT; then
+    echo "  (T48: unreadable-record check skipped — root reads any file)"
+else
+    chmod 000 "$T48D_REC"
+    T48D_RC=0
+    ( set -e; eval "$T48_FUNCS"; memory_record_put "$T48D_REC" memory/new.md "$T48_H2" ) || T48D_RC=$?
+    chmod 600 "$T48D_REC"
+    if [ "$T48D_RC" -ne 0 ] && [ "$(wc -l < "$T48D_REC" | tr -d ' ')" = "6" ] && ! grep -q 'memory/new.md' "$T48D_REC"; then
+        pass "T48: an unreadable record is not rewritten — its six lines survive"
     else
-        fail "T45: report_owner_user_memory_drift() printed no saving hint for a stale copy: '${T45_OUT:-<empty>}'"
+        fail "T48: an unreadable record was rewritten (rc $T48D_RC): $(wc -l < "$T48D_REC" | tr -d ' ') line(s) left"
+    fi
+fi
+printf 'memory/x.md\t%s\n' "$T48_H1" > "$T48_DIR/elsewhere.tsv"
+ln -s "$T48_DIR/elsewhere.tsv" "$T48_DIR/linked-record.tsv"
+T48D_OUT=$(
+    exec 2>&1
+    eval "$T48_FUNCS"
+    # shellcheck disable=SC2034  # read by the eval'd update.sh functions
+    MEMORY_DEPLOYED_RECORD="$T48_DIR/linked-record.tsv"
+    # shellcheck disable=SC2034
+    MEMORY_RECORD_WARNED=false
+    remember_memory_deployed memory/y.md "$T48_H2"
+    remember_memory_deployed memory/z.md "$T48_H2"
+) || true
+if [ -L "$T48_DIR/linked-record.tsv" ] && [ "$(cat "$T48_DIR/elsewhere.tsv")" = "$(printf 'memory/x.md\t%s' "$T48_H1")" ] \
+    && [ "$(t46_count 'не удалось записать' "$T48D_OUT")" = "1" ]; then
+    pass "T48: a record that is a link is left as it is, with one warning for the run"
+else
+    fail "T48: a linked record was replaced or written through, or warned $(t46_count 'не удалось записать' "$T48D_OUT") times"
+fi
+
+# --- 48e: every file left as it was is in the closing summary, whatever the reason; the summary does not
+# promise a command where there is none.
+if $T48_ROOT; then
+    echo "  (T48: closing-summary check skipped — root ignores the modes it needs)"
+else
+    T48E_DIR="$TEST_WS/t48-e"
+    T48E_TEMPLATE="$T48E_DIR/template"
+    T48E_MEM="$T48E_DIR/memory"
+    t46_template "$T48E_TEMPLATE"
+    mkdir -p "$T48E_TEMPLATE/memory/sub" "$T48E_MEM/sub" "$T48E_DIR/workspace"
+    t46_doc platform "new file" > "$T48E_TEMPLATE/memory/sub/new.md"
+    t46_doc platform "template file nobody can read" > "$T48E_TEMPLATE/memory/unreadable.md"
+    t46_doc platform "the copy" > "$T48E_MEM/unreadable.md"
+    chmod 555 "$T48E_MEM/sub"
+    chmod 000 "$T48E_TEMPLATE/memory/unreadable.md"
+    # shellcheck disable=SC2329  # invoked through t46_run
+    t48e_policy() {
+        t46_prepare "$T48E_TEMPLATE" "$T48E_DIR/workspace" "$T48E_MEM" "$T48E_DIR/manifest.json"
+        apply_memory_policy memory/sub/new.md "$T48E_MEM/sub/new.md" || true
+        apply_memory_policy memory/unreadable.md "$T48E_MEM/unreadable.md" || true
+        report_memory_policy_summary
+    }
+    t46_run t48e_policy
+    chmod 755 "$T48E_MEM/sub"
+    chmod 644 "$T48E_TEMPLATE/memory/unreadable.md"
+    T48E_SUMMARY=$(grep -F -- 'Не обновлено файлов памяти' <<<"$T46_OUT" || true)
+    if [ "$T46_RC" -eq 0 ] && grep -qF -- 'Не обновлено файлов памяти: 2 (memory/sub/new.md, memory/unreadable.md)' <<<"$T48E_SUMMARY" \
+        && grep -qF -- 'почему и что сделать — в строке каждого файла выше' <<<"$T48E_SUMMARY" \
+        && grep -qF -- 'memory/sub/new.md — НЕ доставлен: ' <<<"$T46_OUT" \
+        && grep -qF -- 'memory/unreadable.md — НЕ обновлён: не удалось прочитать шаблонный файл' <<<"$T46_OUT"; then
+        pass "T48: a copy that could not be delivered and an unreadable template file are in the closing summary"
+    else
+        fail "T48: the closing summary misses a file left as it was (status $T46_RC): $(printf '%s' "$T46_OUT" | tr '\n' ' ')"
     fi
 fi
 
