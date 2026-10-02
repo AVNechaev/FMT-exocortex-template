@@ -37,10 +37,9 @@ Audit the product as an adversary trying to disprove its release, upgrade, safet
   платформенного хука границы (PreToolUse guard уровня платформы) этот скилл
   запускается **только под пилотом**, не в фоновом/headless-режиме. Разрушительные
   шаги (rollback/freeze/mix-and-match/updater-мутации) не выполнять автономно.
-- **Канонический дом — FMT-шаблон (product-owned).** Здесь скилл живёт как
-  staging-кандидат в авторском workspace. Промоция и доставка в
-  `FMT-exocortex-template` — отдельный явный шаг (S-33 + `template-sync.sh` +
-  зелёная `main`), не часть операционного вызова.
+- **Канонический дом — FMT-шаблон (product-owned).** Скилл уже доставлен в
+  `FMT-exocortex-template`; операционный аудит использует его версию из
+  проверяемого коммита шаблона.
 - **Граница запуска — только через обёртку `boundary-guard.sh`.** Каждую опасную
   операцию (setup/update/hook/scheduler/mutation) запускать как
   `bash .../boundary-guard.sh -- <command>`. Обёртка отказывает, если цель не
@@ -52,20 +51,19 @@ Audit the product as an adversary trying to disprove its release, upgrade, safet
   `fixtures/known-bad-release` обязан получить `BLOCKED`, `fixtures/known-good-release`
   — `GO`. Если плохой проходит или хороший блокируется — методика в этой среде
   сломана, реальный вердикт не выдавать (`cannot_verify`). Калибровка герметична:
-  она не зависит от реальных required-checks проекта (сейчас `main` шаблона
-  красная) — использует синтетическую зелёную квитанцию внутри фикстуры.
+  она не зависит от состояния реальных required-checks проекта и использует
+  синтетическую зелёную квитанцию внутри фикстуры.
 - **Язык вывода.** Внутренний контракт вердикта (`GO`/`CAUTION`/`BLOCKED`,
   таблицы находок) — английский, как во всём продукт-репо (технический канал).
   **Одну итоговую строку решения пилоту в чат отдавать по-русски** (канал-детектор
   DP.SC.050): «Публиковать безопасно / Публиковать нельзя — <причина>».
 - **Это методика, не набор готовых проверок.** Скилл — исполняемый агентом
-  runbook состязательного аудита (open-loop, слой «интеллект»). Детерминированные
-  скрипты, реально гоняющие мутации/матрицы (слой «рефлекс»), — отдельная
-  инженерная работа; повторяющиеся находки кристаллизуются в них позже. «Скилл
-  установлен» ≠ «платформа защищена».
-- **Связь с протоколом релиза.** Скилл — усиленная реализация состязательного
-  слоя протокола верификации релиза FMT-шаблона (VR.SC.006, слой 5). Официальная
-  замена носителя в VR.SC.006 — атомарно вместе с доставкой в шаблон, не раньше.
+  runbook состязательного аудита (open-loop, слой «интеллект»). Каждая
+  существенная подтверждённая находка требует исполняемой проверки в продукте
+  или явно принятой оговорки по Finding Contract ниже; ждать повторения дефекта
+  не нужно. «Скилл установлен» ≠ «платформа защищена».
+- **Связь с протоколом релиза.** Скилл применяется для состязательного
+  уровня протокола верификации релиза FMT-шаблона (VR.SC.006, слой 5).
 
 ## Scope Boundary
 
@@ -227,6 +225,12 @@ For every material finding record:
 - confidence: `high`, `medium`, or `low`;
 - competing explanation and falsifier;
 - regression test and release-blocking status.
+- crystallization disposition: exact executable detector, fixture, or runtime
+  test plus its failing bad-artifact/mutation and passing candidate evidence;
+  alternatively an explicit accepted exception with owner, scope, reason, and
+  re-review trigger. An unfixed finding without either remains open, even when
+  the audit report itself is complete. An exception does not turn an unproven
+  required release gate into `PASS`.
 
 Use `cannot_verify` instead of inference when isolation, access, or evidence is missing.
 
@@ -242,7 +246,7 @@ GO / CAUTION / BLOCKED — exact tag/SHA and audit time
 | Gate | Result | Exact evidence |
 
 ## Findings
-| ID | Severity | Contract | Evidence | Impact | Owner | Confidence | Falsifier |
+| ID | Severity | Contract | Evidence | Impact | Owner | Confidence | Falsifier | Executable check or accepted exception |
 
 ## Release Boundary
 - Safe to publish/use:
@@ -255,6 +259,7 @@ GO / CAUTION / BLOCKED — exact tag/SHA and audit time
 - installed projection:
 - supported OS/shell matrix:
 - second-run/idempotency:
+- per-finding executable check or accepted exception:
 ```
 
 Report skipped and unavailable checks explicitly. Do not bury a blocker below secondary observations.
