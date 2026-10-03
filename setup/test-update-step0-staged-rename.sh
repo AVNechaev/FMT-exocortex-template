@@ -48,8 +48,11 @@ printf '#!/bin/bash\necho "hook v2"\n' > "$UPSTREAM/.claude/hooks/dummy-hook.sh"
 
 # The marked update.sh — what upstream "published" (differs from the running
 # copy by a trailing comment, same behaviour otherwise).
-cp "$UPDATE_SH_REAL" "$UPSTREAM/update.sh"
-printf '\n# step0-staged-rename-marker issue-505-residual\n' >> "$UPSTREAM/update.sh"
+# The end marker must stay the LAST line (#1004), so the comment goes in before it.
+END_MARKER='# --- end of update.sh ---'
+sed '$d' "$UPDATE_SH_REAL" > "$UPSTREAM/update.sh"
+printf '\n# step0-staged-rename-marker issue-505-residual\n%s\n' "$END_MARKER" >> "$UPSTREAM/update.sh"
+tail -n 1 "$UPDATE_SH_REAL" | grep -qxF "$END_MARKER" || { echo "FATAL: update.sh does not end with the marker" >&2; exit 2; }
 
 python3 - "$UPSTREAM" <<'PYEOF'
 import hashlib, json, sys
@@ -162,9 +165,40 @@ if [ -n "\${SHIM_TRUNCATED_UPDATE_SH:-}" ] && [ "\${url##*/}" = "update.sh" ]; t
     [ -n "\$out" ] && printf '#!/bin/bash\nif true; then\n' > "\$out"
     exit 0
 fi
+# SHIM_STUB_UPDATE_SH (issue #1004): a syntactically WHOLE stub that kept the integrity header of
+# this generation but lost the tail (shebang and comments only): it passes the emptiness, "#!" and bash -n checks, but is no complete update.sh.
+if [ -n "\${SHIM_STUB_UPDATE_SH:-}" ] && [ "\${url##*/}" = "update.sh" ]; then
+    [ -n "\$out" ] && printf '#!/bin/bash\n%s\n# truncated answer, header kept, tail lost\n' '# update-sh-integrity: end-marker-required' > "\$out"
+    exit 0
+fi
 # SHIM_ENV_SHEBANG_UPDATE_SH: a real, different script whose first line is "#!/usr/bin/env bash".
 if [ -n "\${SHIM_ENV_SHEBANG_UPDATE_SH:-}" ] && [ "\${url##*/}" = "update.sh" ]; then
     [ -n "\$out" ] && { echo '#!/usr/bin/env bash'; tail -n +2 "$UPSTREAM/update.sh"; } > "\$out"
+    exit 0
+fi
+# #1004 integrity-tag cases (no manifest, no version involved).
+# SHIM_OLD_RELEASE_UPDATE_SH: update.sh of a release without the integrity tag and the end marker.
+# SHIM_NOMARKER_UPDATE_SH: the tag is there, the end marker line is gone (tail lost).
+# SHIM_MIDMARKER_UPDATE_SH: tag and marker present, but the marker is in the middle, content follows.
+# SHIM_FAIL_MANIFEST: the manifest cannot be fetched (Step 0 must not care).
+if [ -n "\${SHIM_FAIL_MANIFEST:-}" ] && [ "\${url##*/}" = "update-manifest.json" ]; then
+    exit 22
+fi
+if [ -n "\${SHIM_OLD_RELEASE_UPDATE_SH:-}" ] && [ "\${url##*/}" = "update.sh" ]; then
+    [ -n "\$out" ] && { grep -vxF -e '# --- end of update.sh ---' -e '# update-sh-integrity: end-marker-required' "$UPSTREAM/update.sh"; echo '# old release'; } > "\$out"
+    exit 0
+fi
+if [ -n "\${SHIM_NOMARKER_UPDATE_SH:-}" ] && [ "\${url##*/}" = "update.sh" ]; then
+    [ -n "\$out" ] && { grep -vxF '# --- end of update.sh ---' "$UPSTREAM/update.sh"; echo '# cut here'; } > "\$out"
+    exit 0
+fi
+# SHIM_TINY_UPDATE_SH: no tag, a shebang and two comments (a truncated answer that lost its header).
+if [ -n "\${SHIM_TINY_UPDATE_SH:-}" ] && [ "\${url##*/}" = "update.sh" ]; then
+    [ -n "\$out" ] && printf '#!/bin/bash\n# partial\n# answer\n' > "\$out"
+    exit 0
+fi
+if [ -n "\${SHIM_MIDMARKER_UPDATE_SH:-}" ] && [ "\${url##*/}" = "update.sh" ]; then
+    [ -n "\$out" ] && printf '#!/bin/bash\n# update-sh-integrity: end-marker-required\n# --- end of update.sh ---\necho cut-off tail\n' > "\$out"
     exit 0
 fi
 [ -z "\$out" ] && exit 0
@@ -310,6 +344,47 @@ step0_run_case html SHIM_HTML_UPDATE_SH "ответ не похож на скр�
 step0_check_case truncated SHIM_TRUNCATED_UPDATE_SH "ответ не похож на рабочий скрипт"
 step0_run_case truncated SHIM_TRUNCATED_UPDATE_SH "ответ не похож на рабочий скрипт"
 
+# Issue #1004: a stub that is syntactically whole (shebang + comments) is refused as incomplete.
+step0_check_case stub SHIM_STUB_UPDATE_SH "ответ неполон"
+step0_run_case stub SHIM_STUB_UPDATE_SH "ответ неполон"
+
+# Marker in the middle of the file, tail after it: not the last line, refused (#1004).
+step0_check_case midmarker SHIM_MIDMARKER_UPDATE_SH "ответ неполон"
+step0_run_case midmarker SHIM_MIDMARKER_UPDATE_SH "ответ неполон"
+
+# No tag and far too short for a real update.sh: refused as incomplete.
+step0_check_case tiny SHIM_TINY_UPDATE_SH "ответ неполон"
+step0_run_case tiny SHIM_TINY_UPDATE_SH "ответ неполон"
+
+# Tag present, end marker lost (header kept, tail cut off): refused.
+step0_check_case nomarker SHIM_NOMARKER_UPDATE_SH "ответ неполон"
+step0_run_case nomarker SHIM_NOMARKER_UPDATE_SH "ответ неполон"
+
+# Compatibility (#1004): update.sh of a release older than the integrity tag has neither tag nor
+# marker; a rollback or pin to it must still replace the updater.
+echo "--- control: an old release without the integrity tag is still accepted ---"
+set +e
+SHIM_OLD_RELEASE_UPDATE_SH=1 PATH="$SHIM_DIR:$PATH" HOME="$FAKE_HOME" IWE_UPDATE_CHANNEL=main \
+    bash "$SCRIPT_DIR/update.sh" --check > "$TEST_ROOT/check-oldrel.log" 2>&1
+set -e
+if grep -q "Новая версия update.sh доступна" "$TEST_ROOT/check-oldrel.log" && ! grep -q "не удалось проверить update.sh" "$TEST_ROOT/check-oldrel.log"; then
+  pass "an update.sh without tag and marker (older release) is accepted"
+else
+  fail "old-release update.sh refused; lines: $(grep -n 'update.sh' "$TEST_ROOT/check-oldrel.log" | head -3 | tr '\n' ' ')"
+fi
+# Step 0 never touches the network for anything but update.sh itself: a manifest outage changes
+# nothing about the verdict on a whole new update.sh.
+echo "--- control: a manifest fetch failure does not affect Step 0 ---"
+set +e
+SHIM_FAIL_MANIFEST=1 PATH="$SHIM_DIR:$PATH" HOME="$FAKE_HOME" IWE_UPDATE_CHANNEL=main \
+    bash "$SCRIPT_DIR/update.sh" --check > "$TEST_ROOT/check-nomanifest.log" 2>&1
+set -e
+if grep -q "Новая версия update.sh доступна" "$TEST_ROOT/check-nomanifest.log" && ! grep -qE "не удалось проверить update.sh" "$TEST_ROOT/check-nomanifest.log"; then
+  pass "a whole new update.sh is accepted while the manifest cannot be fetched"
+else
+  fail "manifest outage changed Step 0; lines: $(grep -n 'update.sh' "$TEST_ROOT/check-nomanifest.log" | head -3 | tr '\n' ' ')"
+fi
+
 # Control: the check refuses what is no script, not what merely starts differently — a real
 # update.sh whose first line is "#!/usr/bin/env bash" is still a newer update.sh.
 echo "--- control: a script with an env shebang is still accepted as a newer update.sh ---"
@@ -330,8 +405,11 @@ fi
 
 # --- Run the REAL update.sh: Step 0 must replace+re-exec itself ---------------
 echo "--- full run: Step 0 self-update replaces the running script ---"
+# TMPDIR points at a private directory so that a temp directory orphaned by the re-exec (#1010 F17:
+# exec skips the EXIT trap) is visible afterwards.
+mkdir -p "$TEST_ROOT/step0-tmp"
 set +e
-PATH="$SHIM_DIR:$PATH" HOME="$FAKE_HOME" IWE_UPDATE_CHANNEL=main \
+TMPDIR="$TEST_ROOT/step0-tmp" PATH="$SHIM_DIR:$PATH" HOME="$FAKE_HOME" IWE_UPDATE_CHANNEL=main \
     bash "$SCRIPT_DIR/update.sh" --yes > "$TEST_ROOT/out.log" 2>&1
 RC=$?
 set -e
@@ -365,6 +443,12 @@ if compgen -G "$SCRIPT_DIR/.update.sh.staged.*" > /dev/null; then
   fail "staged tmp file(s) left behind: $(ls "$SCRIPT_DIR"/.update.sh.staged.* 2>/dev/null | tr '\n' ' ')"
 else
   pass "no staged tmp files left behind"
+fi
+
+if [ -z "$(ls -A "$TEST_ROOT/step0-tmp" 2>/dev/null)" ]; then
+  pass "no temp directory left behind by the Step 0 re-exec"
+else
+  fail "Step 0 re-exec left temp files behind: $(ls -A "$TEST_ROOT/step0-tmp" | tr '\n' ' ')"
 fi
 
 echo

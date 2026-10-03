@@ -1,4 +1,5 @@
 #!/bin/bash
+# update-sh-integrity: end-marker-required
 # Exocortex Update — загрузка обновлений платформы из FMT-exocortex-template
 #
 # Использование:
@@ -2226,6 +2227,31 @@ backfill_executor_catalog_generator() {
 backfill_ds_publish() {
     local governance_repo="${EFFECTIVE_GOVERNANCE_REPO:-$(effective_governance_repo)}"
     local target_path="$WORKSPACE_DIR/$governance_repo/scripts/ds-publish.sh"
+    # Issue #1003: a copy that THIS template shipped earlier (sha256 on the list) is
+    # not user content: it is replaced even though it lies untracked in the governance
+    # repo (the generic backfill refuses untracked files). Any other file stays.
+    local known_old_publishers="dd9a0e7a3116281763b26a351904f5e21de8d730559a1a77dd2a248f2a986730"
+    local source_path="$SCRIPT_DIR/seed/strategy/scripts/ds-publish.sh" target_hash
+    if [ -f "$target_path" ] && [ ! -L "$target_path" ] && [ ! -L "$(dirname "$target_path")" ] \
+       && [ -f "$source_path" ] && [ ! -L "$source_path" ]; then
+        target_hash=$(hash_file "$target_path" 2>/dev/null) || target_hash=""
+        case " $known_old_publishers " in
+            *" $target_hash "*)
+                if [ -n "$target_hash" ]; then
+                    # The file is usually untracked (git has no copy): keep one before replacing.
+                    local backup_dir="$WORKSPACE_DIR/.backups/ds-publish-pre-update/$(date -u +%Y%m%dT%H%M%SZ)-$$"
+                    if [ -L "$WORKSPACE_DIR/.backups" ] || ! mkdir -p "$backup_dir" \
+                       || ! cp -p "$target_path" "$backup_dir/ds-publish.sh"; then
+                        echo "  ✗ scripts/ds-publish.sh: не удалось сделать резервную копию, прежняя копия остаётся." >&2
+                        return 1
+                    fi
+                    echo "  ↳ backup: $target_path → $backup_dir/ds-publish.sh"
+                    atomic_copy_executable "$source_path" "$target_path" || return 1
+                    echo "  ⟳ scripts/ds-publish.sh: прежняя копия шаблона заменена на текущую в $governance_repo."
+                    return 0
+                fi ;;
+        esac
+    fi
     if [ -e "$target_path" ] || [ -L "$target_path" ]; then
         echo "  ✓ scripts/ds-publish.sh уже есть в $governance_repo, не заменяю."
         return 0
@@ -2572,6 +2598,11 @@ copy_platform_file_preserving_user_space() {
                     echo "    Сверьте: diff \"$src\" \"$dst\""
                     return 1
                 fi
+                ;;
+            .claude/skills/*/SKILL.md)
+                # #1010 F3: the regular update path keeps the USER-SPACE block of a skill spec
+                # (Step 5, SKILL.md branch); the repair/stale-repair path did not and dropped it.
+                user_section=$(sed -n '/^<!-- USER-SPACE -->/,/^<!-- \/USER-SPACE -->/p' "$dst" 2>/dev/null || true)
                 ;;
         esac
         backup_rule_before_overwrite "$fpath" "$dst"
@@ -3017,6 +3048,37 @@ if [ -f "$UPDATE_INCOMPLETE_MARKER" ]; then
     echo ""
 fi
 
+# step0_integrity_check FILE — 0 when the downloaded update.sh FILE may replace the running one.
+# No manifest, no network, no version parsing (#1004): the file says about itself whether it must
+# end with the marker. An update.sh of this generation carries UPDATE_SH_INTEGRITY_TAG on its own
+# line in the first 40 lines; such a file must END with UPDATE_SH_END_MARKER (last non-empty
+# line), so a copy that kept its header but lost its tail, or has the marker in the middle, is
+# refused. A file without the tag belongs to an older release (rollback, pin): the checks done
+# before this function (non-empty, "#!", bash -n) plus a minimum length of UPDATE_SH_MIN_LINES. Sets STEP0_REJECT_REASON.
+UPDATE_SH_INTEGRITY_TAG="# update-sh-integrity: end-marker-required"
+UPDATE_SH_END_MARKER="# --- end of update.sh ---"
+UPDATE_SH_MIN_LINES=100
+step0_integrity_check() {
+    local file="$1" last_line
+    STEP0_REJECT_REASON=""
+    # Trailing blanks and CR (a CRLF copy) do not change what a line says.
+    if ! head -n 40 "$file" | sed 's/[[:space:]]*$//' | grep -qxF "$UPDATE_SH_INTEGRITY_TAG"; then
+        # An older release has no tag; a real one is thousands of lines, so a few comment lines
+        # after a shebang are a truncated answer, not an old updater.
+        if [ "$(wc -l < "$file" | tr -d ' ')" -lt "$UPDATE_SH_MIN_LINES" ]; then
+            STEP0_REJECT_REASON="ответ неполон (слишком короткий файл)"
+            return 1
+        fi
+        return 0
+    fi
+    last_line=$(awk '{ sub(/[[:space:]]+$/, "") } NF { l = $0 } END { print l }' "$file")
+    if [ "$last_line" != "$UPDATE_SH_END_MARKER" ]; then
+        STEP0_REJECT_REASON="ответ неполон (последняя строка не конечный маркер)"
+        return 1
+    fi
+    return 0
+}
+
 # === Step 0: Self-update (bootstrap) ===
 # issue #505 root, part 1: the channel must be resolved BEFORE self-update.
 # Step 0 used to fetch update.sh from the DEFAULT moving main while Step 1
@@ -3052,6 +3114,12 @@ elif ! bash -n "$REMOTE_UPDATE" 2>/dev/null; then
     # that needs no reference hash, which Step 0 does not have yet (the manifest comes later),
     # and it runs with the same `bash` that the replacement is re-executed with.
     echo "  ⚠ не удалось проверить update.sh: ответ не похож на рабочий скрипт"
+elif ! step0_integrity_check "$REMOTE_UPDATE"; then
+    # Issue #1004: a syntactically whole stub (a shebang and comments) passes `bash -n` and
+    # used to replace the updater, which then "succeeded" doing nothing. An update.sh that carries
+    # UPDATE_SH_INTEGRITY_TAG must END with the marker; one without the tag is an older release
+    # (rollback, pin) and keeps the checks above.
+    echo "  ⚠ не удалось проверить update.sh: $STEP0_REJECT_REASON"
 else
     LOCAL_HASH=$(hash_file "$SCRIPT_DIR/update.sh")
     REMOTE_HASH=$(hash_file "$REMOTE_UPDATE")
@@ -3073,6 +3141,9 @@ else
         chmod +x "$_boot_staged"
         mv -f "$_boot_staged" "$SCRIPT_DIR/update.sh"
         echo "  Перезапуск..."
+        # #1010 F17: exec replaces the process, so the EXIT trap never runs and the temp
+        # directory (update.sh.new, update.sh.err) would stay behind: remove it first.
+        rm -rf "$TMPDIR_UPDATE"
         exec bash "$SCRIPT_DIR/update.sh" "$@"
     fi
 fi
@@ -3480,11 +3551,17 @@ sync_workspace_claude_md() {
             # pilot's file untouched and surface it the same way an unresolved merge
             # conflict is surfaced, instead of guessing.
             WS_USER_SECTION=$(sed -n '/^<!-- USER-SPACE/,/^<!-- \/USER-SPACE/p' "$WS_CURRENT")
-            if [ -n "$WS_USER_SECTION" ]; then
+            if [ -n "$WS_USER_SECTION" ] && ! WS_BACKUP_DIR=$(claude_backup_before_replace "$WS_CURRENT"); then
+                # #1004: no backup, no replacement.
+                CLAUDE_BASE_MISSING_FILES+=("$WS_CURRENT")
+                echo "  ⚠ $WS_CURRENT НЕ тронут — не удалось сделать резервную копию перед заменой."
+                echo "    Сверьте свои правки вручную с шаблонной версией: diff \"$WS_CURRENT\" \"$WS_NEW\""
+            elif [ -n "$WS_USER_SECTION" ]; then
+                echo "  ⚠ $WS_CURRENT: правки вне блока USER-SPACE будут заменены версией шаблона; резервная копия: $WS_BACKUP_DIR"
                 cp "$WS_NEW" "$WS_CURRENT"
                 sed_inplace '/^<!-- USER-SPACE/,/^<!-- \/USER-SPACE/d' "$WS_CURRENT"
                 echo "" >> "$WS_CURRENT"
-                echo "$WS_USER_SECTION" >> "$WS_CURRENT"
+                printf '%s\n' "$WS_USER_SECTION" >> "$WS_CURRENT"
                 cp "$WS_NEW" "$WS_BASE"
                 echo "  ✓ $WS_CURRENT обновлён (USER-SPACE сохранён, базовый файл создан)"
             else
@@ -3501,6 +3578,20 @@ sync_workspace_claude_md() {
         fi
         CLAUDE_UPDATED=true
     fi
+}
+
+# claude_backup_before_replace FILE — issue #1004: the no-base USER-SPACE branch replaces FILE with
+# the template version and keeps only the marked block; everything the pilot wrote outside it
+# (§8/§9 have no markers in the real format) is gone. Copy FILE into
+# $WORKSPACE_DIR/.backups/claude-md-pre-update/<run>/ first and print where it went; non-zero
+# (and nothing printed) when the copy failed: the caller must then leave FILE untouched.
+claude_backup_before_replace() {
+    local src="$1" dir
+    dir="${WORKSPACE_DIR:-$SCRIPT_DIR}/.backups/claude-md-pre-update/$(date -u +%Y%m%dT%H%M%SZ)-$$"
+    [ -L "${WORKSPACE_DIR:-$SCRIPT_DIR}/.backups" ] && return 1
+    mkdir -p "$dir" || return 1
+    cp -p "$src" "$dir/$(basename "$(dirname "$src")")-$(basename "$src")" || return 1
+    printf '%s\n' "$dir"
 }
 
 # claude_template_copy_is_replaceable FILE — B1 (WP-7 F193): setup.sh (since v0.38.10) keeps the
@@ -4357,9 +4448,11 @@ if [ "$TOTAL_CHANGES" -eq 0 ] && [ ${#SKIPPED_DOWNLOAD[@]} -gt 0 ]; then
         if ! run_post_apply_backfills_or_die; then
             exit "$EXIT_RUNTIME"
         fi
+        # #1010 F7: the conflict gate exits BEFORE the marker is cleared: an unresolved CLAUDE.md
+        # conflict (exit 49) must leave .update-incomplete in place.
+        claude_conflict_gate
         finish_update_transaction
         report_settings_merge_drift
-        claude_conflict_gate
     fi
     exit 0
 fi
@@ -4417,7 +4510,6 @@ if [ "$TOTAL_CHANGES" -eq 0 ]; then
         # the preview used to clear a live .update-incomplete from a previous
         # failed run without repair or build-runtime, disarming the contract
         # this marker now carries (runtime freshness + role-runner guard).
-        finish_update_transaction
         # issue #541 hvost 2 (#540): a stale workspace CLAUDE.md caught by
         # sync_workspace_claude_md above must not be reported as "Всё актуально" —
         # that was exactly the false success Evgenii's retry test found. Same
@@ -4425,7 +4517,9 @@ if [ "$TOTAL_CHANGES" -eq 0 ]; then
         # else, since sync_workspace_claude_md (like repair_pass) never ran
         # under --check and the tracking vars would otherwise still be at
         # their initial empty/false state here regardless.
+        # #1010 F7: the gate first, so a conflict exit keeps the marker.
         claude_conflict_gate
+        finish_update_transaction
     fi
     # Флаги stage B осмысленны и когда обновлений нет: workspace-копии могли
     # отстать от уже актуального шаблона (repair_pass выше их классифицировал).
@@ -4691,11 +4785,16 @@ for f in "${UPDATED_FILES[@]}"; do
             # is no safe 3-way merge — leave the pilot's file untouched and surface it
             # the same way an unresolved merge conflict is surfaced, instead of guessing.
             USER_SECTION=$(sed -n '/^<!-- USER-SPACE/,/^<!-- \/USER-SPACE/p' "$CURRENT_FILE")
-            if [ -n "$USER_SECTION" ]; then
+            if [ -n "$USER_SECTION" ] && ! CLAUDE_BACKUP_DIR=$(claude_backup_before_replace "$CURRENT_FILE"); then
+                # #1004: no backup, no replacement.
+                CLAUDE_BASE_MISSING_FILES+=("$CURRENT_FILE")
+                echo "  ⚠ $f НЕ тронут — не удалось сделать резервную копию перед заменой."
+            elif [ -n "$USER_SECTION" ]; then
+                echo "  ⚠ $f: правки вне блока USER-SPACE будут заменены версией шаблона; резервная копия: $CLAUDE_BACKUP_DIR"
                 cp "$NEW_FILE" "$CURRENT_FILE"
                 sed_inplace '/^<!-- USER-SPACE/,/^<!-- \/USER-SPACE/d' "$CURRENT_FILE"
                 echo "" >> "$CURRENT_FILE"
-                echo "$USER_SECTION" >> "$CURRENT_FILE"
+                printf '%s\n' "$USER_SECTION" >> "$CURRENT_FILE"
                 cp "$NEW_FILE" "$SCRIPT_DIR/.claude.md.base"
                 echo "  ~ $f (USER-SPACE сохранён, базовый файл создан)"
             else
@@ -5680,3 +5779,5 @@ fi
 
 finish_update_transaction
 exit_clean
+
+# --- end of update.sh ---
