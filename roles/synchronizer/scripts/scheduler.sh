@@ -91,14 +91,24 @@ if ! command -v timeout &>/dev/null; then
             use POSIX ":sys_wait_h";
             my $timeout = shift @ARGV;
             my $pid = fork();
-            if ($pid == 0) { exec @ARGV; die "exec failed: $!"; }
+            defined($pid) or die "fork failed: $!";
+            if ($pid == 0) {
+                POSIX::setpgid(0, 0) == 0 or die "setpgid failed: $!";
+                exec @ARGV; die "exec failed: $!";
+            }
             eval {
                 local $SIG{ALRM} = sub { die "alarm" };
                 alarm($timeout);
                 waitpid($pid, 0);
                 alarm(0);
             };
-            if ($@ =~ /alarm/) { kill("TERM", $pid); sleep(1); kill("KILL", $pid); waitpid($pid, WNOHANG); exit(124); }
+            if ($@ =~ /alarm/) {
+                kill("TERM", -$pid);
+                sleep(1);
+                kill("KILL", -$pid);
+                waitpid($pid, WNOHANG);
+                exit(124);
+            }
             exit($? >> 8);
         ' "$duration" "$@"
     }
@@ -123,6 +133,12 @@ run_strategist_scenario() {
         2)
             log "SKIP: strategist $scenario already running (lock held; will retry next dispatch)"
             ;;
+        75)
+            log "ALARM: strategist $scenario deferred: template update incomplete (rc=75; finish or repair update.sh; will retry next dispatch)"
+            if [ "$scenario" = morning ]; then
+                notify_incomplete_morning_update || true
+            fi
+            ;;
         *)
             log "WARN: strategist $scenario failed (rc=$rc; will retry next dispatch)"
             ;;
@@ -142,6 +158,32 @@ ran_this_week() {
 
 mark_done() {
     echo "$(date '+%H:%M:%S')" > "$STATE_DIR/$1-$DATE"
+}
+
+# The strategist exits 75 before its own notifier is available. Use the existing
+# day-open-failed path here; a failed send (which notify.sh may report with exit 0)
+# must not consume the one-per-day notice or the morning retry.
+notify_incomplete_morning_update() {
+    local notice="strategist-morning-update-alert" output="" notify_rc=0
+    ran_today "$notice" && return 0
+    if [ ! -f "$NOTIFY_SH" ]; then
+        log "WARN: Day Open update-incomplete notification unavailable; will retry next dispatch"
+        return 1
+    fi
+    # Bound the whole notifier below TASK_TIMEOUT_SHORT (300s). The macOS
+    # fallback kills its process group, including children that inherited the
+    # command substitution's stdout; notify.sh also bounds curl itself.
+    output=$(DAY_OPEN_FAILED_REASON=update-incomplete DAY_OPEN_FAILED_RC=75 \
+        timeout 15 "$NOTIFY_SH" strategist day-open-failed 2>&1) || notify_rc=$?
+    if [ "$notify_rc" -eq 0 ] && printf '%s\n' "$output" | grep -qxF \
+        'Telegram notification sent: strategist/day-open-failed'; then
+        if mark_done "$notice"; then
+            log "Day Open update-incomplete notification delivered"
+            return 0
+        fi
+    fi
+    log "WARN: Day Open update-incomplete notification not confirmed (notifier rc=$notify_rc); will retry next dispatch"
+    return 1
 }
 
 mark_done_week() {
