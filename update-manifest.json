@@ -853,7 +853,7 @@
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "15fbaf4fd0e39ac341787e73e0351d7cb4c6d9dcd234a59c5ef8450a0d77870c"
+      "sha256": "a85866a88c0a67d05ae4796864eec3790036c3afd8c094d8ef18f721374fd8dd"
     },
     {
       "path": "CLAUDE.md",
@@ -1037,7 +1037,7 @@
     },
     {
       "path": "docs/release-audit-log.md",
-      "sha256": "f2b952cfd078973b8850b62cb28a29038e881772e7f1be78c3414f787641d729"
+      "sha256": "6008b8e959d2e62a246bfcade86cf24d032e4d5daf19ea083cbefc5a76a9523b"
     },
     {
       "path": "docs/roles-catalog.md",
@@ -3153,7 +3153,7 @@
     },
     {
       "path": "update.sh",
-      "sha256": "70f8e39fdfb299cf745526e5290d2b8a4b616c0615df2dfbf293c7f856847ced"
+      "sha256": "fc6eefd122ff2cb9d688d9e24bba3bfa528b5722c66c9686e233b5005566f0af"
     }
   ],
   "excluded_paths": [
@@ -3216,6 +3216,7 @@
     "scripts/tests/test_issue_1006_minor_findings.sh",
     "scripts/tests/test_issue_1010_red_team_findings.sh",
     "scripts/tests/test_issue_1036_migration_source.sh",
+    "scripts/tests/test_issue_1037_filemode.sh",
     "scripts/tests/test_issue_1038_python_env.py",
     "scripts/tests/test_issue_1038_validator.sh",
     "scripts/tests/test_issue_529_owner_integrity.sh",
