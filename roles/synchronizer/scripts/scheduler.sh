@@ -139,6 +139,16 @@ run_strategist_scenario() {
                 notify_incomplete_morning_update || true
             fi
             ;;
+        76)
+            log "ALARM: strategist $scenario exhausted today's automatic attempts (rc=76; manual retry remains available)"
+            ;;
+        77)
+            if [ "$scenario" = week-review ] && week_review_exhausted_today; then
+                log "ALARM: strategist week-review automatic retry paused (rc=77; delivery outcome uncertain or attempts exhausted; inspect status before manual retry)"
+            else
+                log "WARN: strategist $scenario failed (rc=77; next dispatch will recheck status)"
+            fi
+            ;;
         *)
             log "WARN: strategist $scenario failed (rc=$rc; will retry next dispatch)"
             ;;
@@ -154,6 +164,32 @@ ran_today() {
 
 ran_this_week() {
     [ -f "$STATE_DIR/$1-W$WEEK" ]
+}
+
+# #1067: use the strategist's published status record, never its mixed log:
+# model stdout in that log can contain forged GAVE UP/RECORDED markers. UNKNOWN
+# means a run may have delivered before its final status write failed; pause.
+week_review_exhausted_today() {
+    local status_file="$HOME/logs/strategist/week-review-last-status"
+    local stamped_at outcome rc failed_runs extra
+    [ -f "$status_file" ] && [ ! -L "$status_file" ] || return 1
+    IFS=$'\t' read -r stamped_at outcome rc failed_runs extra < "$status_file" || return 1
+    [ -z "$extra" ] && [ "${stamped_at%% *}" = "$DATE" ] &&
+        { { [ "$outcome" = FAILED ] && [[ "$rc" =~ ^[0-9]+$ ]] &&
+            { [ "$failed_runs" = 2 ] || [ -z "$failed_runs" ]; }; } ||
+          { [ "$outcome" = UNKNOWN ] && [ "$rc" = 77 ] &&
+            { [ "$failed_runs" = 1 ] || [ "$failed_runs" = 2 ]; }; }; }
+}
+
+# A manual retry can succeed after the cap. The next scheduler dispatch then
+# observes its dated success status and records the weekly postcondition.
+week_review_recovered_today() {
+    local status_file="$HOME/logs/strategist/week-review-last-status"
+    local stamped_at outcome rc failed_runs extra
+    [ -f "$status_file" ] && [ ! -L "$status_file" ] || return 1
+    IFS=$'\t' read -r stamped_at outcome rc failed_runs extra < "$status_file" || return 1
+    [ -z "$extra" ] && [ "${stamped_at%% *}" = "$DATE" ] &&
+        [ "$outcome" = SUCCESS ] && [ "$rc" = 0 ] && [ "$failed_runs" = 0 ]
 }
 
 mark_done() {
@@ -259,9 +295,16 @@ dispatch() {
 
     # --- Стратег: week-review (Пн, до morning) ---
     if [ "$DOW" = "1" ] && ! ran_this_week "strategist-week-review"; then
-        log "→ strategist week-review (catch-up: hour=$HOUR)"
-        if run_strategist_scenario "week-review"; then
+        if week_review_recovered_today; then
             mark_done_week "strategist-week-review"
+            log "week-review manual recovery confirmed; weekly marker recorded"
+        elif week_review_exhausted_today; then
+            log "SKIP: strategist week-review automatic retry paused (attempts exhausted or delivery outcome uncertain); inspect status before manual retry"
+        else
+            log "→ strategist week-review (catch-up: hour=$HOUR)"
+            if run_strategist_scenario "week-review"; then
+                mark_done_week "strategist-week-review"
+            fi
         fi
         ran=1
     fi
