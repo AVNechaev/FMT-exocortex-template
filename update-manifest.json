@@ -857,7 +857,7 @@
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "331aa1c9f8ce888a99c0094f7c60038ec05b4aefce85e057110977e2abea0325"
+      "sha256": "2c126d38259a45d0915e0350a186ba1513ff5889f3f93ae72bf727002b086464"
     },
     {
       "path": "CLAUDE.md",
@@ -2285,7 +2285,7 @@
     },
     {
       "path": "scripts/day-open-scaffold.sh",
-      "sha256": "1eeef11b8d8062b55c7aca375f80d5a708e09b1b0280a29d672230474c7fa6ca"
+      "sha256": "3dd569715fed65a73fd81198506225daca705ec0b62c3af4b0897f63968e7214"
     },
     {
       "path": "scripts/day-open-smoke-extended.sh",
@@ -3037,7 +3037,7 @@
     },
     {
       "path": "seed/strategy/scripts/day-open-scaffold.sh",
-      "sha256": "8b5156bd39b32a3fbcee77ec5ad864385eee66a850518ab2d446bc7a0f79a2c3"
+      "sha256": "5c823b063c1c38fb96c976bbc7967d750512c6f93d769ddfa8983ed9a612c52c"
     },
     {
       "path": "seed/strategy/scripts/day-open-version-check-patch.py",
