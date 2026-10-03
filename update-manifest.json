@@ -2193,7 +2193,7 @@
     },
     {
       "path": "scripts/codex-peer-adapter.sh",
-      "sha256": "dbef2b0357617283119d0b2641e43b3f2b01a9e77d302d7c193e63f823504231"
+      "sha256": "3d8a1ddeaf3794a3aceaaa12508711b1ecfdf9314ba90a2f564b65b19b370e8f"
     },
     {
       "path": "scripts/config/pipeline-security-whitelist.yaml",
@@ -2201,7 +2201,7 @@
     },
     {
       "path": "scripts/content-filter-apply.py",
-      "sha256": "f93b545cc65938ae12e49ba0965e68f9cab08b59892a1ed58ab20a62b4645a5a"
+      "sha256": "5357c04f229175b8cf9afcfda2eed6c47b53b560687ea0bf99c8a2ad53bbd484"
     },
     {
       "path": "scripts/content-filter-map.txt",
@@ -2701,7 +2701,7 @@
     },
     {
       "path": "scripts/tests/fixtures/python-resolver-baseline.txt",
-      "sha256": "04369eb480cc81ff199ae692fd7ce92dacd22f4748c66c03891e16daa287b4bf"
+      "sha256": "d6693498a7bd90e977b0f2c7886a08a9e0143a4971ee5c874299c3e14485cc89"
     },
     {
       "path": "scripts/tests/lib/capture_fixture.sh",
