@@ -853,7 +853,7 @@
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "53412261ce99868e31d501348f8742a7a8557074ad80b53bd14ad21798b58286"
+      "sha256": "15fbaf4fd0e39ac341787e73e0351d7cb4c6d9dcd234a59c5ef8450a0d77870c"
     },
     {
       "path": "CLAUDE.md",
@@ -1037,7 +1037,7 @@
     },
     {
       "path": "docs/release-audit-log.md",
-      "sha256": "8cfea11c731c3d91a4d9663447283d2341e5e15c5abd2247ee5c45a71f81f33d"
+      "sha256": "f2b952cfd078973b8850b62cb28a29038e881772e7f1be78c3414f787641d729"
     },
     {
       "path": "docs/roles-catalog.md",
@@ -3215,6 +3215,7 @@
     "scripts/tests/test_issue_1005_update_fpf_timeout_no_pkill.sh",
     "scripts/tests/test_issue_1006_minor_findings.sh",
     "scripts/tests/test_issue_1010_red_team_findings.sh",
+    "scripts/tests/test_issue_1036_migration_source.sh",
     "scripts/tests/test_issue_1038_python_env.py",
     "scripts/tests/test_issue_1038_validator.sh",
     "scripts/tests/test_issue_529_owner_integrity.sh",
