@@ -113,11 +113,17 @@ is_author_context_exception() {
     # one functional check for "DS-ecosystem-development/" — docs/LEARNING-PATH.md
     # (exempt from this scan) documents it the same way: an optional, locally-
     # created ecosystem governance repo any pilot may set up, parallel to
-    # DS-strategy, not one author's personal instance; one manifest entry for
-    # session-dispatcher-tsekh.py, a script deliberately excluded from
-    # delivery (EXCLUDED_SCRIPTS) precisely because it is author-host-specific
-    # — renaming it would require coordinating the author's own external
-    # systemd/cron setup for zero end-user benefit (issue #1107 triage).
+    # DS-strategy, not one author's personal instance; six references to
+    # session-dispatcher-tsekh.py (one manifest entry, three byte-identical
+    # find-python3.sh comments, two tool comments) for the same reason: the
+    # script itself is deliberately excluded from delivery (EXCLUDED_SCRIPTS)
+    # because it is author-host-specific, so renaming it would require
+    # coordinating the author's own external systemd/cron setup for zero
+    # end-user benefit (issue #1107 triage); three stable incident-ID slugs
+    # (bug-2026-09-17-tsekh1-*) that the author cross-references outside this
+    # repo — the ID's date+host encoding is disambiguating information, not
+    # personal leakage, and no local bugs/ directory exists here to confirm a
+    # rename is even safe (issue #1107 triage).
     # Match the whole line, never the whole file.
     local line="$2"
     line="${line%$'\r'}"  # grep preserves a final CR in Windows line endings.
@@ -133,7 +139,15 @@ is_author_context_exception() {
         'roles/synchronizer/scripts/collectors.d/README.md:- `publications.sh` — публикации (если есть DS-Knowledge-Index-*/docs/)'|\
         'scripts/week-draft-init.sh:  echo "   knowledge_repo: \"DS-Knowledge-Index\""'|\
         '.claude/hooks/rule-engine.sh:        if ! echo "$file_path" | grep -qE '"'"'DS-[^/]+-strategy/|DS-ecosystem-development/'"'"'; then'|\
-        'update-manifest.json:    "scripts/session-dispatcher-tsekh.py",') return 0 ;;
+        'update-manifest.json:    "scripts/session-dispatcher-tsekh.py",'|\
+        'setup.sh:    echo "  ⚠ Не найден python3 >= 3.10 с библиотекой PyYAML — календарь, лента «Мир», обзор РП и core-скрипты (artifactor.py, session-dispatcher-tsekh.py) будут отключаться с явной ошибкой зависимости."'|\
+        'generate-manifest.sh:    "scripts/session-dispatcher-tsekh.py"       # нет ссылок из доставляемого'|\
+        'seed/strategy/scripts/lib/find-python3.sh:# core scripts (artifactor.py, session-dispatcher-tsekh.py). Reject 3.9 early'|\
+        '.claude/lib/find-python3.sh:# core scripts (artifactor.py, session-dispatcher-tsekh.py). Reject 3.9 early'|\
+        'scripts/lib/find-python3.sh:# core scripts (artifactor.py, session-dispatcher-tsekh.py). Reject 3.9 early'|\
+        'setup/build-runtime.sh:# bug-2026-09-17-tsekh1-recovery-backups-abort: under `set -eu`, a single'|\
+        'setup/build-runtime.sh:# bug-2026-09-17-tsekh1-recovery-backups-abort (продолжение): leftovers from'|\
+        'update.sh:# author_release_regression FPATH PAYLOAD — bug-2026-09-17-tsekh1-release-') return 0 ;;
     esac
     return 1
 }
