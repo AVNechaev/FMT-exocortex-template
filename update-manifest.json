@@ -2621,7 +2621,7 @@
     },
     {
       "path": "scripts/route-task.sh",
-      "sha256": "6909e6345d780ad2247e33eb4932e42173aa58816c980f2194079e158e095b13"
+      "sha256": "795ba299d507efd77ac1c343f9af28960fc29e98a354c2825cfbd2293d8f10b5"
     },
     {
       "path": "scripts/run-regression-tests.sh",
@@ -2701,7 +2701,7 @@
     },
     {
       "path": "scripts/test-route-task.sh",
-      "sha256": "023cd60b79b989f7f66f985a15c059f171f53e4fe7eabba772f4b7d2183f69e4"
+      "sha256": "bf78d9a53c7abd48e30322694ad53bbc582399e57f13fa4321f45cace6243d20"
     },
     {
       "path": "scripts/test-session-guard-yaml-task-escaping.sh",
