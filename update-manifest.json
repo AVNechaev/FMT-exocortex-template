@@ -109,7 +109,7 @@
     },
     {
       "path": ".claude/hooks/pack-creator-spf-guard.sh",
-      "sha256": "68be07adff21228a20ba39b7762d66f5619dd6ce3719b4e8ff82b2724d38d32a"
+      "sha256": "9df1d9001e39a37f62ab6d38e635b386b1fb316194a16a8d430c2ca055cbb080"
     },
     {
       "path": ".claude/hooks/post-tool-use-scope-track.sh",
@@ -373,7 +373,7 @@
     },
     {
       "path": ".claude/settings.json",
-      "sha256": "98041e309d1633474763ed8ec34d41dd815ae65279c2a1b430a19f7d11cc7600"
+      "sha256": "3eb8d0293546fc2a76a6e7aa34eefeed2d8a61e9f0b1a10e2c6b755797d6ab1f"
     },
     {
       "path": ".claude/skills-catalog.yaml",
@@ -605,7 +605,7 @@
     },
     {
       "path": ".claude/skills/pack-creator/test_guard.sh",
-      "sha256": "443f3d1d0bde2e092305e5ddd06f31cdd9c49f0fe8a7719c5b8fe373cbc673b9"
+      "sha256": "c206913d90172954c56ae3b6e65b41f0689db4958825562d43979d1534211fb1"
     },
     {
       "path": ".claude/skills/pack-new/SKILL.md",
@@ -3157,7 +3157,7 @@
     },
     {
       "path": "setup/validate-template.sh",
-      "sha256": "f22e829a26d10f097cb0340beb547e4b68110c8291d1c4bec33f0eabf7a73477"
+      "sha256": "36b42f29f1381e7942aa1d8b3f17db62af81d015f1fe417fd128b33e8234aba9"
     },
     {
       "path": "shared/rubrics/form-089.yaml",
