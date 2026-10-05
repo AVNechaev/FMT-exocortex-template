@@ -833,7 +833,7 @@ else
 fi
 env -i HOME="$M_HOME" PATH="$M/stubs:$STUBS:$PATH" TMPDIR="$TMPDIR" \
     IWE_ROOT="$M/ws" IWE_SCRIPTS="$M/ws/FMT-exocortex-template/scripts" \
-    IWE_GOVERNANCE_REPO=DS-strategy \
+    IWE_GOVERNANCE_REPO=DS-strategy DAY_OPEN_FORCE_STRATEGY_DAY=1 \
     "$BASH" "$M/ws/FMT-exocortex-template/scripts/day-open-scaffold.sh" "$DATE" \
     > "$M/standalone-scaffold.txt" 2>&1
 if [ -f "$incident" ]; then
