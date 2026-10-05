@@ -113,7 +113,11 @@ is_author_context_exception() {
     # one functional check for "DS-ecosystem-development/" — docs/LEARNING-PATH.md
     # (exempt from this scan) documents it the same way: an optional, locally-
     # created ecosystem governance repo any pilot may set up, parallel to
-    # DS-strategy, not one author's personal instance.
+    # DS-strategy, not one author's personal instance; one manifest entry for
+    # session-dispatcher-tsekh.py, a script deliberately excluded from
+    # delivery (EXCLUDED_SCRIPTS) precisely because it is author-host-specific
+    # — renaming it would require coordinating the author's own external
+    # systemd/cron setup for zero end-user benefit (issue #1107 triage).
     # Match the whole line, never the whole file.
     local line="$2"
     line="${line%$'\r'}"  # grep preserves a final CR in Windows line endings.
@@ -128,7 +132,8 @@ is_author_context_exception() {
         'roles/strategist/prompts/week-review.md:Для этого запуска скрипт-обёртка уже открыла служебную сессию охраны (`week-review`, область `current/`) и закроет её сама. Свою сессию (`session-guard.sh open`) не открывай: на замороженном каталоге она отказана, а придуманное значение `--wp` охрана отвергает. В репозитории governance изменяй и коммить только файлы в `current/`; пост клуба (шаг 6) относится к репозиторию Knowledge Index (`DS-Knowledge-Index`), не к governance, и этой сессией не покрывается. Отказ охраны не обходи (`--force`, `--no-verify`, правка хуков): выведи дословный текст отказа в итоговый ответ. Скрипт-обёртка проверяет, что отчёт недели попал на сервер, и поднимет тревогу владельцу, если нет.'|\
         'roles/synchronizer/scripts/collectors.d/README.md:- `publications.sh` — публикации (если есть DS-Knowledge-Index-*/docs/)'|\
         'scripts/week-draft-init.sh:  echo "   knowledge_repo: \"DS-Knowledge-Index\""'|\
-        '.claude/hooks/rule-engine.sh:        if ! echo "$file_path" | grep -qE '"'"'DS-[^/]+-strategy/|DS-ecosystem-development/'"'"'; then') return 0 ;;
+        '.claude/hooks/rule-engine.sh:        if ! echo "$file_path" | grep -qE '"'"'DS-[^/]+-strategy/|DS-ecosystem-development/'"'"'; then'|\
+        'update-manifest.json:    "scripts/session-dispatcher-tsekh.py",') return 0 ;;
     esac
     return 1
 }
