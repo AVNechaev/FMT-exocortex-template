@@ -2,12 +2,12 @@
 # Validate Template — проверка целостности FMT-exocortex-template
 #
 # Режимы (--mode=...):
-#   pristine  (default) — все 7 проверок. Для CI, author template-sync, fresh clone до setup.sh.
+#   pristine  (default) — все 9 проверок. Для CI, author template-sync, fresh clone до setup.sh.
 #   installed           — пропускает чеки 2/3/4, которые легитимно нарушаются после setup.sh
 #                         (/Users/ подставлен, /opt/homebrew в CLAUDE_PATH, MEMORY заполняется работой).
 #                         Используется setup.sh --validate как делегат структурных чеков.
 #
-# 8 проверок:
+# 9 проверок:
 # 1. Нет автор-специфичного контента                              [pristine + installed]
 # 2. Нет захардкоженных путей /Users/                             [pristine only]
 # 3. Нет захардкоженных путей /opt/homebrew                       [pristine only]
@@ -609,14 +609,41 @@ else
     for hook_path in "$HOOKS_DIR"/*.sh; do
         [ -f "$hook_path" ] || continue
         hookname=$(basename "$hook_path")
-        # Already wired into settings.json/settings.local.json — nothing to escalate.
-        grep -q "\.claude/hooks/$hookname" "${SETTINGS_FILES[@]}" 2>/dev/null && continue
+        # Already wired under PreToolUse specifically — the only event type
+        # that can actually block a Write/Edit/MultiEdit/NotebookEdit before
+        # it runs. A plain string-presence grep (the check this replaced)
+        # can't tell PreToolUse apart from SessionStart/PostToolUse/Stop etc,
+        # so a hook registered under the wrong event type still read as
+        # "registered" and this check never escalated it (found by
+        # adversarial review, 2026-10-06: moved a hook's own registration to
+        # SessionStart while leaving its path string elsewhere in the same
+        # file — check [9/9] kept reporting PASS).
+        registered_pretooluse=0
+        for settings_file in "${SETTINGS_FILES[@]}"; do
+            if python3 -c "
+import json, sys
+try:
+    with open(sys.argv[1]) as f:
+        data = json.load(f)
+except (OSError, ValueError):
+    sys.exit(1)
+for entry in data.get('hooks', {}).get('PreToolUse', []):
+    for h in entry.get('hooks', []):
+        if sys.argv[2] in h.get('command', ''):
+            sys.exit(0)
+sys.exit(1)
+" "$settings_file" "$hookname" 2>/dev/null; then
+                registered_pretooluse=1
+                break
+            fi
+        done
+        [ "$registered_pretooluse" -eq 1 ] && continue
         esc_name=$(printf '%s' "$hookname" | sed 's/\./\\./g')
         hits=$(grep -rnEi "$esc_name" "$TEMPLATE_DIR/.claude/skills" --include=SKILL.md 2>/dev/null \
             | grep -Ei 'hook|хук' | grep -E "$ENFORCE_RE" || true)
         if [ -n "$hits" ]; then
             [ "$CHECK9_FAIL" -eq 0 ] && echo "FAIL"
-            echo "  $hookname: SKILL.md заявляет активную защиту (хук + блокирующий глагол в одной строке), но хук не зарегистрирован ни в одном settings.json:"
+            echo "  $hookname: SKILL.md заявляет активную защиту (хук + блокирующий глагол в одной строке), но хук не зарегистрирован под PreToolUse ни в одном settings.json:"
             echo "$hits" | sed 's/^/    /' | head -5
             CHECK9_FAIL=1
             FAIL=1
