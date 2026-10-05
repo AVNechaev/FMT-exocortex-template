@@ -51,16 +51,23 @@ def redact_yookassa(match):
     # issue #848: the same pytest-identifier shape also shows up merely
     # MENTIONING a test's name rather than defining or addressing it -- a
     # comment referencing it, a `--exclude=`/`=`-style CLI argument, or the
-    # basename of a `test_*.sh`/`test_*.py` file. Recognized the same way as
-    # source_definition/pytest_nodeid above: by syntactic context, not by
-    # relaxing YOOKASSA_PYTEST_SHAPE_RE itself -- the shape bar (five or more
+    # basename of a `test_*.<ext>` file of any extension (issue #1091: `.sh`/
+    # `.py` only missed the same name as a `.md` path, e.g. `git add
+    # docs/test_<name>.md`). Recognized the same way as source_definition/
+    # pytest_nodeid above: by syntactic context, not by relaxing
+    # YOOKASSA_PYTEST_SHAPE_RE itself -- the shape bar (five or more
     # lowercase snake_case segments) stays exactly as strict as before.
+    # The lookahead requires the extension to end the filename token (next
+    # char, if any, is not alnum/dot/hyphen) so `test_...sh.bak` or
+    # `test_...sh-extra` are not mistaken for a terminated `.sh` name --
+    # `\b` alone accepted both, since a word boundary sits right after "sh"
+    # regardless of what non-word character follows.
     current_line = before.rsplit("\n", 1)[-1]
     comment_mention = "#" in current_line
     cli_argument = re.search(r"=\Z", before) is not None
-    script_filename = re.match(r"\.(?:sh|py)\b", after) is not None
+    trailing_file_extension = re.match(r"\.[A-Za-z0-9]+(?![A-Za-z0-9._-])", after) is not None
     if YOOKASSA_PYTEST_SHAPE_RE.fullmatch(value) and (
-        source_definition or pytest_nodeid or comment_mention or cli_argument or script_filename
+        source_definition or pytest_nodeid or comment_mention or cli_argument or trailing_file_extension
     ):
         return value
     return "[REDACTED-YOOKASSA-KEY]"
