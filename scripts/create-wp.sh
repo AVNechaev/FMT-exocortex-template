@@ -770,17 +770,14 @@ flag_map = {"P1": "🔴", "P2": "🟡", "P3": "🟢", "P4": "⚪", "P5": "⚪"}
 flag = flag_map.get(priority, "⚪")
 # issue #1088: `re.sub(r"[^0-9\-]", "", budget)` dropped the decimal
 # separator along with the "h" suffix, turning "0.5h" into "05" (read as
-# five hours at a glance, not half an hour). Match the number(s) explicitly
-# instead of subtracting everything that isn't a digit or hyphen, and
-# normalize a locale comma to a dot so the artifact is consistent either
-# way; "h" is still dropped, same as the old regex did for "3-4h" -> "3-4".
-_budget_match = re.match(r"(\d+(?:[.,]\d+)?)(-(\d+(?:[.,]\d+)?))?", budget)
-if _budget_match:
-    h_val = _budget_match.group(1).replace(",", ".")
-    if _budget_match.group(3):
-        h_val += "-" + _budget_match.group(3).replace(",", ".")
-else:
-    h_val = "?"
+# five hours at a glance, not half an hour). Find the number(s) anywhere in
+# the string instead of anchoring to its start -- a start-anchored version
+# of this fix (cold review, Fable) returned "?" for "~2h" or a leading-space
+# budget, and disagreed with the bash threshold parser on "2h-3h". Take the
+# first two numbers found, normalizing a locale comma to a dot; "h" is still
+# dropped, same as the old regex did for "3-4h" -> "3-4".
+_nums = re.findall(r"\d+(?:[.,]\d+)?", budget)
+h_val = "-".join(n.replace(",", ".") for n in _nums[:2]) or "?"
 
 with open(weekplan_path, "r", encoding="utf-8") as f:
     lines = f.readlines()

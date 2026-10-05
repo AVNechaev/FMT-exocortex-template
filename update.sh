@@ -1198,14 +1198,24 @@ apply_settings_merge_if_requested() {
 #
 # Split into build + print (issue #1089) so report_settings_merge_drift can
 # inspect the counts before deciding whether to warn at all, without running
-# the merger script twice.
+# the merger script twice in the common (quiet) case.
+#
+# preview_path is an explicit parameter, not a hardcoded workspace path
+# (cold review, Fable): the merger ALWAYS writes its merged candidate to
+# whatever path it's given (settings-merge-preview.py:217-228, unconditional
+# atomic write) -- a caller that only wants to know whether there's drift,
+# without actually offering a candidate file to the pilot, must pass a
+# throwaway path, never the real $WORKSPACE_DIR/.claude/settings.merged.preview.json.
+# The first version of this function hardcoded that real path here, so the
+# probe call in report_settings_merge_drift left a stray file behind on
+# every quiet run and silently wrote one during --check too, contradicting
+# its own "предпросмотр не записан" message.
 build_settings_merge_report() {
-    local src="$1" dst="$2"
+    local src="$1" dst="$2" preview_path="$3"
     local merger="$SCRIPT_DIR/.claude/scripts/settings-merge-preview.py"
     py_available && [ -f "$merger" ] || return 1
-    local preview="$WORKSPACE_DIR/.claude/settings.merged.preview.json"
     local report_file="$TMPDIR_UPDATE/settings-merge-report.json"
-    "$PY_BIN" "$merger" "$src" "$dst" "$preview" > "$report_file" 2>/dev/null || return 1
+    "$PY_BIN" "$merger" "$src" "$dst" "$preview_path" > "$report_file" 2>/dev/null || return 1
     printf '%s\n' "$report_file"
 }
 
@@ -1217,6 +1227,8 @@ with open(sys.argv[1], encoding="utf-8") as handle:
     r = json.load(handle)
 print(f"    → предпросмотр слияния: {r['preview']}")
 print(f"    + из шаблона: ключей {r['keys_added_from_template']}, hook-записей {r['hooks_added_from_template']}, permissions {r['permissions_added_from_template']}")
+if r.get("hooks_only_in_workspace"):
+    print(f"    ℹ️  в вашей копии есть {r['hooks_only_in_workspace']} hook-записей, которых сейчас нет в шаблоне (может быть обычной личной настройкой)")
 if r["conflicts"]:
     print(f"    ⚠ конфликты (оставлено ваше значение): {', '.join(r['conflicts'])}")
 PY
@@ -1225,7 +1237,8 @@ PY
 report_settings_merge_preview() {
     local src="$1" dst="$2"
     local report_file
-    report_file=$(build_settings_merge_report "$src" "$dst") || {
+    report_file=$(build_settings_merge_report "$src" "$dst" \
+        "$WORKSPACE_DIR/.claude/settings.merged.preview.json") || {
         echo "    ⚠ предпросмотр слияния не построен (битый JSON в одном из файлов)"
         return 0
     }
@@ -1233,9 +1246,13 @@ report_settings_merge_preview() {
     return 0
 }
 
-# True (exit 0) only when the merge would add nothing from the template AND
-# leave no conflicting existing value -- i.e. workspace and template agree
-# on content even though the raw bytes/array order differ (issue #1089).
+# True (exit 0) only when the merge would add nothing from the template,
+# leave no conflicting existing value, and the workspace has no hook entry
+# the template no longer mentions -- i.e. workspace and template agree on
+# content even though the raw bytes/array order differ (issue #1089). The
+# hooks_only_in_workspace check (cold review, Fable) is the one case the
+# earlier byte-for-byte `cmp -s` caught by accident and this content-aware
+# check otherwise missed: template drops a hook, workspace still has it.
 settings_merge_report_is_quiet() {
     local report_file="$1"
     "$PY_BIN" - "$report_file" <<'PY' 2>/dev/null
@@ -1246,6 +1263,7 @@ quiet = (
     r["keys_added_from_template"] == 0
     and r["hooks_added_from_template"] == 0
     and r["permissions_added_from_template"] == 0
+    and r.get("hooks_only_in_workspace", 0) == 0
     and not r["conflicts"]
 )
 sys.exit(0 if quiet else 1)
@@ -1264,29 +1282,34 @@ report_settings_merge_drift() {
     cmp -s "$src" "$dst" && return 0
 
     # issue #1089: a byte-for-byte mismatch can still be the same set of
-    # hooks/permissions in a different array order. Build the report once
-    # and, when the merger agrees there is nothing the template would add
-    # AND no conflicting value, skip the warning silently -- same as the
-    # cmp -s match above. A merger failure does NOT count as quiet (that
-    # would hide real drift behind a parse error); it falls through to the
-    # existing warn path below.
-    local report_file
-    if report_file=$(build_settings_merge_report "$src" "$dst"); then
-        if settings_merge_report_is_quiet "$report_file"; then
-            return 0
-        fi
+    # hooks/permissions in a different array order. Probe the merge into a
+    # throwaway file first -- NEVER the real workspace preview path (cold
+    # review, Fable: the merger writes unconditionally, so building the
+    # report with the real path here would create/overwrite that file on
+    # every run, including a quiet one and a --check one, regardless of
+    # whether anything is actually shown to the pilot). When the merger
+    # agrees there is nothing to report, skip the warning silently -- same
+    # as the cmp -s match above. A merger failure does NOT count as quiet
+    # (that would hide real drift behind a parse error); it falls through
+    # to the existing warn path below.
+    local probe_file quiet=false
+    if probe_file=$(build_settings_merge_report "$src" "$dst" \
+        "$TMPDIR_UPDATE/settings-merge-probe.json"); then
+        settings_merge_report_is_quiet "$probe_file" && quiet=true
     fi
+    $quiet && return 0
 
     echo "  ⚠ .claude/settings.json — платформа обновила hooks/permissions, workspace-копия НЕ тронута (несёт пользовательские хуки)."
     if $CHECK_ONLY; then
         echo "    Режим --check: предпросмотр не записан. Запустите update.sh без --check, чтобы получить безопасный план слияния."
         return 0
     fi
-    if [ -n "${report_file:-}" ]; then
-        print_settings_merge_report "$report_file"
-    else
-        report_settings_merge_preview "$src" "$dst"
-    fi
+    # Real preview, real path -- only reached when there is something to
+    # show and we are actually allowed to write it. A second merger run
+    # (the probe above already ran once) is the price of keeping the
+    # throwaway probe from ever touching the workspace; this path is the
+    # rare one (real drift), not the common one (quiet).
+    report_settings_merge_preview "$src" "$dst"
 }
 
 # === Detect directories ===
