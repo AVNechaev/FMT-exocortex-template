@@ -857,7 +857,7 @@
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "6f7a4d31970926a450433379f928adda2e96b2dd7a9af513878a20bf4303a13d"
+      "sha256": "f5276ae2c4541e836d463c5985474d24ac84a7fe602606b6833b34258cbdbc53"
     },
     {
       "path": "CLAUDE.md",
@@ -2861,7 +2861,7 @@
     },
     {
       "path": "scripts/tests/test_issue_533_agent_fault_delivery.py",
-      "sha256": "e4ce96455f67a2e8bb37ca144d01cd95f438cb1e13d4adc0f201c6d8ac705a46"
+      "sha256": "c4dc08417c988ad5fa12d4c46dcbfb1a84e6cc17b8028988c84540bd28e2dcee"
     },
     {
       "path": "scripts/tests/test_issue_536_day_close_backup.sh",
@@ -3177,7 +3177,7 @@
     },
     {
       "path": "update.sh",
-      "sha256": "09cf9fe99cb7947bbc48b96950789c56509d86c25c8fbd120890c21208031198"
+      "sha256": "8710f7421520b92e641ff318a509c5406ae03ff97826fe0b5d1e203d4525d85c"
     }
   ],
   "excluded_paths": [
