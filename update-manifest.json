@@ -857,7 +857,7 @@
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "e9f3c607af1a806ca3a18662aa7d7d9988a27adb9f4375025a4ef605db4a4211"
+      "sha256": "6f7a4d31970926a450433379f928adda2e96b2dd7a9af513878a20bf4303a13d"
     },
     {
       "path": "CLAUDE.md",
@@ -2482,6 +2482,10 @@
     {
       "path": "scripts/lib/day-open-hooks.sh",
       "sha256": "fe64d2c112e40c9695884c3ceb6dac14e1ca41ad1da3bdc561b4fe84987d9964"
+    },
+    {
+      "path": "scripts/lib/dirty-guard-lock.sh",
+      "sha256": "caa00f78ba817ed16698670b01a1943c1c1bd4d7599fabbf6b2de1d1cf39ef18"
     },
     {
       "path": "scripts/lib/find-python3.sh",
