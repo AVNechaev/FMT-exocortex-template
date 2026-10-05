@@ -3137,7 +3137,7 @@
     },
     {
       "path": "setup.sh",
-      "sha256": "9dfed72200c6eb74ce5a063c8ae313f0c9262a9645d2fa6d589e602de303b3fe"
+      "sha256": "a16eb31f7cc0c543f579e97082b66096b70515bbde5a623cdfb4e95349dc0619"
     },
     {
       "path": "setup/build-runtime.sh",
