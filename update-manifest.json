@@ -2837,7 +2837,7 @@
     },
     {
       "path": "scripts/tests/test_issue_469_settings_merge_hook_identity.py",
-      "sha256": "e9d5384908b54c80d52d95aaba5e4220bbe82d8c86ca4c8a6f748b1d37e42276"
+      "sha256": "aaf58edf91bcedd883f7f24a92e9a2eb25b68e99f794967a440adec91810be3d"
     },
     {
       "path": "scripts/tests/test_issue_471_drift_scan_status_boundary.py",
