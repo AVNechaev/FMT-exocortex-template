@@ -34,7 +34,8 @@ row() { printf '%s\n' "$1" | grep -F "| $2 |" | head -1; }
 scheduler_row() { row "$(scaffold "$1" "$TODAY")" 'Scheduler/триаж'; }
 
 echo "== #919 scheduler row"
-TODAY=$(date +%Y-%m-%d)
+# Use a fixed non-strategy day: Monday is intentionally routed to strategy-day.
+TODAY=2026-09-26
 new_ws s919 with-scripts >/dev/null
 SCHEDULER_LOG="$TMP/s919/home/logs/synchronizer/scheduler-$TODAY.log"
 out=$(scaffold s919 "$TODAY")
