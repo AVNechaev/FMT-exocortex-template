@@ -103,14 +103,32 @@ is_excluded_path() {
 }
 is_author_context_exception() {
     # Existing workflow-only context: one host access control and three
-    # historical/test comments. Match the whole line, never the whole file.
+    # historical/test comments; one vendored-copy line that can't be edited
+    # in place (guide-kit/, byte-identical sync — see
+    # scripts/guide-kit-sync-state.yaml; fix belongs upstream, issue #1107);
+    # five lines using "DS-Knowledge-Index" as the generic, flat convention
+    # name for this optional per-pilot repo (same pattern as DS-strategy and
+    # DS-personal-guide — every pilot creates their OWN repo with this same
+    # name, it is not one specific author's instance; issue #1107 triage);
+    # one functional check for "DS-ecosystem-development/" — docs/LEARNING-PATH.md
+    # (exempt from this scan) documents it the same way: an optional, locally-
+    # created ecosystem governance repo any pilot may set up, parallel to
+    # DS-strategy, not one author's personal instance.
+    # Match the whole line, never the whole file.
     local line="$2"
     line="${line%$'\r'}"  # grep preserves a final CR in Windows line endings.
     case "$1:$line" in
         '.github/workflows/changelog-gate.yml:      NO_CHANGELOG_ALLOWED: "TserenTserenov"'|\
         '.github/workflows/translate-sync.yml:# TserenTserenov; it was never one of the aisystant repos slated for a'|\
         '.github/workflows/release-watchdog.yml:# создана: DS-IT-systems для агента read-only.'|\
-        '.github/workflows/validate-template.yml:      # Имитируем pristine user: DS-strategy вместо DS-my-strategy, DayPlan с минимальным шаблоном.') return 0 ;;
+        '.github/workflows/validate-template.yml:      # Имитируем pristine user: DS-strategy вместо DS-my-strategy, DayPlan с минимальным шаблоном.'|\
+        'guide-kit/generator/personal_export.py:    pathlib.Path.home() / "IWE/DS-my-strategy/inbox/WP-425/cache/derived_snapshot.json"'|\
+        'memory/protocol-work.md:| Заготовка | `DS-Knowledge-Index` status: draft | 14 дней | пост (published) / archive |'|\
+        'memory/protocol-work.md:> **Черновик ≠ Заготовка.** Черновик — личный (DS-strategy). Заготовка — публичная (DS-Knowledge-Index).'|\
+        'roles/strategist/prompts/week-review.md:Для этого запуска скрипт-обёртка уже открыла служебную сессию охраны (`week-review`, область `current/`) и закроет её сама. Свою сессию (`session-guard.sh open`) не открывай: на замороженном каталоге она отказана, а придуманное значение `--wp` охрана отвергает. В репозитории governance изменяй и коммить только файлы в `current/`; пост клуба (шаг 6) относится к репозиторию Knowledge Index (`DS-Knowledge-Index`), не к governance, и этой сессией не покрывается. Отказ охраны не обходи (`--force`, `--no-verify`, правка хуков): выведи дословный текст отказа в итоговый ответ. Скрипт-обёртка проверяет, что отчёт недели попал на сервер, и поднимет тревогу владельцу, если нет.'|\
+        'roles/synchronizer/scripts/collectors.d/README.md:- `publications.sh` — публикации (если есть DS-Knowledge-Index-*/docs/)'|\
+        'scripts/week-draft-init.sh:  echo "   knowledge_repo: \"DS-Knowledge-Index\""'|\
+        '.claude/hooks/rule-engine.sh:        if ! echo "$file_path" | grep -qE '"'"'DS-[^/]+-strategy/|DS-ecosystem-development/'"'"'; then') return 0 ;;
     esac
     return 1
 }
@@ -158,16 +176,13 @@ CHECK1_FAIL=0
 # коде как "TserenTserenov" (mixed-case) — case-sensitive grep никогда не ловил
 # его, поймано только парным паттерном "DS-my-strategy" на тех же строках (2026-07-27).
 for pattern in "tserentserenov" "PACK-MIM" "aist_bot_newarchitecture" \
-               "DS-Knowledge-Index-Tseren" "DS-IT-systems" "DS-ai-systems" \
-               "DS-my-strategy" "engines/tailor"; do
+               "DS-Knowledge-Index" "DS-IT-systems" "DS-ai-systems" \
+               "DS-my-strategy" "engines/tailor" "tsekh" "DS-ecosystem-development"; do
     if [ "$MODE" = "staged" ]; then
         # staged-режим: проверяем только содержимое staged-файлов (git show :path)
         count=0
         hits=""
         while IFS= read -r f; do
-            case "$f" in
-                guide-kit/*) continue ;;  # vendored copy is derived-only (WP-483) — checked by its upstream CI
-            esac
             is_excluded_path "$f" && continue  # frozen out of delivery (#547)
             case "$f" in
                 *.md|*.sh|*.py|*.json|*.plist|*.yaml|*.yml) ;;
@@ -196,7 +211,7 @@ for pattern in "tserentserenov" "PACK-MIM" "aist_bot_newarchitecture" \
                 --include="*.py" --include="*.json" --include="*.plist" --include="*.yaml" --include="*.yml" \
                 --exclude='validate-template.sh' --exclude='LEARNING-PATH.md' \
                 --exclude='CHANGELOG.md' --exclude='aisystant-sync-targets.yaml' \
-                --exclude='translation-manifest.yaml' --exclude-dir='guide-kit' 2>/dev/null \
+                --exclude='translation-manifest.yaml' 2>/dev/null \
                 | grep -v 'github.com/' | grep -v 'docs/adr/' | grep -v 'githubusercontent\.com' \
                 | grep -viE 'TserenTserenov/(FMT-exocortex-template|ZP|SPF)' \
                 | filter_excluded_hits | wc -l | tr -d ' ' || true)
@@ -211,7 +226,7 @@ for pattern in "tserentserenov" "PACK-MIM" "aist_bot_newarchitecture" \
                 --include="*.py" --include="*.json" --include="*.plist" --include="*.yaml" --include="*.yml" \
                 --exclude='validate-template.sh' --exclude='LEARNING-PATH.md' \
                 --exclude='CHANGELOG.md' --exclude='aisystant-sync-targets.yaml' \
-                --exclude='translation-manifest.yaml' --exclude-dir='guide-kit' 2>/dev/null \
+                --exclude='translation-manifest.yaml' 2>/dev/null \
                 | grep -v 'github.com/' | grep -v 'docs/adr/' | grep -v 'githubusercontent\.com' \
                 | grep -viE 'TserenTserenov/(FMT-exocortex-template|ZP|SPF)' \
                 | filter_excluded_hits | head -3 || true
