@@ -285,7 +285,7 @@
     },
     {
       "path": ".claude/rules-lazy/drift-guard.md",
-      "sha256": "a927544a2a0440df32fd4783268b49a9a05bbe0cf0b2be1bb8aa9aa55623f2f9"
+      "sha256": "d0f6eee10b780ae4ccf622f5aa445c17c390feeac6c270d47daf656ca8f8938d"
     },
     {
       "path": ".claude/rules-lazy/hooks-bypass-gate.md",
@@ -393,7 +393,7 @@
     },
     {
       "path": ".claude/skills/apply-captures/SKILL.md",
-      "sha256": "49059a0b16633814b4822073f6fd364f8c8dedd6e0bdd6e28a13d49f810bf92d"
+      "sha256": "c07ba0ea6f8ae1f3402866eb442e79196a3e801168a43afddd2c7b8292800d10"
     },
     {
       "path": ".claude/skills/archgate/SKILL.md",
@@ -425,11 +425,11 @@
     },
     {
       "path": ".claude/skills/check-secret/SKILL.md",
-      "sha256": "df991b9e5d4a4caf9c8b5432226af330338ffb05d84aebaed54d15583848bc5b"
+      "sha256": "84cf7c0b2a0646b4d761452489abfa7444e799c5313d38456dd233e90d437880"
     },
     {
       "path": ".claude/skills/check-secret/check.sh",
-      "sha256": "8cf83e63b49b05ed5ed4bbb9bd79c83c1af34dde0e5aaec770ffc66e79864e55"
+      "sha256": "147cc0981e50f70a313440c193b7c2d7b43ec345d5467233b62c0963f5c4dbb4"
     },
     {
       "path": ".claude/skills/consent/SKILL.md",
@@ -441,7 +441,7 @@
     },
     {
       "path": ".claude/skills/day-close/day-close-details.md",
-      "sha256": "26c6ff95ba03a7c8492ed92f2797ae615411210e08bdba803b40c2ab23c969d4"
+      "sha256": "c9e17d2a2202145ddc20f37476129b4b5a09f2eedde7821949adb2b7510fa4a3"
     },
     {
       "path": ".claude/skills/day-close/day-close/SKILL.md",
@@ -693,7 +693,7 @@
     },
     {
       "path": ".claude/skills/setup-wakatime/SKILL.md",
-      "sha256": "d1ddd0f2b0e13b53bb927018e0154c8e00286db25906f09626d1522be9f5e166"
+      "sha256": "ea7a3f45b2f34cd0add13b54368b73065c123ccb566d7947d51f0163dfd84f44"
     },
     {
       "path": ".claude/skills/skill-creator/SKILL.md",
@@ -749,7 +749,7 @@
     },
     {
       "path": ".claude/skills/verify-hypotheses/SKILL.md",
-      "sha256": "5c7b1a9216c75833656beaa2393e2987c1e642c8190f4412a9d0505ea3e3b4fa"
+      "sha256": "24a16b5063f6d6bb04d5837bd2d2aa2b7996bd14e53dd6e9d0005d165b8ccdf0"
     },
     {
       "path": ".claude/skills/verify/SKILL.md",
@@ -1505,7 +1505,7 @@
     },
     {
       "path": "memory/communication-style-downstream-template.md",
-      "sha256": "b1858b936c5a7152d1d2e75b0c3b5dcfa238ab16e4cacf4a46493c1043621959"
+      "sha256": "57bca2fc52fb11d9bc21969c7c9d300870c334c5a962fa7bcac28152c0fa5068"
     },
     {
       "path": "memory/communication-style-personal-template.md",
@@ -1517,7 +1517,7 @@
     },
     {
       "path": "memory/distinctions-warm.md",
-      "sha256": "44f99f43925283c276f280c3bce02a56f289281f1b60e55b897d955acbc5e8c2"
+      "sha256": "b75ca92417fedad46091dd525fdc931a84ab04fb3412030cb8f9aae9f5316d8a"
     },
     {
       "path": "memory/dry-run-contract.md",
@@ -1541,7 +1541,7 @@
     },
     {
       "path": "memory/hard-distinctions.md",
-      "sha256": "96596d5fa545c03b6f18d0ef6ca79e0f464800785365f57b457497273eaa6634"
+      "sha256": "80280e61f8b853103c151986ab74c4fbd1e4bade4f3fed66bfca6f9cddc24662"
     },
     {
       "path": "memory/hooks-design.md",
@@ -2133,7 +2133,7 @@
     },
     {
       "path": "scripts/check-claude-md-links.py",
-      "sha256": "f3f6fb6080291f4a36d48fed4167a872df8996154f04f8ab22802c388295be04"
+      "sha256": "c95965353edc11d399997a4783aa37131833156cc7a318ad9a3016cd276fbaec"
     },
     {
       "path": "scripts/check-critical-files-map.sh",
