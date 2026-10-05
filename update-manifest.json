@@ -2133,7 +2133,7 @@
     },
     {
       "path": "scripts/check-claude-md-links.py",
-      "sha256": "c95965353edc11d399997a4783aa37131833156cc7a318ad9a3016cd276fbaec"
+      "sha256": "795291d64b1661f0679ac2a6bf7152c326b8f74ba41a6506bc9812af125ebc71"
     },
     {
       "path": "scripts/check-critical-files-map.sh",
