@@ -100,6 +100,43 @@ MDLINK_RE = re.compile(r"\[[^\]\n]*\]\(([^)\s]+)\)")
 TOKEN_FULLMATCH_RE = re.compile(r"[\w./{}-]+\.[a-zA-Z]{2,5}")
 WHITESPACE_RE = re.compile(r"\S+")
 
+# issue #1110 follow-up (adversarial review, 2026-10-06): "$IWE_SCRIPTS/x.sh"
+# is the dominant way this exact codebase's own skills name a script path
+# (check-secret/SKILL.md:38 has a real, correct "$IWE_SCRIPTS/route-task.sh"
+# right in the file this fix touches) -- but the bare "$" voided the whole
+# token above, so a genuinely dead "$IWE_SCRIPTS/<typo>.sh" was never even
+# tested. These two vars are a deliberately narrow, explicit exception, not
+# a shell-expansion parser: update.sh/setup.sh deliver .claude/, memory/ and
+# scripts/ directly under $IWE_ROOT, and $IWE_SCRIPTS is specifically
+# $IWE_ROOT/<this repo>/scripts -- both map unambiguously onto the exact
+# three prefixes is_dead() already restricts itself to. Other vars seen in
+# this text (IWE_GOVERNANCE_REPO, IWE_HOME, IWE_TEMPLATE, a ":-default"
+# branch) name a path in some OTHER repo or carry a fallback value a regex
+# can't safely resolve -- left alone, same as before this fix.
+KNOWN_VAR_PREFIX_RE = re.compile(r"^\$\{?(IWE_SCRIPTS|IWE_ROOT)\}?(/.*)?$")
+KNOWN_VAR_PREFIX_SUBSTITUTION = {"IWE_SCRIPTS": "scripts", "IWE_ROOT": ""}
+
+
+def _known_var_candidate(tok):
+    """`tok` with a recognized $IWE_SCRIPTS/$IWE_ROOT prefix substituted for
+    the real repo-relative path it names, or None if `tok` doesn't start
+    with one of those two (see the module-level comment above)."""
+    m = KNOWN_VAR_PREFIX_RE.match(tok)
+    if not m:
+        return None
+    return (KNOWN_VAR_PREFIX_SUBSTITUTION[m.group(1)] + (m.group(2) or "")).lstrip("/")
+
+
+def _candidate_from_token(tok):
+    """The token itself if it already fullmatches the safe path pattern,
+    else its known-var-substituted form if THAT fullmatches, else None."""
+    if TOKEN_FULLMATCH_RE.fullmatch(tok):
+        return tok
+    substituted = _known_var_candidate(tok)
+    if substituted and TOKEN_FULLMATCH_RE.fullmatch(substituted):
+        return substituted
+    return None
+
 LEAD_STRIP = "\"'(["
 TRAIL_STRIP = "\"')],;:"
 
@@ -108,12 +145,16 @@ TRAIL_STRIP = "\"')],;:"
 # issue #1110 for the full reasoning.
 TREE_ALLOWLIST = {
     # check-secret/{SKILL.md,check.sh} name this ecosystem-external runbook
-    # (lives in the author's separate DS-ecosystem-development repo — see
-    # check.sh's own full-path mention) right next to hardcoded author paths
-    # that are issue #1107's territory (a parallel fix touching the same two
-    # files for a different reason). Left unedited to avoid colliding with
-    # that in-flight change; allowlisted so this known, pre-existing gap
-    # doesn't read as new breakage introduced by the #1110 fix.
+    # (lives in a separate, pilot-created ecosystem-development repo, if one
+    # exists — see check.sh's own full-path mention) right next to hardcoded
+    # author paths that are issue #1107's territory (a parallel fix touching
+    # the same two files for a different reason). Left unedited to avoid
+    # colliding with that in-flight change; allowlisted so this known,
+    # pre-existing gap doesn't read as new breakage introduced by the #1110
+    # fix. Deliberately worded without "author" here: #1107 widens
+    # setup/validate-template.sh's own author-constant scan to also flag
+    # "DS-ecosystem-development" in an author-attribution context, and this
+    # very comment would otherwise trip it once both land.
     "DP.RUNBOOK.003-cascade-secret-rotation.md",
     # Governance-repo-relative, not template-repo-relative — "scripts/" is
     # also the directory name in the user's deployed governance repo, and
@@ -130,6 +171,16 @@ TREE_ALLOWLIST = {
     "scripts/ds-publish.sh",
     "scripts/process-runner.py",
     "scripts/processes/quick-close.yaml",
+    # author-mode/SKILL.md's "$IWE_SCRIPTS/template-sync.sh" line is inside a
+    # paragraph explicitly gated "Автор (author_mode: true)" -- the author's
+    # own delivery tooling, which root CLAUDE.md says lives in a separate
+    # setup repo, not in this template. Only reachable since the
+    # $IWE_SCRIPTS-prefix substitution above was added; the original #1110
+    # checker's charset never looked at this token at all (it contains "$"),
+    # so this isn't something that fix missed -- it's a new case this later
+    # widening surfaces for the first time, same shape as the three entries
+    # right above it.
+    "scripts/template-sync.sh",
     # bottleneck-pick/SKILL.md's own parameter table already says this map
     # "не доставляется публичным шаблоном" (not delivered by the public
     # template) right at the point of reference — a documented default
@@ -217,9 +268,9 @@ def find_candidates(text):
         inner = m.group(1)
         base = m.start(1)
         for wm in WHITESPACE_RE.finditer(inner):
-            tok = strip_token(wm.group(0))
-            if TOKEN_FULLMATCH_RE.fullmatch(tok):
-                yield base + wm.start(), tok
+            candidate = _candidate_from_token(strip_token(wm.group(0)))
+            if candidate:
+                yield base + wm.start(), candidate
     for m in MDLINK_RE.finditer(text):
         tok = strip_token(m.group(1))
         if not tok.startswith(("http://", "https://", "mailto:", "#")):
@@ -228,9 +279,9 @@ def find_candidates(text):
         body = fence.group(2)
         base = fence.start(2)
         for wm in WHITESPACE_RE.finditer(body):
-            tok = strip_token(wm.group(0))
-            if TOKEN_FULLMATCH_RE.fullmatch(tok):
-                yield base + wm.start(), tok
+            candidate = _candidate_from_token(strip_token(wm.group(0)))
+            if candidate:
+                yield base + wm.start(), candidate
 
 
 def check_tree(glob_root, pattern):
