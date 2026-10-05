@@ -196,7 +196,8 @@ CHECK1_FAIL=0
 # его, поймано только парным паттерном "DS-my-strategy" на тех же строках (2026-07-27).
 for pattern in "tserentserenov" "PACK-MIM" "aist_bot_newarchitecture" \
                "DS-Knowledge-Index" "DS-IT-systems" "DS-ai-systems" \
-               "DS-my-strategy" "engines/tailor" "tsekh" "DS-ecosystem-development"; do
+               "DS-my-strategy" "engines/tailor" "tsekh" "DS-ecosystem-development" \
+               "tseren"; do
     if [ "$MODE" = "staged" ]; then
         # staged-режим: проверяем только содержимое staged-файлов (git show :path)
         count=0
