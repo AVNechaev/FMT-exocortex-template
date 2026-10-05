@@ -373,7 +373,7 @@
     },
     {
       "path": ".claude/settings.json",
-      "sha256": "98041e309d1633474763ed8ec34d41dd815ae65279c2a1b430a19f7d11cc7600"
+      "sha256": "3eb8d0293546fc2a76a6e7aa34eefeed2d8a61e9f0b1a10e2c6b755797d6ab1f"
     },
     {
       "path": ".claude/skills-catalog.yaml",
@@ -3157,7 +3157,7 @@
     },
     {
       "path": "setup/validate-template.sh",
-      "sha256": "f22e829a26d10f097cb0340beb547e4b68110c8291d1c4bec33f0eabf7a73477"
+      "sha256": "da0897a715dba5a7ed579fa100f2fc22cffe7df45ed4b12fd00f2c9d4cc4e72f"
     },
     {
       "path": "shared/rubrics/form-089.yaml",
