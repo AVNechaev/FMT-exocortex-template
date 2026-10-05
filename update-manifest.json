@@ -857,7 +857,7 @@
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "40245c224e913759e35c2289aa2ffd518e3a2f1870454ab79d6985006b571906"
+      "sha256": "e9f3c607af1a806ca3a18662aa7d7d9988a27adb9f4375025a4ef605db4a4211"
     },
     {
       "path": "CLAUDE.md",
@@ -1041,7 +1041,7 @@
     },
     {
       "path": "docs/release-audit-log.md",
-      "sha256": "a70ea18e4a85e8840b9b63b53e2df74a00cbc075c7d24f626cfc451eb1ceba1a"
+      "sha256": "b11a6d9a17af1a840462009ab7fab6e33f8b45cd86eda1fca7b40fae6e30ff22"
     },
     {
       "path": "docs/roles-catalog.md",
