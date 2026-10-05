@@ -1601,11 +1601,19 @@ case "$1" in
         # all); keep the code, alarm the pilot, then exit with it.
         week_review_rc=0
         run_claude_with_retry "week-review" "" 3 60 300 || week_review_rc=$?
-        # Fallback push for Knowledge Index (week-review creates a post there)
-        # KI_REPO may not exist for all users — guard with [ -d ]
-        KI_REPO="$HOME/IWE/DS-Knowledge-Index"
-        if [ -d "$KI_REPO/.git" ] && git -C "$KI_REPO" log --oneline -1 --since="1 hour ago" --grep="week-review" 2>/dev/null | grep -q .; then
-            git -C "$KI_REPO" push >> "$LOG_FILE" 2>&1 && log "Pushed Knowledge Index (fallback)" || log "WARN: KI push failed"
+        # Fallback push for Knowledge Index (week-review creates a post there).
+        # knowledge_repo in params.yaml is optional (see week-draft-init.sh) —
+        # if the pilot hasn't configured it, there is no repo to push to.
+        KI_PARAMS_FILE="${IWE_WORKSPACE:-$HOME/IWE}/params.yaml"
+        KI_REPO_REL=""
+        if [ -f "$KI_PARAMS_FILE" ]; then
+            KI_REPO_REL=$(grep -E "^knowledge_repo:" "$KI_PARAMS_FILE" | sed 's/^knowledge_repo:[[:space:]]*//; s/^"//; s/"$//; s/^'"'"'//; s/'"'"'$//' || echo "")
+        fi
+        if [ -n "$KI_REPO_REL" ]; then
+            KI_REPO="${IWE_WORKSPACE:-$HOME/IWE}/${KI_REPO_REL}"
+            if [ -d "$KI_REPO/.git" ] && git -C "$KI_REPO" log --oneline -1 --since="1 hour ago" --grep="week-review" 2>/dev/null | grep -q .; then
+                git -C "$KI_REPO" push >> "$LOG_FILE" 2>&1 && log "Pushed Knowledge Index (fallback)" || log "WARN: KI push failed"
+            fi
         fi
         if [ "$week_review_rc" -ne 0 ]; then
             notify_telegram "week-review-failed" || true  # the alarm must never replace the run's own exit code

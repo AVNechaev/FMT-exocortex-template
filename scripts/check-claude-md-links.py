@@ -144,17 +144,11 @@ TRAIL_STRIP = "\"')],;:"
 # -understood gap rather than something #1110 should fix. See the report for
 # issue #1110 for the full reasoning.
 TREE_ALLOWLIST = {
-    # check-secret/{SKILL.md,check.sh} name this ecosystem-external runbook
-    # (lives in a separate, pilot-created ecosystem-development repo, if one
-    # exists — see check.sh's own full-path mention) right next to hardcoded
-    # author paths that are issue #1107's territory (a parallel fix touching
-    # the same two files for a different reason). Left unedited to avoid
-    # colliding with that in-flight change; allowlisted so this known,
-    # pre-existing gap doesn't read as new breakage introduced by the #1110
-    # fix. Deliberately worded without "author" here: #1107 widens
-    # setup/validate-template.sh's own author-constant scan to also flag
-    # "DS-ecosystem-development" in an author-attribution context, and this
-    # very comment would otherwise trip it once both land.
+    # check-secret/{SKILL.md,check.sh} name this runbook, but it does not
+    # live in this template's own tree at all — it lives in whichever
+    # separate, personal repo each installation keeps its rotation runbooks
+    # in, if any. check-claude-md-links.py can never confirm that path
+    # locally, so it is allowlisted rather than treated as a dead link.
     "DP.RUNBOOK.003-cascade-secret-rotation.md",
     # Governance-repo-relative, not template-repo-relative — "scripts/" is
     # also the directory name in the user's deployed governance repo, and
