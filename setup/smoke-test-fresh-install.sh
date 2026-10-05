@@ -480,6 +480,45 @@ else
     else
         fail "e2e memory: day-rhythm-config.yaml ОТСУТСТВУЕТ в $E2E_MEM"
     fi
+    # issue #1105: setup.sh copied only a flat "$TEMPLATE_DIR/memory/"*.md/*.yaml/*.yml glob,
+    # so a nested manifest path (memory/reference/agent-core.md) silently never reached a fresh
+    # install — 15 dead "→ memory/reference/agent-core.md" links in the delivered CLAUDE.md/
+    # AGENTS.md until the pilot's first update.sh happened to pull it in. Check every memory/*
+    # path the manifest declares, not just one hardcoded file, so a future nested addition that
+    # setup.sh fails to recurse into is caught the same way.
+    E2E_MANIFEST_MEMORY_PATHS=$(python3 -c "
+import json
+with open('$TEMPLATE_DIR/update-manifest.json') as f:
+    data = json.load(f)
+for entry in data.get('files', []):
+    p = entry.get('path', '')
+    if p.startswith('memory/'):
+        print(p)
+" 2>&1)
+    if [ -z "$E2E_MANIFEST_MEMORY_PATHS" ]; then
+        fail "e2e memory: update-manifest.json memory/* записи не прочитаны: $E2E_MANIFEST_MEMORY_PATHS"
+    else
+        E2E_MEM_MISSING=0
+        while IFS= read -r mpath; do
+            [ -z "$mpath" ] && continue
+            if [ ! -f "$E2E_MEM/${mpath#memory/}" ]; then
+                fail "e2e memory: $mpath ОТСУТСТВУЕТ в $E2E_MEM (manifest-driven, issue #1105)"
+                E2E_MEM_MISSING=$((E2E_MEM_MISSING + 1))
+            fi
+        done <<EOF
+$E2E_MANIFEST_MEMORY_PATHS
+EOF
+        if [ "$E2E_MEM_MISSING" -eq 0 ]; then
+            pass "e2e memory: все memory/* пути манифеста доставлены, включая вложенные"
+        fi
+    fi
+    # Minimum regression assertion the issue asked for, kept even if the manifest-driven
+    # check above is ever removed or the manifest temporarily loses its one nested entry.
+    if [ -f "$E2E_MEM/reference/agent-core.md" ]; then
+        pass "e2e memory: memory/reference/agent-core.md (вложенный путь) доставлен"
+    else
+        fail "e2e memory: memory/reference/agent-core.md ОТСУТСТВУЕТ в $E2E_MEM (issue #1105 regression)"
+    fi
     E2E_GATE_SKILL="$E2E_WS/.claude/skills/smoke-residency-policy"
     mkdir -p "$E2E_GATE_SKILL"
     cat > "$E2E_GATE_SKILL/SKILL.md" <<'EOF'
@@ -727,7 +766,13 @@ else
 fi
 
 echo "[8b] setup.sh step 3 копирует memory/*.yaml и *.yml..."
-if grep -A5 'cp.*memory/.*\.md' "$SETUP_SH" | grep -qE '\.yaml|\.yml'; then
+# issue #1105: step 3 moved from a flat `cp "...memory/"*.md ...` glob (the shape the old
+# `grep -A5 'cp.*memory/.*\.md'` heuristic below expected) to a single find-driven loop that
+# also recurses into memory/** — the .md/.yaml/.yml extensions no longer sit a fixed number of
+# lines after a line matching "cp...memory...md". Extract the whole step-3 block (between its
+# own banner and the next step's) instead of anchoring on one line, same approach as Test 8c/8d.
+STEP3_BLOCK=$(awk '/\[3\/6\] Installing memory/{flag=1} flag; flag && /\[4\/6\]/{exit}' "$SETUP_SH")
+if echo "$STEP3_BLOCK" | grep -q '\.md' && echo "$STEP3_BLOCK" | grep -qE '\.yaml|\.yml'; then
     pass "setup.sh step 3: memory/*.yaml/.yml копируются"
 else
     fail "setup.sh step 3: memory/*.yaml/.yml НЕ копируются (day-rhythm-config.yaml не доставляется)"
