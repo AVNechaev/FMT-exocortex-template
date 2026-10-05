@@ -2701,7 +2701,7 @@
     },
     {
       "path": "scripts/test-route-task.sh",
-      "sha256": "2c3d43362d74897b400b5d32187a7cb50e38683a4e9291d1b9cf01ac167f7c53"
+      "sha256": "bf78d9a53c7abd48e30322694ad53bbc582399e57f13fa4321f45cace6243d20"
     },
     {
       "path": "scripts/test-session-guard-yaml-task-escaping.sh",

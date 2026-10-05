@@ -225,12 +225,18 @@ echo "=== T18: IWE_DIR self-location fallback, no env vars at all (issue #1094) 
 # no override vars at all, so the fix must derive <root> from the script's
 # own location instead of guessing.
 NOENV_ROOT="$HARNESS_TMP/noenv"
-mkdir -p "$NOENV_ROOT/FMT-exocortex-template/scripts/lib" "$NOENV_ROOT/DS-strategy/scripts"
+# The fixture must match whatever route-task.sh itself resolves to once its
+# own subprocess below strips IWE_GOVERNANCE_REPO (env -u) -- not whatever
+# this harness's own ambient shell happens to export -- so compute it the
+# same way, in the same stripped subshell, rather than reading the ambient
+# value directly here.
+NOENV_GOV_REPO=$(env -u IWE_GOVERNANCE_REPO bash -c 'echo "${IWE_GOVERNANCE_REPO:-DS-strategy}"')
+mkdir -p "$NOENV_ROOT/FMT-exocortex-template/scripts/lib" "$NOENV_ROOT/$NOENV_GOV_REPO/scripts"
 ln -s "$SCRIPT_DIR/route-task.sh" "$NOENV_ROOT/FMT-exocortex-template/scripts/route-task.sh"
 ln -s "$SCRIPT_DIR/lib/common.sh" "$NOENV_ROOT/FMT-exocortex-template/scripts/lib/common.sh"
 ln -s "$SCRIPT_DIR/lib/find-python3.sh" "$NOENV_ROOT/FMT-exocortex-template/scripts/lib/find-python3.sh"
 cp "$FIXTURE_IWE/scripts/consent-fixture.sh" "$NOENV_ROOT/FMT-exocortex-template/scripts/"
-cat > "$NOENV_ROOT/DS-strategy/scripts/executor-catalog.yaml" <<'YAML'
+cat > "$NOENV_ROOT/$NOENV_GOV_REPO/scripts/executor-catalog.yaml" <<'YAML'
 schema_version: '1.0'
 generated_at: '2026-08-24T00:00:00Z'
 total_entries: 1
