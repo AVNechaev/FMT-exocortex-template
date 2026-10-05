@@ -58,6 +58,9 @@
 #   T48: the record before Step 5 (a run broken off before Step 6), atomic writes of the record and
 #        of memory copies, unreadable or linked record, every file left as it was in the summary
 #        (review-12 of #965/#967)
+#   T49: governance script policy (update-derived-snapshot.py, generate-executor-catalog.py) decides
+#        by content against the template clone's own history, not by the deployed copy's git status;
+#        a kept file never aborts the rest of update.sh (WP-485 Ф17)
 #
 # Exit: 0 = all PASS, N = N tests failed
 #
@@ -5513,6 +5516,114 @@ else
         pass "T48: a copy that could not be delivered and an unreadable template file are in the closing summary"
     else
         fail "T48: the closing summary misses a file left as it was (status $T46_RC): $(printf '%s' "$T46_OUT" | tr '\n' ' ')"
+    fi
+fi
+
+# ============================================================================
+# T49: governance script policy — content decides, never git status; never aborts the run
+# (WP-485 Ф17, 2026-10-05). backfill_governance_seed_script() used to decide "safe to
+# replace" from the deployed copy's git status: clean-tracked was always treated as ours,
+# which replaced a pilot's own committed, more-advanced version with an older seed (the
+# live incident this phase fixes). apply_governance_script_policy reuses the memory/*
+# policy's classifier (content vs. the template clone's own history at the seed path) and
+# its never-abort contract instead.
+# ============================================================================
+echo "--- T49: governance script policy — content decides, never git status; never aborts (WP-485 Ф17) ---"
+
+T49_FUNCS=$(update_sh_functions hash_file atomic_copy_executable memory_record_put memory_record_get \
+    memory_old_hash remember_memory_deployed memory_reason_text memory_copy_verdict saving_cp_command \
+    backup_governance_script_before_overwrite apply_governance_script_policy report_governance_script_policy_summary)
+if ! grep -q '^apply_governance_script_policy() {' <<<"$T49_FUNCS"; then
+    fail "T49: could not extract apply_governance_script_policy() from update.sh"
+else
+    T49_DIR="$TEST_WS/t49-governance-script-policy"
+    T49_TEMPLATE="$T49_DIR/template"
+    T49_WS="$T49_DIR/workspace"
+    # apply_governance_script_policy resolves governance_dir="$WORKSPACE_DIR/$EFFECTIVE_GOVERNANCE_REPO"
+    # itself (same as the backfill_governance_seed_script it replaces) -- the fixture must nest the
+    # governance directory under the workspace, not place it as a sibling.
+    T49_GOV="$T49_WS/governance"
+    mkdir -p "$T49_TEMPLATE/seed/strategy/scripts" "$T49_TEMPLATE/.claude/scripts" "$T49_GOV/scripts" "$T49_WS"
+    cp "$TEMPLATE_DIR/.claude/scripts/classify-workspace-copy.sh" "$T49_TEMPLATE/.claude/scripts/classify-workspace-copy.sh"
+    git -C "$T49_TEMPLATE" init -q
+    git -C "$T49_TEMPLATE" config user.email "test@test"
+    git -C "$T49_TEMPLATE" config user.name "test"
+    printf '#!/usr/bin/env python3\n# v1 — historical release\n' > "$T49_TEMPLATE/seed/strategy/scripts/one.py"
+    git -C "$T49_TEMPLATE" add -- seed/strategy/scripts/one.py
+    git -C "$T49_TEMPLATE" commit -q -m v1
+    printf '#!/usr/bin/env python3\n# v2 — current release\n' > "$T49_TEMPLATE/seed/strategy/scripts/one.py"
+    git -C "$T49_TEMPLATE" add -- seed/strategy/scripts/one.py
+    git -C "$T49_TEMPLATE" commit -q -m v2
+    printf '#!/usr/bin/env python3\n# v1 — current release\n' > "$T49_TEMPLATE/seed/strategy/scripts/two.py"
+    git -C "$T49_TEMPLATE" add -- seed/strategy/scripts/two.py
+    git -C "$T49_TEMPLATE" commit -q -m two-v1
+
+    # scripts/absent.py: not yet delivered anywhere.
+    # scripts/one.py: deployed copy equals a HISTORICAL (not current) release -- "stale", safe to
+    #   replace after a backup, the live case that replaced the pilot's own committed day-open-llm-
+    #   fill.py on 2026-10-04 (WP-485 Ф17 finding).
+    # scripts/two.py: deployed copy matches no release in the clone's history -- "authored" (could
+    #   be the pilot's own edit, or an earlier unlogged backfill): kept, diff and command offered,
+    #   never overwritten.
+    printf '#!/usr/bin/env python3\n# v1 — current release\n' > "$T49_TEMPLATE/seed/strategy/scripts/absent.py"
+    git -C "$T49_TEMPLATE" add -- seed/strategy/scripts/absent.py
+    git -C "$T49_TEMPLATE" commit -q -m absent-v1
+    printf '#!/usr/bin/env python3\n# v1 — historical release\n' > "$T49_GOV/scripts/one.py"
+    printf '#!/usr/bin/env python3\n# not in any release\n' > "$T49_GOV/scripts/two.py"
+    T49_TWO_BEFORE=$(cat "$T49_GOV/scripts/two.py")
+
+    T49_OUT=$(
+        set +e
+        eval "$T49_FUNCS"
+        SCRIPT_DIR="$T49_TEMPLATE"
+        WORKSPACE_DIR="$T49_WS"
+        EFFECTIVE_GOVERNANCE_REPO="$(basename "$T49_GOV")"
+        MEMORY_DEPLOYED_RECORD="$T49_WS/.memory-deployed.tsv"
+        # update.sh itself runs under set -e only (no -u, like T46's t46_prepare notes) -- this
+        # harness runs the whole suite under set -u (line 68), so the globals update.sh's own
+        # top-level script body would initialize before any call need setting here explicitly.
+        GOVSCRIPT_BACKUP_RUN=""
+        GOVSCRIPT_REPLACED=()
+        GOVSCRIPT_KEPT=()
+        apply_governance_script_policy "scripts/absent.py"
+        apply_governance_script_policy "scripts/one.py"
+        apply_governance_script_policy "scripts/two.py"
+        report_governance_script_policy_summary
+    )
+    T49_BACKUP=$(find "$T49_WS/.backups/governance-script-pre-update" -type f -name "one.py" -print -quit 2>/dev/null || true)
+
+    if [ -f "$T49_GOV/scripts/absent.py" ] \
+        && cmp -s "$T49_GOV/scripts/absent.py" "$T49_TEMPLATE/seed/strategy/scripts/absent.py" \
+        && [ -x "$T49_GOV/scripts/absent.py" ]; then
+        pass "T49: a never-delivered path is copied fresh, executable"
+    else
+        fail "T49: scripts/absent.py was not delivered: $T49_OUT"
+    fi
+
+    if cmp -s "$T49_GOV/scripts/one.py" "$T49_TEMPLATE/seed/strategy/scripts/one.py" \
+        && [ -n "$T49_BACKUP" ] && grep -qF 'v1 — historical release' "$T49_BACKUP"; then
+        pass "T49: a copy equal to a historical (not current) release is replaced after a backup — not blocked by git status"
+    else
+        fail "T49: scripts/one.py (stale historical release) was not safely replaced: $T49_OUT"
+    fi
+
+    if [ "$(cat "$T49_GOV/scripts/two.py")" = "$T49_TWO_BEFORE" ]; then
+        pass "T49: content matching no release is kept untouched (authored — could be the pilot's own edit)"
+    else
+        fail "T49: scripts/two.py (content in no release) was overwritten: $T49_OUT"
+    fi
+
+    if grep -qF -- 'scripts/two.py — НЕ обновлён: ' <<<"$T49_OUT" \
+        && grep -qF -- 'Если ваших правок там нет, примите версию шаблона (прежняя копия останется рядом): ' <<<"$T49_OUT"; then
+        pass "T49: the kept file's line carries a diff pointer and a ready accept command"
+    else
+        fail "T49: scripts/two.py produced no actionable kept-file message: $T49_OUT"
+    fi
+
+    if grep -qF -- 'Не обновлено скриптов governance-репо: 1 (scripts/two.py)' <<<"$T49_OUT"; then
+        pass "T49: the closing summary names the kept script by its own label, not as a 'файл памяти'"
+    else
+        fail "T49: closing summary missing or mislabeled: $T49_OUT"
     fi
 fi
 
