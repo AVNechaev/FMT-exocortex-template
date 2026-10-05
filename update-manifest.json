@@ -1969,7 +1969,7 @@
     },
     {
       "path": "roles/synchronizer/scripts/dt-collect.sh",
-      "sha256": "85110a8e8e46521d093060555e3eb098c5a719321c24bb3b108e2c9fdbc312a7"
+      "sha256": "ca46d09c78ef2572df2a345fd694bddf999a3af2aebae2c2eccf3dfbcb12e9a3"
     },
     {
       "path": "roles/synchronizer/scripts/launchd/com.exocortex.scheduler.plist",
@@ -3247,6 +3247,7 @@
     "scripts/tests/test_issue_1061_platform_bottleneck_map.sh",
     "scripts/tests/test_issue_1067_week_review_gave_up.sh",
     "scripts/tests/test_issue_1084_runtime_placeholder_scope.sh",
+    "scripts/tests/test_issue_1106_dt_collect_gov.sh",
     "scripts/tests/test_issue_529_owner_integrity.sh",
     "scripts/tests/test_issue_530_staged_self_scan.sh",
     "scripts/tests/test_issue_531_index_health_status_cell.py",
@@ -3340,9 +3341,20 @@
     "scripts/translate.py",
     "scripts/verify-template-integrity.sh",
     "setup/detector-fixtures/README.md",
+    "setup/detector-fixtures/detector_07/negative_bash_fallback_bare_var.sh",
+    "setup/detector-fixtures/detector_07/negative_bash_fallback_iwe_var.sh",
     "setup/detector-fixtures/detector_07/negative_env_fallback.md",
     "setup/detector-fixtures/detector_07/positive_backtick_slash.md",
+    "setup/detector-fixtures/detector_07/positive_bare_path_segment.sh",
+    "setup/detector-fixtures/detector_07/positive_disguised_wrong_var_fallback.sh",
+    "setup/detector-fixtures/detector_07/positive_dotgit_suffix.sh",
+    "setup/detector-fixtures/detector_07/positive_end_of_line.sh",
+    "setup/detector-fixtures/detector_07/positive_parens.sh",
+    "setup/detector-fixtures/detector_07/positive_quote_before_slash.sh",
     "setup/detector-fixtures/detector_07/positive_quoted_literal.md",
+    "setup/detector-fixtures/detector_07/positive_single_quotes.py",
+    "setup/detector-fixtures/detector_07/positive_single_quotes.sh",
+    "setup/detector-fixtures/detector_07/positive_tilde_path.sh",
     "setup/detector-regex.sh",
     "setup/integration-contract-validator.sh",
     "setup/optional/COVER-IMAGES.md",
