@@ -2905,7 +2905,7 @@
     },
     {
       "path": "scripts/tests/test_update_build_runtime_fail_closed.sh",
-      "sha256": "eae95a58c9cff9e1bd624ae746af497c61591b89a6cf135c53a6074a0c4171fc"
+      "sha256": "1c0ae70e3b10bada7a989b9f71dfb0f3e6c3618d31939528978ddd18c3145083"
     },
     {
       "path": "scripts/tests/test_update_delivers_python_resolver_before_roles.sh",
