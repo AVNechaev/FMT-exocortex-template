@@ -487,10 +487,11 @@ git -C "$UPDATE_GOVERNANCE" config user.email "issue-508@example.invalid"
 # seed-path git history (classify-workspace-copy.sh) -- a placeholder that
 # was never a real release classifies as "unknown, keep it" instead, which
 # is correct new behaviour but defeats this specific fixture's intent. Use
-# an actual historical seed release (2381d7fe, the commit that introduced
-# this seed path) so the fixture again represents what it is meant to:
-# an old-but-real release that should upgrade to current seed bytes.
-git -C "$ROOT" show 2381d7fe:seed/strategy/scripts/update-derived-snapshot.py \
+# an actual historical seed release (4f34412b, confirmed via git log -S not
+# to carry the unrelated bash-vs-python literal-string bug an even earlier
+# commit on this path has) so the fixture again represents what it is meant
+# to: an old-but-real release that should upgrade to current seed bytes.
+git -C "$ROOT" show 4f34412b:seed/strategy/scripts/update-derived-snapshot.py \
     > "$UPDATE_GOVERNANCE/scripts/update-derived-snapshot.py"
 chmod +x "$UPDATE_GOVERNANCE/scripts/update-derived-snapshot.py"
 git -C "$UPDATE_GOVERNANCE" add -- scripts/update-derived-snapshot.py

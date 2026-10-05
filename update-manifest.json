@@ -2837,7 +2837,7 @@
     },
     {
       "path": "scripts/tests/test_issue_463_setup_reuses_resolved_python3.sh",
-      "sha256": "8b9b4afb64ccfef3f508c41b5968d7fce7fa2beb7cca295daee61902db50bea2"
+      "sha256": "23ecadd8375bde3f788134f81f1537d631ed50140f9f652fc050a2736cb70734"
     },
     {
       "path": "scripts/tests/test_issue_469_settings_merge_hook_identity.py",
