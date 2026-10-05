@@ -16,6 +16,7 @@
 # 6. Нет хардкод-путей к FMT/scripts|roles в протоколах (WP-219)  [pristine + installed]
 # 7. settings.json hooks ↔ .claude/hooks/ cross-ref (issue #13)   [pristine + installed]
 # 8. Нет устаревших семантических ссылок FPF                     [pristine + staged]
+# 9. SKILL.md claims of an active hook match settings.json (#1109) [pristine + installed]
 
 set -euo pipefail
 
@@ -571,6 +572,57 @@ else
     else
         echo "PASS"
     fi
+fi
+
+# 9. SKILL.md hook-claims must be registered (issue #1109).
+#
+# Check [7/7] above only WARNs when a hook file in .claude/hooks/ is not
+# referenced from settings.json — a legitimate state for a script that is
+# invoked directly rather than through Claude Code's PreToolUse dispatch
+# (e.g. a library sourced by other hooks). But when a SKILL.md explicitly
+# documents a hook as ACTIVE protection ("Hook `x.sh` блокирует ..." / "hook
+# ... blocks ..."), an unregistered hook is not a benign unused file — it is
+# a fail-open security claim: the hook's own isolated unit test can pass
+# forever while no real session ever invokes it (same false-confidence class
+# as issues #310/#323, found by independent audit on pack-creator-spf-guard.sh).
+# This check escalates exactly that case from WARN to FAIL.
+#
+# Detection is mechanical, not NLP, to keep it reliable across the whole
+# .claude/skills/ tree (general version, not hardcoded to one hook): a
+# SKILL.md line counts as an "active protection" claim only when THREE
+# things co-occur on the SAME line —
+#   (a) the basename of a real file under .claude/hooks/*.sh,
+#   (b) the word "hook" or "хук" (case-insensitive),
+#   (c) an enforcement verb — blocks/guards/prevents/denies/stops/enforces
+#       (EN) or блокир/защища/запрещ/отказ (RU), either case.
+# Verified against this repo before the settings.json fix in this same
+# commit: the triple co-occurs on exactly 3 lines across every SKILL.md —
+# destructive-guard.sh and dry-run-gate.sh (both already registered → PASS)
+# and pack-creator-spf-guard.sh (not registered → exactly the bug this
+# check exists to catch).
+echo -n "[9/9] SKILL.md hook-claims are registered... "
+if [ ${#SETTINGS_FILES[@]} -eq 0 ] || [ ! -d "$HOOKS_DIR" ]; then
+    echo "SKIP (no settings.json or hooks/ dir)"
+else
+    CHECK9_FAIL=0
+    ENFORCE_RE='block|Block|блокир|Блокир|guard|Guard|защища|Защища|запрещ|Запрещ|prevent|Prevent|enforc|Enforc|deni|Deni|отказ|Отказ|stop|Stop'
+    for hook_path in "$HOOKS_DIR"/*.sh; do
+        [ -f "$hook_path" ] || continue
+        hookname=$(basename "$hook_path")
+        # Already wired into settings.json/settings.local.json — nothing to escalate.
+        grep -q "\.claude/hooks/$hookname" "${SETTINGS_FILES[@]}" 2>/dev/null && continue
+        esc_name=$(printf '%s' "$hookname" | sed 's/\./\\./g')
+        hits=$(grep -rnEi "$esc_name" "$TEMPLATE_DIR/.claude/skills" --include=SKILL.md 2>/dev/null \
+            | grep -Ei 'hook|хук' | grep -E "$ENFORCE_RE" || true)
+        if [ -n "$hits" ]; then
+            [ "$CHECK9_FAIL" -eq 0 ] && echo "FAIL"
+            echo "  $hookname: SKILL.md заявляет активную защиту (хук + блокирующий глагол в одной строке), но хук не зарегистрирован ни в одном settings.json:"
+            echo "$hits" | sed 's/^/    /' | head -5
+            CHECK9_FAIL=1
+            FAIL=1
+        fi
+    done
+    [ "$CHECK9_FAIL" -eq 0 ] && echo "PASS"
 fi
 
 echo ""
