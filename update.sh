@@ -3588,7 +3588,7 @@ if $CHECK_ONLY && $FAST_CHECK; then
 import json, sys
 def files_key(path):
     try:
-        with open(path) as f:
+        with open(path, encoding='utf-8') as f:
             data = json.load(f)
     except Exception:
         return None
@@ -3696,7 +3696,7 @@ repair_pass() {
     if py_available; then
         if ! $PY_BIN -c "
 import json, sys
-with open(sys.argv[1]) as f:
+with open(sys.argv[1], encoding='utf-8') as f:
     data = json.load(f)
 for entry in data.get('files', []):
     print(entry['path'] + '|')
@@ -4180,7 +4180,7 @@ if py_available; then
     # "no changes."
     if ! $PY_BIN -c "
 import json, sys
-with open(sys.argv[1]) as f:
+with open(sys.argv[1], encoding='utf-8') as f:
     data = json.load(f)
 for entry in data.get('files', []):
     print(entry['path'] + '|' + entry.get('desc', '') + '|' + entry.get('sha256', ''))
@@ -4374,7 +4374,7 @@ import json, sys
 
 path = sys.argv[1]
 try:
-    with open(path) as f:
+    with open(path, encoding='utf-8') as f:
         data = json.load(f)
     for entry in data.get('excluded_paths', []):
         print(entry['path'] if isinstance(entry, dict) else entry)
@@ -4711,7 +4711,7 @@ done < <(
     if py_available; then
         $PY_BIN -c "
 import json, sys
-with open(sys.argv[1]) as f:
+with open(sys.argv[1], encoding='utf-8') as f:
     data = json.load(f)
 # 2026-08-22 (external report): a path present in BOTH the delivered files
 # set and deprecated_files is a generator inconsistency — removal deleted 10
@@ -5692,7 +5692,7 @@ if [ -f "$MCP_WORKSPACE" ] && py_available; then
     $PY_BIN -c "
 import json, sys
 
-with open(sys.argv[1]) as f:
+with open(sys.argv[1], encoding='utf-8') as f:
     data = json.load(f)
 
 servers = data.get('mcpServers', {})
@@ -5715,7 +5715,7 @@ if changed:
     ordered = {'iwe-knowledge': servers.pop('iwe-knowledge')}
     ordered.update(servers)
     data['mcpServers'] = ordered
-    with open(sys.argv[1], 'w') as f:
+    with open(sys.argv[1], 'w', encoding='utf-8') as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
         f.write('\n')
     removed = ', '.join(old_keys) if old_keys else ''
@@ -6107,7 +6107,7 @@ import json, os, sys
 script_dir = os.path.realpath(sys.argv[1])
 manifest_path = os.path.join(script_dir, "update-manifest.json")
 
-with open(manifest_path) as f:
+with open(manifest_path, encoding='utf-8') as f:
     manifest = json.load(f)
 
 def _path(e): return e["path"] if isinstance(e, dict) else e
@@ -6121,7 +6121,7 @@ local_manifest_path = os.path.join(script_dir, "update-manifest.local.json")
 local_excluded = []
 if os.path.isfile(local_manifest_path):
     try:
-        with open(local_manifest_path) as f:
+        with open(local_manifest_path, encoding='utf-8') as f:
             local_excluded = [_path(e) for e in json.load(f).get("excluded_paths", [])]
     except (json.JSONDecodeError, TypeError) as exc:
         print(f"  [warn] update-manifest.local.json unreadable, ignored: {exc}")
