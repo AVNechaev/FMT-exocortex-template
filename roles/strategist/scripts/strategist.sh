@@ -1085,6 +1085,25 @@ run_claude_with_retry() {
     return $rc
 }
 
+# issue #1134: path for a manual "mark this scenario done for this week" record (see
+# the `mark-done` CLI command below). Keyed by ISO week (%G-W%V), not by date: a
+# week-review or session-prep done by hand on Sunday must still be recognized by
+# Monday's automatic run, which already_ran_today's own date-scoped checks below
+# cannot do on their own (week-review's status file compares to "today", and
+# session-prep's generic log-grep only searches today's rotated $LOG_FILE).
+_mark_done_file() {
+    local scenario="$1" week="$2"
+    printf '%s/mark-done-%s-%s' "$LOG_DIR" "$scenario" "$week"
+}
+
+# Did a human explicitly mark $1 done for the ISO week relevant to right now
+# (this week, not necessarily today)? A stale mark for a PAST week never
+# suppresses a future run — the file is week-specific, not scenario-wide.
+_marked_done_this_week() {
+    local scenario="$1"
+    [ -f "$(_mark_done_file "$scenario" "$(date +%G-W%V)")" ]
+}
+
 # Проверка: уже запускался ли сценарий сегодня
 # Done for today = it succeeded, or it gave up for the day with "GAVE UP scenario: <name> (<reason>)"
 # (the morning Day Open below), so a launchd RunAtLoad/CalendarInterval rerun does not start it again.
@@ -1092,6 +1111,9 @@ run_claude_with_retry() {
 # that alarm the owner reruns week-review by hand the same day.
 already_ran_today() {
     local scenario="$1"
+    if _marked_done_this_week "$scenario"; then
+        return 0
+    fi
     if [ "$scenario" = week-review ]; then
         local status_file="$LOG_DIR/week-review-last-status"
         local stamped_at outcome rc failed_runs extra
@@ -1641,6 +1663,48 @@ case "$1" in
         log "Manual: running day plan"
         run_claude "day-plan" ""
         notify_telegram "day-plan"
+        ;;
+    "mark-done")
+        # issue #1134: for a scenario closed by hand outside its own schedule
+        # (e.g. week-close run Sunday evening instead of waiting for Monday's
+        # automatic week-review) — record it so the next automatic run finds
+        # already_ran_today() already satisfied, instead of running a second
+        # time or overwriting what the owner just did.
+        mark_scenario="${2:-}"
+        case "$mark_scenario" in
+            week-review|session-prep) ;;
+            *)
+                echo "mark-done: сценарий должен быть week-review или session-prep, получено: '$mark_scenario'" >&2
+                exit 1
+                ;;
+        esac
+        mark_week=""
+        mark_clear=0
+        shift 2 2>/dev/null || shift $#
+        while [ "$#" -gt 0 ]; do
+            case "$1" in
+                --week) mark_week="${2:-}"; shift 2 ;;
+                --clear) mark_clear=1; shift ;;
+                *) echo "mark-done: неизвестный флаг: $1" >&2; exit 1 ;;
+            esac
+        done
+        case "$mark_week" in
+            "") mark_week="$(date +%G-W%V)" ;;
+            [0-9][0-9][0-9][0-9]-W[0-9][0-9]) ;;
+            *)
+                echo "mark-done: --week должен быть в формате YYYY-Www (например 2026-W41), получено: '$mark_week'" >&2
+                exit 1
+                ;;
+        esac
+        mark_file="$(_mark_done_file "$mark_scenario" "$mark_week")"
+        if [ "$mark_clear" -eq 1 ]; then
+            rm -f "$mark_file"
+            echo "mark-done: отметка снята: $mark_scenario за $mark_week"
+        else
+            mkdir -p "$LOG_DIR"
+            printf '%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$mark_file"
+            echo "mark-done: отмечено сделанным: $mark_scenario за $mark_week"
+        fi
         ;;
     "note-review")
         acquire_lock "note-review"

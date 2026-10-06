@@ -1933,7 +1933,7 @@
     },
     {
       "path": "roles/strategist/scripts/strategist.sh",
-      "sha256": "c870be7bf30cfb0b2eb58e3d88d787349188ea859e3b16f7452350206c692787"
+      "sha256": "e44c64bc5b0d2da42f191a8204a13655f43d4f9c423268891364abd725e964e2"
     },
     {
       "path": "roles/strategist/scripts/systemd/iwe-strategist-morning.service",
@@ -3399,6 +3399,7 @@
     "setup/test-extractor-subscription-env.sh",
     "setup/test-scheduler-interval-slack.sh",
     "setup/test-strategist-isolated-scenarios.sh",
+    "setup/test-strategist-mark-done.sh",
     "setup/test-update-channel-enum.sh",
     "setup/test-update-ds-publish-delivery.sh",
     "setup/test-update-edge-cases.sh",
