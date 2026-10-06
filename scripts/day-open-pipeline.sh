@@ -355,7 +355,9 @@ WEEKPLAN_PATH=$(ls -t "$CURRENT_DIR"/WeekPlan\ *.md 2>/dev/null | grep -v '(prob
 WP_REGISTRY="$DS_STRATEGY/docs/WP-REGISTRY.md"
 # WP-7 Ф-DRIFT-DATA-PIPELINES D1 (13.07): было memory/cp-profile.json, который не
 # писал ни один механизм. update-derived-snapshot.py (шаг 1.5 выше) уже пишет сюда.
-CP_PROFILE="$DS_STRATEGY/inbox/WP-425/cache/derived_snapshot.json"
+# issue #1132: inbox/WP-425/ — платформенный номер РП автора, не имеющий смысла
+# для чужого governance-репо; путь должен совпадать с _resolve_snapshot_path().
+CP_PROFILE="$DS_STRATEGY/.cache/derived_snapshot.json"
 CALENDAR_OUT="$IWE/.tmp/calendar-$DATE.txt"
 # issue #877: the shipped script carries NO built-in gateway address. The old
 # default was the maintainer's private Railway gateway, which a user install can

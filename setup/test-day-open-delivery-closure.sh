@@ -161,7 +161,7 @@ SNAPSHOT_TEST_ROOT="/tmp/iwe-snapshot-path-test-$$"
 SNAPSHOT_PY=$("$REPO_ROOT/scripts/lib/find-python3.sh" 2>/dev/null) || SNAPSHOT_PY=""
 [ -n "$SNAPSHOT_PY" ] || SNAPSHOT_PY=python3
 SNAPSHOT_CONFIG_ROOT="$SNAPSHOT_TEST_ROOT/configured-workspace"
-SNAPSHOT_EXPECTED="$SNAPSHOT_CONFIG_ROOT/custom-governance/inbox/WP-425/cache/derived_snapshot.json"
+SNAPSHOT_EXPECTED="$SNAPSHOT_CONFIG_ROOT/custom-governance/.cache/derived_snapshot.json"
 
 SNAPSHOT_ACTUAL=$(IWE_ROOT="$SNAPSHOT_CONFIG_ROOT" IWE_GOVERNANCE_REPO=custom-governance \
   "$SNAPSHOT_PY" - "$SNAPSHOT_ROOT_SCRIPT" <<'PY'
@@ -185,7 +185,7 @@ mkdir -p "$SNAPSHOT_INSTALLED_REPO/scripts"
 cp "$SNAPSHOT_SEED_SCRIPT" "$SNAPSHOT_INSTALLED_REPO/scripts/update-derived-snapshot.py"
 cp "$REPO_ROOT/seed/strategy/REPO-TYPE.md" "$SNAPSHOT_INSTALLED_REPO/REPO-TYPE.md"
 SNAPSHOT_INSTALLED_REPO_PHYSICAL=$(cd "$SNAPSHOT_INSTALLED_REPO" && pwd -P)
-SNAPSHOT_INSTALLED_EXPECTED="$SNAPSHOT_INSTALLED_REPO_PHYSICAL/inbox/WP-425/cache/derived_snapshot.json"
+SNAPSHOT_INSTALLED_EXPECTED="$SNAPSHOT_INSTALLED_REPO_PHYSICAL/.cache/derived_snapshot.json"
 SNAPSHOT_INSTALLED_ACTUAL=$( \
   IWE_ROOT="$SNAPSHOT_TEST_ROOT/stale-workspace" \
   IWE_GOVERNANCE_REPO=stale-governance \

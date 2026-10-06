@@ -1,0 +1,4 @@
+# issue #1132: scripts/update-derived-snapshot.py writes a local, rebuildable
+# cache here. Not a work product — never add inbox/WP-NNN/ or any other
+# RP-numbered path here, that defeats the point of moving out of inbox/.
+.cache/
