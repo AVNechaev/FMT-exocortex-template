@@ -671,11 +671,26 @@ render_repo_activity() {
   since=$(date -v-2d +%Y-%m-%d 2>/dev/null || date -d "2 days ago" +%Y-%m-%d 2>/dev/null)
   [ -z "$since" ] && { echo "_не удалось вычислить дату фильтра — пропуск._"; return; }
   out="| Репозиторий | Коммитов (2д) | Последний |\n|---|---|---|\n"
+  # issue #1131: `cut -c1-50` counts bytes under the C/POSIX locale (launchd's
+  # EnvironmentVariables carry no LANG/LC_*) and can split a multibyte UTF-8
+  # character mid-sequence, corrupting the whole scaffold file for every
+  # downstream reader. Resolved once here, not inside the loop (same
+  # rationale as the find-python3.sh resolution elsewhere in this file).
+  local _resolved_python3
+  _resolved_python3=$("$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/find-python3.sh" --stdlib-only 2>/dev/null) || _resolved_python3=""
   while IFS= read -r repo; do
     slug=$(basename "$repo")
     n=$(git -C "$repo" log --since="$since 00:00:00" --oneline 2>/dev/null | wc -l | tr -d ' ')
     [ "${n:-0}" -eq 0 ] && continue
-    last=$(git -C "$repo" log -1 --format='%s' 2>/dev/null | cut -c1-50)
+    if [ -n "$_resolved_python3" ]; then
+      last=$(git -C "$repo" log -1 --format='%s' 2>/dev/null | "$_resolved_python3" -c "
+import sys
+line = sys.stdin.buffer.readline().decode('utf-8', errors='replace').rstrip('\n')
+print(line if len(line) <= 50 else line[:50] + '…')
+")
+    else
+      last=$(git -C "$repo" log -1 --format='%s' 2>/dev/null | cut -c1-50)
+    fi
     out="${out}| ${slug} | ${n} | ${last} |\n"
     any=1
   done < <(iwe_repo_dirs "$IWE"/*/)
