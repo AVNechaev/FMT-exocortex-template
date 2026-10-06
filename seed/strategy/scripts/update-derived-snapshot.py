@@ -40,9 +40,15 @@ def _installed_governance_root() -> Optional[pathlib.Path]:
 
 def _resolve_snapshot_path() -> pathlib.Path:
     """Resolve cache location, preferring an installed copy's physical repo."""
+    # issue #1132: this cache used to live under inbox/WP-425/ — the platform
+    # author's own RP number, with no meaning for anyone else's governance
+    # repo. A fresh install got an unexplained inbox/WP-425/ folder, visible
+    # and untracked in `git status`, indistinguishable by look from a real
+    # work-product folder. `.cache/` carries no RP numbering, so it can never
+    # collide with one.
     installed_root = _installed_governance_root()
     if installed_root is not None:
-        return installed_root / "inbox/WP-425/cache/derived_snapshot.json"
+        return installed_root / ".cache/derived_snapshot.json"
 
     configured_root = os.environ.get("IWE_ROOT") or os.environ.get("IWE_WORKSPACE")
     iwe_root = (
@@ -51,7 +57,7 @@ def _resolve_snapshot_path() -> pathlib.Path:
         else pathlib.Path.home() / "IWE"
     )
     governance_repo = os.environ.get("IWE_GOVERNANCE_REPO", "DS-strategy")
-    return iwe_root / governance_repo / "inbox/WP-425/cache/derived_snapshot.json"
+    return iwe_root / governance_repo / ".cache/derived_snapshot.json"
 
 
 SNAPSHOT_PATH = _resolve_snapshot_path()
