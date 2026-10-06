@@ -857,7 +857,7 @@
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "51fc2ca89f4e15dc284fac2644fc711ca75cf7a6094fd4a337b15b13da4e5948"
+      "sha256": "15deb70f082e96ca4bc3ac99d292a3077c8d7dbaa5f01cc27f4b93cae872ebed"
     },
     {
       "path": "CLAUDE.md",
@@ -2945,7 +2945,7 @@
     },
     {
       "path": "scripts/validate-fmt-scripts.sh",
-      "sha256": "13d5f80874bd4e47fdf9ebf267d4e98f8f20d66597255dacfb52e18211a3afa1"
+      "sha256": "17f591f9c9a04417f1553154de4abfe5dc1023503b7160021e4e2aea43a457f3"
     },
     {
       "path": "scripts/validate-hypothesis-priority.sh",
