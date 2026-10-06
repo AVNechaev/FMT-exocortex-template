@@ -857,7 +857,7 @@
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "15deb70f082e96ca4bc3ac99d292a3077c8d7dbaa5f01cc27f4b93cae872ebed"
+      "sha256": "4d01a71a862cac6092b6b5665857c5bc88f156a5f6bccf9cf75950952af978fc"
     },
     {
       "path": "CLAUDE.md",
@@ -1237,7 +1237,7 @@
     },
     {
       "path": "guide-kit/generator/adapter.py",
-      "sha256": "c85ed0369576271aa6e303bed45015ba362526795c782a083e43ab3b4f62fb91"
+      "sha256": "982553bab2cc31155fdac8001b5161218d7187a47d7897ffa9ab36ecd6a32a7a"
     },
     {
       "path": "guide-kit/generator/conftest.py",
@@ -1249,7 +1249,7 @@
     },
     {
       "path": "guide-kit/generator/f6f10_integration.py",
-      "sha256": "4ccb1e95b247f076296daa1619321d5a3d8b4c57c198ee35f006e13d91ef7595"
+      "sha256": "91d272f63ae2c2ec31959ad161a43c1aa3f491d65cda19341f3a197003880174"
     },
     {
       "path": "guide-kit/generator/health_adapter.py",
@@ -1281,7 +1281,7 @@
     },
     {
       "path": "guide-kit/generator/personal_export.py",
-      "sha256": "38a4890a72bca61b1b8207d6c63fa7dcd760145dbd2ddf0347189cb6f0ab12f0"
+      "sha256": "fa37651874dd55f57092db290a5644321c163eaa79f62754b897c6f3ec3006d7"
     },
     {
       "path": "guide-kit/generator/planner.py",
@@ -1297,7 +1297,7 @@
     },
     {
       "path": "guide-kit/generator/prompt.md",
-      "sha256": "451ee71a48bef00cf2aede12b8e3af4f1c68b629c3bfd5ca269a6202adc99cf7"
+      "sha256": "42934f34efb28906f25266411c767a2527bf531de11e29237686ae7ef11e7b8b"
     },
     {
       "path": "guide-kit/generator/render_work_section_runner.py",
@@ -1322,6 +1322,10 @@
     {
       "path": "guide-kit/generator/test_adapter_applied_note.py",
       "sha256": "896548b6f00095234271ca4d56477daa662706a309d8cb0d480fe091f997bbfd"
+    },
+    {
+      "path": "guide-kit/generator/test_adapter_json_fences.py",
+      "sha256": "646f9e518f63d721cba543155d1aa2214e9e76671d3197d1be95afbfe8e96075"
     },
     {
       "path": "guide-kit/generator/test_adapter_work_section.py",
@@ -1408,6 +1412,10 @@
       "sha256": "00368e7810a5644c10980487b2d9dc77886728aad9121ce162416bfd4364da32"
     },
     {
+      "path": "guide-kit/structurer/health_ingest.py",
+      "sha256": "a1884f1e4735ebe417a98958fe45a6b9889777af88794de11eee6500aa7eab53"
+    },
+    {
       "path": "guide-kit/structurer/homes.py",
       "sha256": "b4ef2870b7e2f0f7341a2a8cfc35a045775fe17a796aa3958136674f1f824669"
     },
@@ -1460,6 +1468,10 @@
       "sha256": "76790b46666676129e015f246ec546ed1abaa07fca6397157189f00582a98c11"
     },
     {
+      "path": "guide-kit/structurer/topic_ingest.py",
+      "sha256": "45ba713f390d25b609f1d275171aabca3c8135c61830e80921c0b64b4d2b81ed"
+    },
+    {
       "path": "guide-kit/tests/acceptance/stub_llm_server.py",
       "sha256": "09398946875d12dd7bd0b1434ea3caa06c31fb1d68f0b2676f3651f1299c9edd"
     },
@@ -1473,15 +1485,19 @@
     },
     {
       "path": "guide-kit/tests/test_decomposer.py",
-      "sha256": "4a093d97f1e79cd46540bc90357c2f51826deaaf96371974efbf492efb425df5"
+      "sha256": "8d51ffa7bb5f95c206505c50f62860c06c07ba8b49517e0a64fdbaeb17dc8ef8"
     },
     {
       "path": "guide-kit/tests/test_f6f10_smoke.py",
-      "sha256": "a8ef4fa0b67f8bb083601095a09536a867d8c65dc1b2a2142e65499efb458984"
+      "sha256": "27910fd37e947211e098deddbcb3067963d67768a3f1fc22fba963537442e63e"
     },
     {
       "path": "guide-kit/tests/test_planner_area_fallback.py",
       "sha256": "d5e469080121392ff94da6647f78c85c63b0d851eff0eeb5442c99dd966b7520"
+    },
+    {
+      "path": "guide-kit/tests/test_topic_ingest.py",
+      "sha256": "e1cd63ff501278afa22892d0f7b5d68149358a27a3aca935388bd3f829e2015f"
     },
     {
       "path": "memory/MEMORY.md",
@@ -2277,7 +2293,7 @@
     },
     {
       "path": "scripts/day-open-pipeline.sh",
-      "sha256": "4ad2c946ab02f62d19431c3cc4285e09234530eb8553acc41c181bdd4500795a"
+      "sha256": "735f7e240c7aa2756036bfbdd41c779a2a80af8244f862e4ce6c95d02e9c309a"
     },
     {
       "path": "scripts/day-open-preflight.sh",
@@ -2905,7 +2921,7 @@
     },
     {
       "path": "scripts/tests/test_update_build_runtime_fail_closed.sh",
-      "sha256": "1c0ae70e3b10bada7a989b9f71dfb0f3e6c3618d31939528978ddd18c3145083"
+      "sha256": "2b0fbcddb8aeba6e8fd107b0e322fc44add48fcef8584547c708e02dc2ced666"
     },
     {
       "path": "scripts/tests/test_update_delivers_python_resolver_before_roles.sh",
@@ -2941,7 +2957,7 @@
     },
     {
       "path": "scripts/update-derived-snapshot.py",
-      "sha256": "0d5e7404bc60b4830de2f096e0b15d08712d6fd4405a3176b3d563f5a25f9252"
+      "sha256": "1a90d218053a489c873c297eed6e304f34c83b277ceb81d67726f7ba85e4f961"
     },
     {
       "path": "scripts/validate-fmt-scripts.sh",
@@ -3041,7 +3057,7 @@
     },
     {
       "path": "seed/strategy/scripts/day-open-pipeline.sh",
-      "sha256": "7d47c0158ac629058f06b430d1ce63e1f9267ec1845d97c662f9e8edbf64e2d6"
+      "sha256": "3041070c90ccf7996e0afc681eafd1699b1292abb31600175e33b0e22e781102"
     },
     {
       "path": "seed/strategy/scripts/day-open-priorities-patch.py",
@@ -3129,7 +3145,7 @@
     },
     {
       "path": "seed/strategy/scripts/update-derived-snapshot.py",
-      "sha256": "b1c7ca80792acfa1e4b0ae528148ca2cf3ebbff6589ab699ec63b36611a438d8"
+      "sha256": "d42ee80735e31bfe5df85555c5f610c0fd2614e07f768fe0f513dbbdb722bc59"
     },
     {
       "path": "sessions/00-index.md",
