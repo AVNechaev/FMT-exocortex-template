@@ -857,7 +857,7 @@
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "90747dfa7e599b4b32095f877f4a5a1d04c297956771a72a63a05150d1d97866"
+      "sha256": "5b12a8473fc9c582ac66c893fc2a4c9218eb1bf4029173d8c9dc85872a249549"
     },
     {
       "path": "CLAUDE.md",
@@ -2665,7 +2665,7 @@
     },
     {
       "path": "scripts/smoke-clean-env.sh",
-      "sha256": "4d062f62e794929bdf86fed7f7d3631050713e6ef794c70cb4d7265ab6a85c00"
+      "sha256": "d5a05f782c43f2524d8edd8aa0f8350a476c9b993196b49a5c2a4cb893715afe"
     },
     {
       "path": "scripts/staging-audit.sh",
