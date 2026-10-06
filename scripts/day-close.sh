@@ -198,7 +198,6 @@ sync_owned_memory_files() {
 
   "$STDLIB_PYTHON3" - "$@" <<'PYEOF'
 import hashlib
-import fcntl
 import json
 import os
 from pathlib import Path, PurePosixPath
@@ -208,6 +207,15 @@ import sys
 import time
 import unicodedata
 import uuid
+
+# issue #933/#1099: fcntl does not exist on Windows. The POSIX transaction
+# journal below (fcntl.flock at the lock acquisition near the bottom of this
+# script) never runs on Windows -- dispatch exits through main_windows()
+# first -- but the unconditional import used to crash before that dispatch
+# was even reached, which took out the already-reviewed Windows branch along
+# with it (WP-7 F171, #911).
+if os.name != "nt":
+    import fcntl
 
 
 source_root = Path(sys.argv[1])
