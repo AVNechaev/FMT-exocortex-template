@@ -857,7 +857,7 @@
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "4bc32419fa54a2a7b1a952e8a6a79536d18f7cd8abfae62b93200beb5eb01292"
+      "sha256": "PLACEHOLDER_WILL_BE_REGENERATED"
     },
     {
       "path": "CLAUDE.md",
@@ -2289,7 +2289,7 @@
     },
     {
       "path": "scripts/day-open-scaffold.sh",
-      "sha256": "698499b0fecd1b9ddafa529caf0a34d646f6aad21ffce569afb6199a0773d7b5"
+      "sha256": "e72523659f36fd67be4fffb7aefaf93fc6ab6c27ca8a9802869a21e608daf36b"
     },
     {
       "path": "scripts/day-open-smoke-extended.sh",
