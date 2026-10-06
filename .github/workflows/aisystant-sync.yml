@@ -2,7 +2,7 @@ name: Aisystant Sync (Pipeline 1, pull-only)
 
 # WP-415 Pipeline 1: personal RU template (this repo) -> private RU repos in
 # the aisystant org, Variant A pull-only (pilot decision 2026-07-13).
-# Architecture: DS-ecosystem-development/0.OPS/0.9.Inbox/WP-415-pipeline-architecture.md
+# Architecture: WP-415-pipeline-architecture.md (0.OPS/0.9.Inbox in the pilot's own ecosystem-development repo)
 #
 # Manual dispatch only, on purpose -- unlike translate-sync.yml (Pipeline 2,
 # push-triggered), this workflow never fires on a plain push. Two reasons:
