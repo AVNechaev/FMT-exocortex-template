@@ -857,7 +857,7 @@
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "7a43d85dfb78da80022b71892e85d7b30ba335ba188b6f6e97e700c1e97a0ca0"
+      "sha256": "7c57c57b3cc12f1256bd01f28b830a7ec1b421ffad57e484f1ebf5f283f03ce8"
     },
     {
       "path": "CLAUDE.md",
@@ -2257,7 +2257,7 @@
     },
     {
       "path": "scripts/day-close.sh",
-      "sha256": "fdba93e2ab0ae1f6df056e52ddcca2e20bd144ae4a5c47a0b1fffae8f2748e07"
+      "sha256": "17360aceb8fc9c4cb51ec9e04a2fcb21f51cd6407fefa5d517734c02f2646e34"
     },
     {
       "path": "scripts/day-open-bottleneck-patch.sh",
