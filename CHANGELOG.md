@@ -149,6 +149,7 @@ Refs: WP-NNN
 
 ### Changed
 
+- [behavior] Автоматическая доставка из авторского источника (template-sync.sh): обновлены scripts/artifactor.py (#1161).
 - [behavior] Автоматическая доставка из авторского источника (template-sync.sh): обновлены scripts/kimi-peer-adapter.sh (#1160).
 - [behavior] Автоматическая доставка из авторского источника (template-sync.sh): обновлены scripts/server-calendar.sh (#1158).
 
