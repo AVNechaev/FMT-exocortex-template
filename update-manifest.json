@@ -857,7 +857,7 @@
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "6c90bcddb63270dbe442262198f2a4e8d42decf5e577eff32cf82d94383cdfa5"
+      "sha256": "8bd64ca73eb67bff6461262cfde5ead137e0ae21b5854ca3ae53801df7178fe0"
     },
     {
       "path": "CLAUDE.md",
@@ -1593,7 +1593,7 @@
     },
     {
       "path": "memory/protocol-work.md",
-      "sha256": "f64b62764aea7ac7260ea92e9296cfdad0c79cb914d373df8364641e697edb65"
+      "sha256": "fa291ce2db2767ca96afcb72151ea2eab3c7d424e4c77cfec2e76f6a5961d9f9"
     },
     {
       "path": "memory/r-questionnaire.md",
