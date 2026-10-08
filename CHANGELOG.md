@@ -150,6 +150,7 @@ Refs: WP-NNN
 ### Changed
 
 - [behavior] Автоматическая доставка из авторского источника (template-sync.sh): обновлены scripts/lib/governance-repo-path.sh, scripts/lib/session-index-draft.sh, scripts/grok-peer-adapter.sh, scripts/session-manifest-write.sh, scripts/session-dir-reserve.sh (#1163).
+- [behavior] Автоматическая доставка из авторского источника (template-sync.sh): обновлён memory/roles.md (#1164).
 - [behavior] Автоматическая доставка из авторского источника (template-sync.sh): обновлены memory/protocol-work.md (#1162).
 - [behavior] Автоматическая доставка из авторского источника (template-sync.sh): обновлены scripts/artifactor.py (#1161).
 - [behavior] Автоматическая доставка из авторского источника (template-sync.sh): обновлены scripts/kimi-peer-adapter.sh (#1160).
