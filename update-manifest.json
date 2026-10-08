@@ -2517,7 +2517,7 @@
     },
     {
       "path": "scripts/lib/governance-repo-path.sh",
-      "sha256": "de8cfdbbbb8cc1ba18ba8d558f96768203041922d9102bc04e8791174b1bcec4"
+      "sha256": "801ecd427395e5ccf059ed35f1d13ef1e8f0e31da76e5c7254aaecfe50e965ee"
     },
     {
       "path": "scripts/lib/language-check.py",
@@ -2557,7 +2557,7 @@
     },
     {
       "path": "scripts/lib/session-index-draft.sh",
-      "sha256": "748e0051764a416c4a7ca4b80e9826a0078c6304b8099b7d4a1332650e7622c4"
+      "sha256": "e11cdef56c298114d1648d647cbfb81014e1e84afb2bc8762205a1dfc6c07eea"
     },
     {
       "path": "scripts/lib/telegram.sh",

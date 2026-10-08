@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # session-index-draft.sh — single point of truth for writing to the
 # sessions/00-index.md draft buffer (WP-537 Ф4, design consensus at
 # sessions/2026-08/17/2026-08-17-09-sessions-index-snapshotter/report.md).

@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # governance-repo-path.sh — single point of truth for resolving which working
 # copy of the governance repo (DS-strategy) a script should read/write.
 # (WP-537, peer-session 2026-08-17-06-wp530-parallel-session-architecture,
