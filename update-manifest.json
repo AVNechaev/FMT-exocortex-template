@@ -857,7 +857,7 @@
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "d64731ce85d229796f38bfd0094d89f38445c543ffd4bc2bd239f1dc3f2201fd"
+      "sha256": "c117725a49bc0cabf2ab31ceef049aa721835245b849109ebcf379519ce08c2a"
     },
     {
       "path": "CLAUDE.md",
@@ -1613,7 +1613,7 @@
     },
     {
       "path": "memory/roles.md",
-      "sha256": "8bc37226f6d03fd72e447a3a3591be520aa2f728a3f5953436e46b0856010fd6"
+      "sha256": "f3e9c085d1ad4544ed5702b729a60cf0c56bde73fb25a5221a6213ba7a9fee9b"
     },
     {
       "path": "memory/routing-vocab.md",
