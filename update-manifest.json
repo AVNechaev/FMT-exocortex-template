@@ -857,7 +857,7 @@
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "6983ed13380663a6caf5b6ccabede6bdca6b208dad9e43ac3fa8a1f8f4220420"
+      "sha256": "6c90bcddb63270dbe442262198f2a4e8d42decf5e577eff32cf82d94383cdfa5"
     },
     {
       "path": "CLAUDE.md",
@@ -2097,7 +2097,7 @@
     },
     {
       "path": "scripts/artifactor.py",
-      "sha256": "639949ce3423ffc0c6b8778e0f35090ea094907e6e53104658d32a2e12b8ed72"
+      "sha256": "6f25941206c9cea4cc83b2665687d6da5123392d7cf442ea5c16ba70d4daa3f3"
     },
     {
       "path": "scripts/attestation-build-statement.sh",
