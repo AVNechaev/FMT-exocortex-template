@@ -147,6 +147,10 @@ Refs: WP-NNN
 
 ## [Unreleased]
 
+### Changed
+
+- [behavior] Автоматическая доставка из авторского источника (template-sync.sh): обновлены scripts/server-calendar.sh (#1158).
+
 ### Added
 
 - [behavior] Новая команда `strategist.sh mark-done <week-review|session-prep> [--week YYYY-Www] [--clear]`: ручное закрытие недели вне своего расписания (например, в воскресенье вечером вместо понедельничного автозапуска) теперь не теряется для следующего автоматического прогона (#1134, #1141).
