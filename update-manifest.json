@@ -857,7 +857,7 @@
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "36d0aa6126d7e67f86a16ff36aa957f3272af0d08852027950e610969f0529c4"
+      "sha256": "6983ed13380663a6caf5b6ccabede6bdca6b208dad9e43ac3fa8a1f8f4220420"
     },
     {
       "path": "CLAUDE.md",
@@ -2473,7 +2473,7 @@
     },
     {
       "path": "scripts/kimi-peer-adapter.sh",
-      "sha256": "10332cda79fa9dcdec1b2dbb21503c2a92c66985bc24ec07d7edaf02e865089f"
+      "sha256": "6c5442c340fe568148c838eef9a2d5ff46238b2d51e5e26e13fd43891b9e9a31"
     },
     {
       "path": "scripts/kimi-session-watchdog.sh",
