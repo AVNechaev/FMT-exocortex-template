@@ -857,7 +857,7 @@
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "8bd64ca73eb67bff6461262cfde5ead137e0ae21b5854ca3ae53801df7178fe0"
+      "sha256": "d64731ce85d229796f38bfd0094d89f38445c543ffd4bc2bd239f1dc3f2201fd"
     },
     {
       "path": "CLAUDE.md",
@@ -2368,6 +2368,10 @@
       "sha256": "c41ac16e71abeab7575f7c75dbb8fff87e8662abb062ca3561a8420835873f26"
     },
     {
+      "path": "scripts/grok-peer-adapter.sh",
+      "sha256": "6ca3e1ced09b123f3559f4deb743f44f4636d21550ff56bae103163ace47a25f"
+    },
+    {
       "path": "scripts/headless-runner.sh",
       "sha256": "5a79a6d1fe9735bd7a6675d79aeb31d0fb4112f32a639c434f1e406ac14582ff"
     },
@@ -2512,6 +2516,10 @@
       "sha256": "ac1502902e5f37628ddf55dade1153c2b76071dd754057d029ba42587b55ae15"
     },
     {
+      "path": "scripts/lib/governance-repo-path.sh",
+      "sha256": "de8cfdbbbb8cc1ba18ba8d558f96768203041922d9102bc04e8791174b1bcec4"
+    },
+    {
       "path": "scripts/lib/language-check.py",
       "sha256": "ba445fe2f2f7cb85bdf81c582597871b66f114e2f9022f0f26d86039bade233a"
     },
@@ -2546,6 +2554,10 @@
     {
       "path": "scripts/lib/session-guard-isolate-lib.sh",
       "sha256": "82e1e60a8080976c74de0758d8635c783731e39ab4695bb20f7f794b989dbfd7"
+    },
+    {
+      "path": "scripts/lib/session-index-draft.sh",
+      "sha256": "748e0051764a416c4a7ca4b80e9826a0078c6304b8099b7d4a1332650e7622c4"
     },
     {
       "path": "scripts/lib/telegram.sh",
@@ -2656,8 +2668,16 @@
       "sha256": "28be1a113884e4f747e43ee659221201456837a49258e645d8342426163f2b1c"
     },
     {
+      "path": "scripts/session-dir-reserve.sh",
+      "sha256": "a5e7734820b3d576faee3cf5a55addbef1cf0c4a3e5a75879e8f699874827f50"
+    },
+    {
       "path": "scripts/session-guard.sh",
       "sha256": "c1883285e6be61d98b0698c66371c0b04de90357a7d5a548d851540f6c141c1c"
+    },
+    {
+      "path": "scripts/session-manifest-write.sh",
+      "sha256": "16b7aae25529be37f4827d17ec86cd7f85224235420840493ff4b445b414088d"
     },
     {
       "path": "scripts/settings-promote.sh",
