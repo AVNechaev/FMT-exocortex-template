@@ -437,11 +437,15 @@
     },
     {
       "path": ".claude/skills/day-close/SKILL.md",
-      "sha256": "950284adfb6ca2325aa71d1489b1f220ac653e8d6471d6a0c622b1f616075a4f"
+      "sha256": "fbccca31ef9ea6c5fe6d9f7deec2d78a1db0f71a1c2b8011676c3ee2833877b9"
     },
     {
       "path": ".claude/skills/day-close/day-close-details.md",
       "sha256": "c9e17d2a2202145ddc20f37476129b4b5a09f2eedde7821949adb2b7510fa4a3"
+    },
+    {
+      "path": ".claude/skills/day-close/day-close-helpers.sh",
+      "sha256": "b0cc9c75124cfd031faa42fcca9d630756555d04222e9946d0ff1aa1e5b2df51"
     },
     {
       "path": ".claude/skills/day-close/day-close/SKILL.md",
@@ -857,7 +861,7 @@
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "317ab36e4e4039bc00bacd2c9f4d587cc56e81fe7fe76c6947a2623fb9cb7c72"
+      "sha256": "6402cce7d04150d2886bd1a5c6b9d0fc9b7ca62b295f53d1dcfb97d9b1a4b187"
     },
     {
       "path": "CLAUDE.md",
@@ -925,7 +929,7 @@
     },
     {
       "path": "docs/LEARNING-PATH.md",
-      "sha256": "8d3738d4575453cc3958c522e0fa609d26ca687db7b98e3181e78771b78506be"
+      "sha256": "d5a53b84840d60aa411802ee7b5a67ee2351bb5958e4f68f248118eef73ea49a"
     },
     {
       "path": "docs/PACK-CREATION.md",
@@ -2257,7 +2261,7 @@
     },
     {
       "path": "scripts/day-close.sh",
-      "sha256": "17360aceb8fc9c4cb51ec9e04a2fcb21f51cd6407fefa5d517734c02f2646e34"
+      "sha256": "c16eed8f4bb591def2971a9dd6664b1de0b55856f9aefaac2839dade3e6ba122"
     },
     {
       "path": "scripts/day-open-bottleneck-patch.sh",
@@ -2297,7 +2301,7 @@
     },
     {
       "path": "scripts/day-open-preflight.sh",
-      "sha256": "fc89f990405a442504a8b53226310fb0c4e7613728385667244d45cb87a2a0e9"
+      "sha256": "79ccf951b65b8a9de6882694d148478eb3d6cc9a5ba72db4efa15fe08a9c64d2"
     },
     {
       "path": "scripts/day-open-priorities-patch.py",
@@ -2893,7 +2897,7 @@
     },
     {
       "path": "scripts/tests/test_issue_511_day_close_commit_guard.sh",
-      "sha256": "c5f058979445a3d16d92c8370151101ecfbd145a0ae63c8db8467146701156c8"
+      "sha256": "d084becc4d92a3ee2864e2d025d41663b2f3837c9489a0cd3a1e1a21ce4068e0"
     },
     {
       "path": "scripts/tests/test_issue_533_agent_fault_delivery.py",
@@ -2905,7 +2909,7 @@
     },
     {
       "path": "scripts/tests/test_issue_557_zsh_special_vars.sh",
-      "sha256": "10515bdb3cfc793fbf3eb00a269675e00716f9b0daa8a8ac3aae85bc9d8fc06a"
+      "sha256": "3c798f1e177cc4bada710b2cc2b7385a242de2e5c6435da1791610fc789aa594"
     },
     {
       "path": "scripts/tests/test_issue_718_sync_canary.sh",
