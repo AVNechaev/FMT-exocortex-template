@@ -149,6 +149,7 @@ Refs: WP-NNN
 
 ### Changed
 
+- [optional] `memory/fpf-reference.md`: справочник описывает состав экосистемы FPF — помимо Core (`FPF-Spec.md`, Part A–G) перечислены DPF-сьюты (Foundational Thinking — 5 DPF, Engineering — 27 DPF, Narrativization), точки входа `Readme.md`/`USING-FPF.md`/Suite Reference и поиск паттернов по ID через rg; `fpf_version` обновлён до upstream `e2c6ac1` от 2026-10-10 (#925, #1190).
 - [optional] Шаги 6a и 8 стратегической сессии (`strategy-session-weekly/steps/06a-pool.md`, `08-confirm.md`): ручной путь описан как базовый и полный (пул недели собирается без личных скриптов), скрипты `week-open-scaffold.sh`/`week_pool_manifest.py`/`week-open-llm-fill.py`/`strategy-focus-hash.sh`/`strategy-session-checks-runner.sh` — явно помеченные опциональные ускорители, которых нет в поставке шаблона (#1100, #1191).
 - [behavior] `strategist.sh`: ветка доставки резолвится из `refs/remotes/origin/HEAD` вместо хардкода `main`, поэтому установки с веткой управления `master` не падают на проверке доставки `week-review` каждый ночной запуск (#1097, #1195).
 - [behavior] `day-open-scaffold.sh`/`day-open-pipeline.sh`: ключ `day_boundary` из `day-rhythm-config.yaml` читается и сдвигает автоматическую дату «сегодня» на день назад, если запуск идёт раньше этого часа (#924, #1195).
