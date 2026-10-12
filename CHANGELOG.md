@@ -147,6 +147,10 @@ Refs: WP-NNN
 
 ## [Unreleased]
 
+### Changed
+
+- [optional] Экстрактор (`roles/extractor/scripts/extractor.sh`, `roles/extractor/tests/test_extractor_pipeline.py`): прямые тесты на `assert_ai_cli_root_compat()` (root + `--dangerously-skip-permissions`) и `resolve_tool_path()` (цепочка `IWE_SCRIPTS → IWE_TEMPLATE/scripts → $HOME/IWE/scripts`) — тестовая переменная `IWE_EXTRACTOR_TEST_EUID` (не читается ни в одном production-пути) плюс отдельный интеграционный тест через `unshare --map-root-user` для честного EUID 0; тестовый файл подключён к `validate-template.yml`, где раньше не исполнялся вовсе (РП-545 Ф15, закрывает известное ограничение Ф14, #928, #1116, #1202).
+
 ## [0.41.8] — 2026-10-12
 
 ### Changed
@@ -170,7 +174,6 @@ Refs: WP-NNN
 - [fix] `day-close.sh`: зеркало правил работает без `rsync` (Git Bash): копия во временный каталог и подмена после успеха, предыдущее зеркало не опустошается при сбое (#1099, #1204).
 - [fix] `.claude/bin/guarded-rm`: на macOS цель с двумя и более несуществующими уровнями пути разрешается как через `realpath -m` на Linux (символические ссылки раскрываются, `..` после ссылки означает родителя её цели) (#1005, #1204).
 - [fix] Закрытие дня (`day-close/SKILL.md`, `day-close-details.md`, `protocol-close.md`): имя WakaTime CLI на Windows (`wakatime-cli-windows-amd64.exe`) и поиск по маске `~/.wakatime/wakatime-cli*` (#1151). Верхнеуровневые `cd` в `day-open-details.md` и `fpf-reference.md` заменены на подоболочку/`git -C`, которые не блокирует destructive-guard (#1006, #1204).
-- [optional] Экстрактор (`roles/extractor/scripts/extractor.sh`, `roles/extractor/tests/test_extractor_pipeline.py`): прямые тесты на `assert_ai_cli_root_compat()` (root + `--dangerously-skip-permissions`) и `resolve_tool_path()` (цепочка `IWE_SCRIPTS → IWE_TEMPLATE/scripts → $HOME/IWE/scripts`) — тестовая переменная `IWE_EXTRACTOR_TEST_EUID` (не читается ни в одном production-пути) плюс отдельный интеграционный тест через `unshare --map-root-user` для честного EUID 0; тестовый файл подключён к `validate-template.yml`, где раньше не исполнялся вовсе (РП-545 Ф15, закрывает известное ограничение Ф14, #928, #1116, #1202).
 - [optional] `.github/workflows/weekly-release.yml`: будильник недельного автовыпуска сдвинут с 23:00 МСК (20:00 UTC) на 20:00 МСК (17:00 UTC) — прежнее время (ночь на понедельник) было неудобно для живого наблюдения (#1193).
 - [optional] `memory/fpf-reference.md`: справочник описывает состав экосистемы FPF — помимо Core (`FPF-Spec.md`, Part A–G) перечислены DPF-сьюты (Foundational Thinking — 5 DPF, Engineering — 27 DPF, Narrativization), точки входа `Readme.md`/`USING-FPF.md`/Suite Reference и поиск паттернов по ID через rg; `fpf_version` обновлён до upstream `e2c6ac1` от 2026-10-10 (#925, #1190).
 - [optional] Шаги 6a и 8 стратегической сессии (`strategy-session-weekly/steps/06a-pool.md`, `08-confirm.md`): ручной путь описан как базовый и полный (пул недели собирается без личных скриптов), скрипты `week-open-scaffold.sh`/`week_pool_manifest.py`/`week-open-llm-fill.py`/`strategy-focus-hash.sh`/`strategy-session-checks-runner.sh` — явно помеченные опциональные ускорители, которых нет в поставке шаблона (#1100, #1191).
