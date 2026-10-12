@@ -117,7 +117,11 @@
     },
     {
       "path": ".claude/hooks/precompact-checkpoint.sh",
-      "sha256": "74cd1139e0ff98d0a9984e7c9f6e0263da000fce713f9fd3857dec66691a74ae"
+      "sha256": "c1c53ab7de0c862c6823d04cec32c667db6e0da15ac6eca5b87b44e013888c5d"
+    },
+    {
+      "path": ".claude/hooks/precompact-restore.sh",
+      "sha256": "2abd96e86b6af3a20c92ae66d40519f6a4fb51e1feb2c506a8adec4edf8db737"
     },
     {
       "path": ".claude/hooks/protocol-artifact-validate.sh",
@@ -220,6 +224,10 @@
       "sha256": "604c42d167de4ac40ea2d48b1f97c1dca000357b16000b7567477406876abe82"
     },
     {
+      "path": ".claude/hooks/tests/test-issue-1183-precompact-checkpoint.sh",
+      "sha256": "1620f76efef535cd42c5dde1aacc22921dc022e108246f20ed0cbb3feffe70b3"
+    },
+    {
       "path": ".claude/hooks/tests/test-protocol-artifact-validate-mandatory-fail-closed.sh",
       "sha256": "6298b52f77be40dca698050a95fee94cca66cf4a9e64f119acde03b18d76f765"
     },
@@ -234,10 +242,6 @@
     {
       "path": ".claude/hooks/tests/test-secret-leak-block-unparsed-input.sh",
       "sha256": "5f95cd160628f1fa7a50bdba49bdfb687c45965919bd129275d1758533f4fe97"
-    },
-    {
-      "path": ".claude/hooks/tests/test_issue_1183_precompact_system_msg.sh",
-      "sha256": "c80b1e7c35ef6512bd0164eb262f73737f51d3e995b2dca1070bad0b829fac3f"
     },
     {
       "path": ".claude/hooks/tests/test_issue_1184_stop_gate_block_once.sh",
@@ -385,7 +389,7 @@
     },
     {
       "path": ".claude/settings.json",
-      "sha256": "3eb8d0293546fc2a76a6e7aa34eefeed2d8a61e9f0b1a10e2c6b755797d6ab1f"
+      "sha256": "6fa288ca84fd2a0ce5ab0404b267041971b0bd4bc58b31e5779386719029d715"
     },
     {
       "path": ".claude/skills-catalog.yaml",
@@ -705,7 +709,7 @@
     },
     {
       "path": ".claude/skills/run-protocol/SKILL.md",
-      "sha256": "5b6fcc899277cf2a5e774fca87278c636864f3a7fd583621ff7e24d7c9c5a1cb"
+      "sha256": "0c5a9d7dda7ac26b2418591d0572b8cf5ebb802d4e6b7085f5a84773355f2018"
     },
     {
       "path": ".claude/skills/setup-wakatime/SKILL.md",
@@ -873,7 +877,7 @@
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "37ef2fcf936149ee70454a223fcf02563db8de0fafe6ee117b05641d598b7e3e"
+      "sha256": "0a2252ee48a189dad936f41039cedf09d2a7960359e1de4ffed94f8f2a42600c"
     },
     {
       "path": "CLAUDE.md",
@@ -3491,6 +3495,10 @@
     "setup/ux-walkthrough-prompt.md"
   ],
   "deprecated_files": [
+    {
+      "path": ".claude/hooks/tests/test_issue_1183_precompact_system_msg.sh",
+      "reason": "renamed to .claude/hooks/tests/test-issue-1183-precompact-checkpoint.sh (issue #1183, PR #1203): old test_issue_1183_ prefix false-matched the local secret scanner's YooKassa key pattern"
+    },
     {
       "path": "scripts/template-sync.sh",
       "reason": "removed 2026-07-17 (e9cf822): functionality fully covered by the protected author-side sync pipeline (not shipped to the template). Forks that updated before removal keep an orphaned copy on disk without this entry (issue #486)."
