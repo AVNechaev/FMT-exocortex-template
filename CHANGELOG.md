@@ -147,6 +147,10 @@ Refs: WP-NNN
 
 ## [Unreleased]
 
+### Changed
+
+- [optional] Экстрактор (`roles/extractor/scripts/extractor.sh`, `roles/extractor/tests/test_extractor_pipeline.py`): прямые тесты на `assert_ai_cli_root_compat()` (root + `--dangerously-skip-permissions`) и `resolve_tool_path()` (цепочка `IWE_SCRIPTS → IWE_TEMPLATE/scripts → $HOME/IWE/scripts`) — тестовая переменная `IWE_EXTRACTOR_TEST_EUID` (не читается ни в одном production-пути) плюс отдельный интеграционный тест через `unshare --map-root-user` для честного EUID 0; тестовый файл подключён к `validate-template.yml`, где раньше не исполнялся вовсе (РП-545 Ф15, закрывает известное ограничение Ф14, #928, #1116, #1202).
+
 ## [0.41.8] — 2026-10-12
 
 ### Changed
