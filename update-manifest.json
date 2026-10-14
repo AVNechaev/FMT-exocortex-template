@@ -881,7 +881,15 @@
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "a0e01abadcc133cdf3445cbde230075f5807b9f8b457c74ed99b302bd9d45943"
+      "sha256": "6bd802f07d4453c1a2e92c78d69d2e613c65127563e5ed1622991de9ac5fb0db"
+    },
+    {
+      "path": "CHANGELOG.md",
+      "sha256": "6bd802f07d4453c1a2e92c78d69d2e613c65127563e5ed1622991de9ac5fb0db"
+    },
+    {
+      "path": "CHANGELOG.md",
+      "sha256": "6bd802f07d4453c1a2e92c78d69d2e613c65127563e5ed1622991de9ac5fb0db"
     },
     {
       "path": "CLAUDE.md",
@@ -1961,7 +1969,7 @@
     },
     {
       "path": "roles/strategist/scripts/strategist.sh",
-      "sha256": "9d55ec7a097a7ca8041071ec1615ba4c45f349911644910aa01cc0a1e782f9f4"
+      "sha256": "2bdc6bfaa0c6c0e5adce781d77b0bcbe5dd98f109bbd4b7c299be79630417a16"
     },
     {
       "path": "roles/strategist/scripts/systemd/iwe-strategist-morning.service",
