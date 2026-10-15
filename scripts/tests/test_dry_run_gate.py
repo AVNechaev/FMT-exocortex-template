@@ -214,6 +214,95 @@ class TestSentinelActive:
         assert r.returncode == 2, r.stderr
 
 
+class TestIwePathsChainWhitelist:
+    """issue #1238: #1233's new .iwe-paths fallback-chain resolver
+    (day-close/SKILL.md, dry-run-contract.md) is whitelisted as one exact
+    text block in dry-run-gate.sh, not per-segment -- see the comment above
+    the sed pipeline in the hook for why. The exact text here MUST match
+    what's actually deployed in day-close/SKILL.md byte-for-byte; if either
+    one changes without the other, these tests (or a live Day Close
+    rehearsal) catch the drift."""
+
+    CHAIN = (
+        'IWE_PATHS="${IWE_PATHS_FILE:-}"; if [ -z "$IWE_PATHS" ]; then '
+        'for _c in "$PWD/.iwe-paths" "${IWE_WORKSPACE:-$HOME/IWE}/.iwe-paths" '
+        '"$HOME/.iwe-paths"; do [ -r "$_c" ] && { IWE_PATHS="$_c"; break; }; '
+        'done; fi; [ -n "$IWE_PATHS" ] && . "$IWE_PATHS"'
+    )
+
+    def test_exact_chain_allowed(self, sentinel):
+        r = _run_hook(self.CHAIN)
+        assert r.returncode == 0, r.stderr
+
+    def test_chain_with_trailing_command_allowed(self, sentinel):
+        """Deployed form: chain followed by the actual Day Close step command."""
+        cmd = f'{self.CHAIN} 2>/dev/null; bash "$IWE_SCRIPTS/day-close-prepare.sh"'
+        r = _run_hook(cmd)
+        assert r.returncode == 0, r.stderr
+
+    def test_extra_space_blocked(self, sentinel):
+        """A single added space anywhere breaks the exact-text match --
+        fail-closed by design, not a false positive to relax."""
+        tampered = self.CHAIN.replace("; if ", ";  if ", 1)
+        assert tampered != self.CHAIN
+        r = _run_hook(tampered)
+        assert r.returncode == 2, r.stderr
+
+    def test_home_reassigned_before_chain_blocked(self):
+        """The chain's own HOME fallback is only as trustworthy as the real
+        $HOME; a command that reassigns HOME earlier (same attack class as
+        the pre-existing #784/#785 HOME_OR_IWE_PATHS_TAMPERED check) must
+        still be rejected even though the chain text itself matches
+        verbatim -- this is a different sentinel per-test to avoid clashing
+        with the fixture's shared /tmp/iwe-dry-run.flag mid-assertion."""
+        if SENTINEL.exists():
+            pytest.skip("живой dry-run sentinel активен — не трогаем чужой")
+        OWNER.write_text("pytest-capability", encoding="utf-8")
+        SENTINEL.write_text(
+            json.dumps(
+                {
+                    "initiator": "pytest",
+                    "created_at": "test",
+                    "session_id": "pytest-session",
+                    "owner_token": "pytest-capability",
+                    "owner_file": str(OWNER),
+                }
+            ),
+            encoding="utf-8",
+        )
+        try:
+            cmd = f'HOME=/tmp/evil; {self.CHAIN}'
+            r = _run_hook(cmd)
+            assert r.returncode == 2, r.stderr
+        finally:
+            SENTINEL.unlink(missing_ok=True)
+            OWNER.unlink(missing_ok=True)
+
+    def test_bare_dollar_iwe_paths_source_blocked(self, sentinel):
+        """Without the preceding resolver chain, a bare `. "$IWE_PATHS"`
+        (e.g. an attacker pre-setting IWE_PATHS some other way) is not a
+        recognized whitelist target -- same fail-closed default as any
+        other unrecognized source|. argument."""
+        r = _run_hook('IWE_PATHS=/tmp/evil; . "$IWE_PATHS"')
+        assert r.returncode == 2, r.stderr
+
+    def test_cd_before_chain_blocked(self, sentinel):
+        """Cold-review finding (Agent tool, 2026-10-15): the chain's first
+        fallback is "$PWD/.iwe-paths", and `cd` -- the ordinary way $PWD
+        actually changes in a running shell -- was not in the tamper regex
+        at all (only VAR= assignment forms were). Live PoC before this test
+        existed: `cd /tmp/evil-poc; <chain>` passed the gate (exit 0) and
+        the real shell sourced an attacker-planted /tmp/evil-poc/.iwe-paths."""
+        for cmd in (
+            f'cd /tmp; {self.CHAIN}',
+            f'cd -P /tmp; {self.CHAIN}',
+            f'builtin cd /tmp; {self.CHAIN}',
+            f'pushd /tmp; {self.CHAIN}',
+        ):
+            r = _run_hook(cmd)
+            assert r.returncode == 2, f"{cmd!r}: {r.stderr}"
+
+
 class TestSentinelInactive:
     def test_no_sentinel_allows_everything(self):
         """No sentinel AND no owner-file: nothing claims a rehearsal is active."""
