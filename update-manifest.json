@@ -3045,7 +3045,7 @@
     },
     {
       "path": "scripts/validate-staged-artifacts.sh",
-      "sha256": "9a9ae6740805de29261696756bf6f71f485f8848009b37237f43a1b112af1937"
+      "sha256": "a8c5943b4af7067bf01a3da9e0a8808c5e8e6192e82862b96cc40c32997b5d5d"
     },
     {
       "path": "scripts/verify-context-budget.sh",
