@@ -273,7 +273,7 @@
     },
     {
       "path": ".claude/lib/iwe-env-bootstrap.sh",
-      "sha256": "acc620ba6737162c082a23a634f3c3d08acade8a724917220d4877373dc2459b"
+      "sha256": "deb11bcea0c796833ae65d4dd7e53103846c6a561bbbd14cebfeb89b6108acac"
     },
     {
       "path": ".claude/lib/log_formatter.sh",
@@ -453,7 +453,7 @@
     },
     {
       "path": ".claude/skills/day-close/SKILL.md",
-      "sha256": "bb92322e75583bc25bfdc61a87dbd045abc9f0ef6b8a309084c8d5ef177f9966"
+      "sha256": "5570798e12e51dc0379ec49f4e7d039753e94e163cf223c43d2433af3da2c637"
     },
     {
       "path": ".claude/skills/day-close/day-close-details.md",
@@ -833,7 +833,7 @@
     },
     {
       "path": ".githooks/pre-commit",
-      "sha256": "e643f41b2788199495c4d1271e816b4b4fb9539cedd8d1762daa4662a9126cc0"
+      "sha256": "060954978091aa917e5a3b7434499ea86dbffc8c557a7d18393e41395b76f491"
     },
     {
       "path": ".github/workflows/cloud-scheduler.yml",
@@ -1561,7 +1561,7 @@
     },
     {
       "path": "memory/dry-run-contract.md",
-      "sha256": "ff367b5e158eb91a22ff7e7f055a416a99c39457b1973007e859252d9a72c436"
+      "sha256": "fe142d82617652e5aa0fdf129cf7a106bac9daed1f94662ae501fce5bc42c231"
     },
     {
       "path": "memory/feedback_community_communication_style.md",
@@ -3319,6 +3319,8 @@
     "scripts/tests/test_1229_sync_bundle.sh",
     "scripts/tests/test_1230_publish.sh",
     "scripts/tests/test_1231_artifactor.sh",
+    "scripts/tests/test_1234_fork_precommit.sh",
+    "scripts/tests/test_1235_backup_bootstrap.sh",
     "scripts/tests/test_adopt_governance.sh",
     "scripts/tests/test_agent_dashboard.py",
     "scripts/tests/test_ar293_ai_cli_override.sh",
@@ -3471,12 +3473,15 @@
     "setup/detector-fixtures/detector_07/positive_disguised_wrong_var_fallback.sh",
     "setup/detector-fixtures/detector_07/positive_dotgit_suffix.sh",
     "setup/detector-fixtures/detector_07/positive_end_of_line.sh",
+    "setup/detector-fixtures/detector_07/positive_lowercase.sh",
+    "setup/detector-fixtures/detector_07/positive_mixedcase.sh",
     "setup/detector-fixtures/detector_07/positive_parens.sh",
     "setup/detector-fixtures/detector_07/positive_quote_before_slash.sh",
     "setup/detector-fixtures/detector_07/positive_quoted_literal.md",
     "setup/detector-fixtures/detector_07/positive_single_quotes.py",
     "setup/detector-fixtures/detector_07/positive_single_quotes.sh",
     "setup/detector-fixtures/detector_07/positive_tilde_path.sh",
+    "setup/detector-fixtures/detector_07/positive_uppercase.sh",
     "setup/detector-regex.sh",
     "setup/integration-contract-validator.sh",
     "setup/optional/COVER-IMAGES.md",

@@ -35,6 +35,6 @@
 # они остаются на попечении per-line whitelist'а в integration-contract-
 # validator.sh (который проверяет конкретное имя переменной перед ":-", а
 # не любое).
-export DETECTOR_07_REGEX='(^|[^A-Za-z0-9_-])DS-strategy([^A-Za-z0-9_-]|$)'
+export DETECTOR_07_REGEX='(^|[^A-Za-z0-9_-])[Dd][Ss]-[Ss][Tt][Rr][Aa][Tt][Ee][Gg][Yy]([^A-Za-z0-9_-]|$)'
 
 # (При добавлении detector_08+ — добавлять здесь как DETECTOR_NN_REGEX)
