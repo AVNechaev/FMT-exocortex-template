@@ -881,7 +881,7 @@
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "7fbace1b17fb13b2e6eda1a0a9f586e9fc49be7ede8f0652682fa029cefc3243"
+      "sha256": "6049a3cf654181a9fdc2437ee89f2df73ad264d0d34d197284348dcb0bcff81e"
     },
     {
       "path": "CLAUDE.md",
@@ -3045,7 +3045,7 @@
     },
     {
       "path": "scripts/validate-staged-artifacts.sh",
-      "sha256": "9a9ae6740805de29261696756bf6f71f485f8848009b37237f43a1b112af1937"
+      "sha256": "a8c5943b4af7067bf01a3da9e0a8808c5e8e6192e82862b96cc40c32997b5d5d"
     },
     {
       "path": "scripts/verify-context-budget.sh",
