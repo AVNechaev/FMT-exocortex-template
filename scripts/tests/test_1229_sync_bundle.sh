@@ -17,10 +17,16 @@ fail=0
 pass() { echo "  ✅ PASS: $*"; }
 fail_test() { echo "  ❌ FAIL: $*" >&2; fail=1; }
 
-# A copy of the bundle script at a path with no scripts/lib/ next to it, so
-# the self-relative lookup is guaranteed to miss.
-mkdir -p "$TMP/isolated/.claude/scripts" "$TMP/real-scripts/lib"
+# A copy of the bundle script at a path with no scripts/lib/git-sync-status.sh
+# next to it, so the self-relative lookup for THAT library is guaranteed to
+# miss. wp-sync-bundle.sh also hard-requires scripts/lib/wp-num.sh (issue
+# #954, unrelated to #1229) before it gets anywhere near the git-sync code --
+# that one has to resolve normally (copied into the isolated tree at the same
+# relative layout) or every run here fails before the behaviour under test
+# even executes.
+mkdir -p "$TMP/isolated/.claude/scripts" "$TMP/isolated/scripts/lib" "$TMP/real-scripts/lib"
 cp "$BUNDLE" "$TMP/isolated/.claude/scripts/wp-sync-bundle.sh"
+cp "$ROOT/scripts/lib/wp-num.sh" "$TMP/isolated/scripts/lib/wp-num.sh"
 cp "$ROOT/scripts/lib/git-sync-status.sh" "$TMP/real-scripts/lib/git-sync-status.sh"
 
 # --- 1. No IWE_SCRIPTS set: self-relative misses, no fallback available,
