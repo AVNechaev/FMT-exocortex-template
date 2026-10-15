@@ -29,9 +29,17 @@ cp "$BUNDLE" "$TMP/isolated/.claude/scripts/wp-sync-bundle.sh"
 cp "$ROOT/scripts/lib/wp-num.sh" "$TMP/isolated/scripts/lib/wp-num.sh"
 cp "$ROOT/scripts/lib/git-sync-status.sh" "$TMP/real-scripts/lib/git-sync-status.sh"
 
+# wp-sync-bundle.sh requires a governance repo with docs/WP-REGISTRY.md under
+# $IWE_WORKSPACE before it ever reaches the git-sync code under test -- an
+# unrelated precondition. Point it at a throw-away one instead of relying on
+# whatever happens to live at the real $HOME/IWE (which made this pass
+# locally while CI's clean $HOME/IWE-less runner failed it outright).
+mkdir -p "$TMP/fake-ws/governance/docs"
+: > "$TMP/fake-ws/governance/docs/WP-REGISTRY.md"
+
 # --- 1. No IWE_SCRIPTS set: self-relative misses, no fallback available,
 # stays checker_unavailable/degraded (the pre-fix, still-correct behaviour).
-out=$(env -u IWE_SCRIPTS bash "$TMP/isolated/.claude/scripts/wp-sync-bundle.sh" WP-1 2>&1)
+out=$(env -u IWE_SCRIPTS IWE_WORKSPACE="$TMP/fake-ws" bash "$TMP/isolated/.claude/scripts/wp-sync-bundle.sh" WP-1 2>&1)
 if printf '%s' "$out" | grep -q 'GIT_SYNC_STATUS: checker_unavailable'; then
     pass "no IWE_SCRIPTS: library not found, degraded as before"
 else
@@ -41,7 +49,7 @@ fi
 # --- 2. IWE_SCRIPTS pointing at the real library: fallback kicks in, the
 # library actually loads (status moves off checker_unavailable/library_missing,
 # proving check_git_sync_status ran instead of the stub branch).
-out=$(env IWE_SCRIPTS="$TMP/real-scripts" bash "$TMP/isolated/.claude/scripts/wp-sync-bundle.sh" WP-1 2>&1)
+out=$(env IWE_SCRIPTS="$TMP/real-scripts" IWE_WORKSPACE="$TMP/fake-ws" bash "$TMP/isolated/.claude/scripts/wp-sync-bundle.sh" WP-1 2>&1)
 if printf '%s' "$out" | grep -q 'пробую \$IWE_SCRIPTS/lib/git-sync-status.sh'; then
     pass "IWE_SCRIPTS set: fallback attempted"
 else
