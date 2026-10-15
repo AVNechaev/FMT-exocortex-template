@@ -385,7 +385,7 @@
     },
     {
       "path": ".claude/scripts/wp-sync-bundle.sh",
-      "sha256": "4f5aaf96806c78ee89644937a656ee26166486b5e3a4af4bfefdc1acf771e19c"
+      "sha256": "948cac5840f8d27073405fb46f955055d556257d61ba8a404d52980023f3e962"
     },
     {
       "path": ".claude/settings.json",
@@ -2125,7 +2125,7 @@
     },
     {
       "path": "scripts/artifactor.py",
-      "sha256": "6f25941206c9cea4cc83b2665687d6da5123392d7cf442ea5c16ba70d4daa3f3"
+      "sha256": "6a1f46898acc3937e172f89df31861ea7385b1e5c46b20e6268e521031b503bf"
     },
     {
       "path": "scripts/attestation-build-statement.sh",
@@ -2809,7 +2809,7 @@
     },
     {
       "path": "scripts/tests/run-issue-tests.sh",
-      "sha256": "1948065257faef4c0e351f770bacc257c7ce3cb17c4b5275a3c0fad8009970b7"
+      "sha256": "0889c4266cd7565d8e881bedd8e717976f50d4ae5a599fd9b044bc6e4c3cb3f5"
     },
     {
       "path": "scripts/tests/test_capture_bus_contract.sh",
@@ -3149,7 +3149,7 @@
     },
     {
       "path": "seed/strategy/scripts/ds-publish.sh",
-      "sha256": "a86c3f628c06e8b7fe8d7a338c01ff0d7a0794751b4ce1a27affbb11295b2a36"
+      "sha256": "19649ea85169a92d20890fe68cb97182c53f5616675010edbf428b3eea75ce03"
     },
     {
       "path": "seed/strategy/scripts/generate-executor-catalog.py",
@@ -3316,6 +3316,9 @@
     "scripts/tests/test-setup-git-identity-precheck.sh",
     "scripts/tests/test-update-extractor-feeders.sh",
     "scripts/tests/test-update-fpf-refresh.sh",
+    "scripts/tests/test_1229_sync_bundle.sh",
+    "scripts/tests/test_1230_publish.sh",
+    "scripts/tests/test_1231_artifactor.sh",
     "scripts/tests/test_adopt_governance.sh",
     "scripts/tests/test_agent_dashboard.py",
     "scripts/tests/test_ar293_ai_cli_override.sh",
