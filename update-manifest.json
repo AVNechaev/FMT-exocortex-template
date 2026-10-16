@@ -889,7 +889,7 @@
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "1187f98150248772e7490bf8223ee7b5eeb7f70c1edfa3c3872757b294f3e380"
+      "sha256": "fa68087676741556c50c399ec208db680fed4befb8e80729921e231e3f42a8d4"
     },
     {
       "path": "CLAUDE.md",
@@ -2189,7 +2189,7 @@
     },
     {
       "path": "scripts/check-claude-md-links.py",
-      "sha256": "f82676f04a795e6b7f01b997b3fc30753903b456e88e41a1ff2d849f5ed59e95"
+      "sha256": "34b20ead5bc23519b321f5134b397a6d223a4848202ee72d78b082c4b788a25f"
     },
     {
       "path": "scripts/check-critical-files-map.sh",
