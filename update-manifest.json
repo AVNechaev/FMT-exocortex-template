@@ -137,7 +137,7 @@
     },
     {
       "path": ".claude/hooks/pull-on-touch.sh",
-      "sha256": "87ae9737685893c4eb3245de467e2ca7b6011d73da1a835f9cc1dbeb198dd759"
+      "sha256": "29b4433747795109d9a85ffaac316c50044d6cc8ad7cbce4bec4511dcc8e0644"
     },
     {
       "path": ".claude/hooks/residency-gate-init.sh",
@@ -897,7 +897,7 @@
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "766ad4560638d7510a95e0dedf99ee02e4341e29e0e3ec54cd82392d5d038a14"
+      "sha256": "69e6c6c79c6958b5bb53630c9b999d1e7cfa8f06b8dae167c94f2464ffbc065b"
     },
     {
       "path": "CLAUDE.md",
@@ -3328,6 +3328,7 @@
     "scripts/tests/git-sync-status-smoke.sh",
     "scripts/tests/iwe-paths-scripts-resolution-smoke.sh",
     "scripts/tests/lib/extract-update-download-batch.sh",
+    "scripts/tests/pull-on-touch-ff-only-smoke.sh",
     "scripts/tests/session-guard-audit-validate-orz-batch-smoke.sh",
     "scripts/tests/session-guard-isolate-minimal-smoke.sh",
     "scripts/tests/session-guard-isolate-t1-t20-smoke.sh",
