@@ -881,7 +881,7 @@
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "6049a3cf654181a9fdc2437ee89f2df73ad264d0d34d197284348dcb0bcff81e"
+      "sha256": "1187f98150248772e7490bf8223ee7b5eeb7f70c1edfa3c3872757b294f3e380"
     },
     {
       "path": "CLAUDE.md",
@@ -2681,7 +2681,7 @@
     },
     {
       "path": "scripts/restore-from-exocortex.sh",
-      "sha256": "0df9545069cbca03fc25013254e0fdfa98c8f8d466bab5d8f8712a34791daa98"
+      "sha256": "7958cc78749734f5f316864138abc0d906cdd737bb5e5ad8c0d2174cb3e3d363"
     },
     {
       "path": "scripts/route-task.sh",
