@@ -3328,6 +3328,7 @@
     "scripts/tests/git-sync-status-smoke.sh",
     "scripts/tests/iwe-paths-scripts-resolution-smoke.sh",
     "scripts/tests/lib/extract-update-download-batch.sh",
+    "scripts/tests/pull-on-touch-ff-only-smoke.sh",
     "scripts/tests/session-guard-audit-validate-orz-batch-smoke.sh",
     "scripts/tests/session-guard-isolate-minimal-smoke.sh",
     "scripts/tests/session-guard-isolate-t1-t20-smoke.sh",
