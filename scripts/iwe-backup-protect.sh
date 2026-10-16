@@ -108,7 +108,7 @@ echo "[protect] создаю снимок перед операцией: ${SOURC
 
 BACKUP_OUTPUT=""
 BACKUP_STATUS=0
-BACKUP_OUTPUT=$(restic backup --json "${SOURCES[@]}" 2>&1) || BACKUP_STATUS=$?
+BACKUP_OUTPUT=$(restic backup --json --tag protect "${SOURCES[@]}" 2>&1) || BACKUP_STATUS=$?
 
 if [ "$BACKUP_STATUS" -ne 0 ]; then
     echo "❌ [protect] снимок не удался (restic exit $BACKUP_STATUS) — операция НЕ выполнена" >&2
