@@ -153,7 +153,7 @@
     },
     {
       "path": ".claude/hooks/response-clarity-hook.sh",
-      "sha256": "094c904d9452b9067dfbbd867adf8902ed49c45296661a6aebdfa2690a9431e8"
+      "sha256": "8c84febc7b31f2d2c28dd53f478415a6132ca9a22e6ae1f188e9c9720f781a95"
     },
     {
       "path": ".claude/hooks/rule-engine.sh",
