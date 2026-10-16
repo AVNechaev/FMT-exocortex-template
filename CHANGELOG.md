@@ -149,7 +149,7 @@ Refs: WP-NNN
 
 ### Added
 
-- [optional] `scripts/iwe-backup-sources.yaml` + `scripts/iwe-backup-check.sh` (раздел 4): дефолтный список runtime-каталогов ИИ-агентов вне `$HOME/IWE` (`.claude`, `.codex`, `.hermes`, `.kimi`, `.kimi-code`, `.grok` и ключевые dotfiles), классифицированный по восстановимости (три tier), с проверкой фактического покрытия и явным сигналом про отсутствующий источник — раньше только `$HOME/IWE` попадал в еженедельный бэкап, память и история всех остальных агентов не бэкапились вовсе; локальный override — `~/.iwe-backup-sources.local.yaml` (не трогается обновлением шаблона) (WP-7 Ф233а, пир-сессия 2026-10-16-18-iwe-template-backup).
+- [optional] `scripts/iwe-backup-sources.yaml` + `scripts/iwe-backup-check.sh` (раздел 4): дефолтный список runtime-каталогов ИИ-агентов вне `$HOME/IWE` (`.claude`, `.codex`, `.hermes`, `.kimi`, `.kimi-code`, `.grok` и ключевые dotfiles), классифицированный по восстановимости (три tier), с проверкой фактического покрытия и явным сигналом про отсутствующий источник — раньше только `$HOME/IWE` попадал в еженедельный бэкап, память и история всех остальных агентов не бэкапились вовсе; локальный override — `~/.iwe-backup-sources.local.yaml` (не трогается обновлением шаблона) (WP-7 Ф237а, пир-сессия 2026-10-16-18-iwe-template-backup, PR #1248).
 
 ### Changed
 
