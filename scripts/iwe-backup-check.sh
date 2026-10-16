@@ -8,10 +8,13 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 # ОБЕЩАНИЕ
 # ═══════════════════════════════════════════════════════════════════════════════
-# За ≤3 секунды проверить 3 уровня резервирования IWE и выдать markdown-отчёт:
+# За ≤3 секунды проверить 4 уровня резервирования IWE и выдать markdown-отчёт:
 #   1. iCloud-бэкапы (основной оффлайн-канал)
 #   2. Локальные копии .backups/ (legacy / fallback)
 #   3. Git-hygiene (удалённые репо на GitHub как живой backup-код)
+#   4. Runtime-каталоги агентов вне ${HOME}/IWE (WP-7 Ф233а) — покрытие
+#      источников из iwe-backup-sources.yaml: что существует, что
+#      пропущено (с явной причиной), сколько весит.
 #
 # Verdict: ✅ / ⚠️ / ❌ с конкретным списком действий.
 # Скрипт ТОЛЬКО детектит. Никаких автофиксов, никаких write-операций в git.
@@ -379,6 +382,90 @@ else
     fi
 fi
 echo ""
+
+# ---------- Раздел 4: Runtime-каталоги агентов (WP-7 Ф233а) ----------
+
+echo "## 4. Runtime-каталоги агентов вне \`\$HOME/IWE\`"
+echo ""
+
+SOURCES_FILE="$SCRIPT_DIR/iwe-backup-sources.yaml"
+SOURCES_OVERRIDE="$HOME/.iwe-backup-sources.local.yaml"
+
+if [ ! -f "$SOURCES_FILE" ]; then
+    info "Файл дефолтов не найден ($SOURCES_FILE) — раздел пропущен"
+    echo ""
+else
+    # python3 выдаёт один TSV-ряд на источник: tier, path, exists(0/1), note.
+    # Разбор YAML — здесь, не в bash: избегаем ручного парсинга
+    # структурированного формата (P9) и пишем ряд раз. Размер НЕ считаем
+    # здесь: `du -sh` на крупных источниках (например ~/IWE целиком, сотни
+    # ГБ) занимает минуты и ломает заявленное «≤3 секунды» этого скрипта
+    # (найдено живым прогоном при реализации, WP-7 Ф233а) — для статуса
+    # покрытия размер не нужен, только факт наличия.
+    SOURCES_TSV=$(HOME="$HOME" SOURCES_FILE="$SOURCES_FILE" SOURCES_OVERRIDE="$SOURCES_OVERRIDE" python3 <<'PYEOF'
+import os
+import yaml
+
+home = os.environ["HOME"]
+
+
+def load(path):
+    if not os.path.isfile(path):
+        return {}
+    with open(path) as f:
+        return yaml.safe_load(f) or {}
+
+
+defaults = load(os.environ["SOURCES_FILE"])
+override = load(os.environ["SOURCES_OVERRIDE"])
+
+if defaults.get("schema_version") != 1:
+    import sys
+    print(f"unsupported schema_version: {defaults.get('schema_version')!r}", file=sys.stderr)
+    sys.exit(1)
+
+tiers = ["tier0_unique", "tier1_scheduled", "tier2_optional"]
+for tier in tiers:
+    entries = list(defaults.get(tier, [])) + list(override.get(tier, []))
+    for entry in entries:
+        raw_path = entry.get("path", "")
+        path = raw_path.replace("${HOME}", home)
+        note = entry.get("note", "")
+        exists = os.path.exists(path)
+        print(f"{tier}\t{path}\t{int(exists)}\t{note}")
+PYEOF
+) || SOURCES_TSV=""
+
+    if [ -z "$SOURCES_TSV" ]; then
+        warn "Не удалось разобрать $SOURCES_FILE (пустой вывод или ошибка python3) — проверьте PyYAML (python3 -c 'import yaml')"
+        WARNINGS=$((WARNINGS + 1))
+    else
+        MISSING_TIER0=0
+        echo "| Tier | Путь | Статус | Примечание |"
+        echo "|---|---|---|---|"
+        while IFS=$'\t' read -r tier path exists note; do
+            [ -z "$tier" ] && continue
+            if [ "$exists" = "1" ]; then
+                printf "| %s | \`%s\` | есть | %s |\n" "$tier" "$path" "${note:--}"
+            else
+                printf "| %s | \`%s\` | пропущено (не существует) | %s |\n" "$tier" "$path" "${note:--}"
+                if [ "$tier" = "tier0_unique" ]; then
+                    MISSING_TIER0=$((MISSING_TIER0 + 1))
+                fi
+            fi
+        done <<< "$SOURCES_TSV"
+        echo ""
+
+        if [ "$MISSING_TIER0" -gt 0 ]; then
+            crit "$MISSING_TIER0 источник(а) уровня tier0 (невосстановимые данные) не найдено — проверьте путь или override"
+            CRITICALS=$((CRITICALS + 1))
+        else
+            pass "Все tier0-источники (невосстановимые данные) присутствуют на диске"
+        fi
+        info "Этот раздел только показывает покрытие — сам снимок (restic) приходит в следующей фазе (WP-7 Ф233в), пока не исполняется этим скриптом"
+    fi
+    echo ""
+fi
 
 # ---------- Итог ----------
 

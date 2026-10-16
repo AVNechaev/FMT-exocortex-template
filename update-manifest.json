@@ -897,7 +897,7 @@
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "69e6c6c79c6958b5bb53630c9b999d1e7cfa8f06b8dae167c94f2464ffbc065b"
+      "sha256": "fdb88603e367d84174fdc3c6b8ab6a25dc8e0fe0d61f3d53bfca7e679d96bf72"
     },
     {
       "path": "CLAUDE.md",
@@ -2469,7 +2469,15 @@
     },
     {
       "path": "scripts/iwe-backup-check.sh",
-      "sha256": "8338e704f50edea10f8628323e39ff3a1398a9742fb7b67039d8e24a36577a49"
+      "sha256": "f8c7237dd72cb854a57dc12fed7804800259a0c43fad0c347cfb320f7f574bd8"
+    },
+    {
+      "path": "scripts/iwe-backup-protect.sh",
+      "sha256": "026c79de3c7c1b81b714504d980bb9ca71162437a636cd5185044911e279c12c"
+    },
+    {
+      "path": "scripts/iwe-backup-sources.yaml",
+      "sha256": "4e0cb830c5d6674a80466abeacf96a298d061660770ebf5880ee5bcf7a01a973"
     },
     {
       "path": "scripts/iwe-bug-report.sh",
