@@ -89,7 +89,7 @@
     },
     {
       "path": ".claude/hooks/inject-communication-style.sh",
-      "sha256": "5e2df1b36cd1729ab1a362310f4d5c133ad1fe88331d82e72a011271056edf3e"
+      "sha256": "017eb6233da377d87699330d703d97ee7a40661a8d7aad7f45d0d1ddebbac91b"
     },
     {
       "path": ".claude/hooks/inject-fault-profile.sh",
@@ -808,6 +808,14 @@
       "sha256": "bfb316eb7e42c71c15772113d8bcc63ebba539fbbe96da30e7fc83186addd740"
     },
     {
+      "path": ".claude/styles/genre-template/guide.md",
+      "sha256": "63366a7a3bac32f306f11758941491c98a0071e87e7b6d5502b045dae43e37e9"
+    },
+    {
+      "path": ".claude/styles/genre-template/post.md",
+      "sha256": "38ecb023c3c675c6dbcc1d3fc7ee9360f5fc3303e0c10524d65ab9327201c940"
+    },
+    {
       "path": ".claude/styles/p05-core.md",
       "sha256": "f4a15383059df6ade9026a99aa83dc7dd61521b15e953ee8c35a570b959717a8"
     },
@@ -1066,6 +1074,10 @@
     {
       "path": "docs/release-audit-log.md",
       "sha256": "e0bbe1ca80ecafbedfc92349b83554cf629795e3cf26ddd6b3cf4e038a0522f5"
+    },
+    {
+      "path": "docs/response-clarity-catalog.md",
+      "sha256": "8ee41c871838b0d3cd355d26f13f94768feea1cca5cb83b6aebf11615afc931b"
     },
     {
       "path": "docs/roles-catalog.md",
@@ -1549,7 +1561,7 @@
     },
     {
       "path": "memory/communication-style-personal-template.md",
-      "sha256": "5928f1f7617004b00737e6d505b862d760d63630dfb992980ccf0a20b932a6db"
+      "sha256": "93e1bb8844115ebcb4bccd876115dafd7e3553ba45ca893a4b1c6c2cc2c5413c"
     },
     {
       "path": "memory/day-rhythm-config.yaml",
