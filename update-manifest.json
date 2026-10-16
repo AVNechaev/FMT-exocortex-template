@@ -897,7 +897,7 @@
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "fdb88603e367d84174fdc3c6b8ab6a25dc8e0fe0d61f3d53bfca7e679d96bf72"
+      "sha256": "336a17a6295b7ce8bdb2bbf64e994da272d805da30ba1fa24b31663b90e3e112"
     },
     {
       "path": "CLAUDE.md",
@@ -2469,11 +2469,15 @@
     },
     {
       "path": "scripts/iwe-backup-check.sh",
-      "sha256": "f8c7237dd72cb854a57dc12fed7804800259a0c43fad0c347cfb320f7f574bd8"
+      "sha256": "eb078d6b5ca0a94d0c98389811dff72ba5cda8435be0b35e4e3b63bd137eb26d"
     },
     {
       "path": "scripts/iwe-backup-protect.sh",
-      "sha256": "026c79de3c7c1b81b714504d980bb9ca71162437a636cd5185044911e279c12c"
+      "sha256": "a715eeffb71e53a68a004df4edc4994bf7b99590ded9b7f308812d26b6e294b0"
+    },
+    {
+      "path": "scripts/iwe-backup-run.sh",
+      "sha256": "17d74d1acf86ca245f1dedbb468c1061398b9c055e5d7edff316f221a8a85854"
     },
     {
       "path": "scripts/iwe-backup-sources.yaml",

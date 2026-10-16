@@ -462,10 +462,73 @@ PYEOF
         else
             pass "Все tier0-источники (невосстановимые данные) присутствуют на диске"
         fi
-        info "Этот раздел только показывает покрытие — сам снимок (restic) приходит в следующей фазе (WP-7 Ф233в), пока не исполняется этим скриптом"
     fi
     echo ""
 fi
+
+# ---------- Раздел 5: Свежесть регулярного бэкапа (WP-7 Ф237в) ----------
+
+echo "## 5. Регулярный зашифрованный бэкап (restic)"
+echo ""
+
+PROTECT_REPO_DIR="$HOME/.iwe-backup/protect-repo"
+PROTECT_KEY_FILE="$HOME/.iwe-backup/protect-repo.key"
+FRESHNESS_CRIT_HOURS=48
+
+if ! command -v restic >/dev/null 2>&1; then
+    info "restic не установлен — регулярный бэкап (iwe-backup-run.sh) не настроен"
+elif [ ! -d "$PROTECT_REPO_DIR" ]; then
+    info "Хранилище $PROTECT_REPO_DIR ещё не создано — запустите scripts/iwe-backup-run.sh хотя бы раз"
+else
+    # Возраст считаем в python3: restic отдаёт ISO8601 с реальным offset
+    # (например +03:00) — bash/date-разбор без учёта offset (найдено живым
+    # прогоном: naive "взять часть до точки" давало отрицательный возраст,
+    # т.к. локальное время интерпретировалось как UTC).
+    #
+    # stderr restic (не python3) НЕ глушим: поломанный/отсутствующий ключ,
+    # устаревший lock или битый репозиторий дают ненулевой код restic с
+    # пустым stdout — тогда python ветка "snapshots=[]" ложно репортует
+    # «бэкап ни разу не выполнялся» вместо настоящей причины (нужен другой
+    # ремонт: ключ/репозиторий, не повторный запуск) — найдено холодным
+    # ревью. Сохраняем вывод restic отдельно и показываем его при пустом
+    # результате, если он непуст.
+    RESTIC_SNAPSHOTS_ERR="$(mktemp)"
+    SNAPSHOTS_JSON=$(RESTIC_REPOSITORY="$PROTECT_REPO_DIR" RESTIC_PASSWORD_FILE="$PROTECT_KEY_FILE" \
+        restic snapshots --tag scheduled --json 2>"$RESTIC_SNAPSHOTS_ERR") || true
+    AGE_HOURS=$(printf '%s' "$SNAPSHOTS_JSON" | python3 -c '
+import datetime
+import json
+import sys
+
+try:
+    snapshots = json.load(sys.stdin)
+except json.JSONDecodeError:
+    snapshots = []
+if not snapshots:
+    sys.exit(1)
+latest = max(datetime.datetime.fromisoformat(s["time"]) for s in snapshots)
+age = datetime.datetime.now(datetime.timezone.utc) - latest
+print(int(age.total_seconds() // 3600))
+' 2>/dev/null) || AGE_HOURS=""
+
+    if [ -z "$AGE_HOURS" ]; then
+        if [ -s "$RESTIC_SNAPSHOTS_ERR" ]; then
+            crit "restic snapshots завершился с ошибкой — хранилище/ключ требуют проверки, не просто «запустить бэкап»"
+            cat "$RESTIC_SNAPSHOTS_ERR" >&2
+            CRITICALS=$((CRITICALS + 1))
+        else
+            warn "Ни одного снимка с тегом scheduled не найдено — регулярный бэкап ни разу не выполнялся"
+            WARNINGS=$((WARNINGS + 1))
+        fi
+    elif [ "$AGE_HOURS" -gt "$FRESHNESS_CRIT_HOURS" ]; then
+        crit "Последний регулярный снимок старше ${FRESHNESS_CRIT_HOURS}ч (${AGE_HOURS}ч назад) — расписание не выполняется"
+        CRITICALS=$((CRITICALS + 1))
+    else
+        pass "Последний регулярный снимок ${AGE_HOURS}ч назад (≤ ${FRESHNESS_CRIT_HOURS}ч)"
+    fi
+    rm -f "$RESTIC_SNAPSHOTS_ERR"
+fi
+echo ""
 
 # ---------- Итог ----------
 
