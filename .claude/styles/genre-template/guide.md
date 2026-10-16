@@ -6,7 +6,7 @@ name: Шаблон структуры жанра «руководство»
 status: active
 lang: ru
 role: canon
-promoted_from: "WP-412 Ф13"
+promoted_from: "WP-412 phase 13"
 ---
 
 # Шаблон жанра: руководство
