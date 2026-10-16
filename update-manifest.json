@@ -809,11 +809,11 @@
     },
     {
       "path": ".claude/styles/genre-template/guide.md",
-      "sha256": "63366a7a3bac32f306f11758941491c98a0071e87e7b6d5502b045dae43e37e9"
+      "sha256": "0bb989a47a415e923cfaee94ab8af3c80c98a9cf51e036b64e9d400a4e7580bd"
     },
     {
       "path": ".claude/styles/genre-template/post.md",
-      "sha256": "38ecb023c3c675c6dbcc1d3fc7ee9360f5fc3303e0c10524d65ab9327201c940"
+      "sha256": "269a36eac918a22965763637c7f89d4dea8eae2dbc92b52bc94072033f6f5e44"
     },
     {
       "path": ".claude/styles/p05-core.md",
@@ -1077,7 +1077,7 @@
     },
     {
       "path": "docs/response-clarity-catalog.md",
-      "sha256": "8ee41c871838b0d3cd355d26f13f94768feea1cca5cb83b6aebf11615afc931b"
+      "sha256": "406b9a5936cc4746f4fb30bc632b9d6129f806fffb67fb15d46549903c093425"
     },
     {
       "path": "docs/roles-catalog.md",

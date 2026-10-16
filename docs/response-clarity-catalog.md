@@ -3,7 +3,7 @@ name: response-clarity-catalog
 description: "12 паттернов засорения ответов агентов + 11 правил «писать в режиме читателя»"
 type: reference
 layer: S0
-promoted_from: "WP-412 Ф13"
+promoted_from: "WP-412 phase 13"
 spec_for_hook: ".claude/hooks/response-clarity-hook.sh"
 spec_for_hook_sha: "15a38b91"
 ---
