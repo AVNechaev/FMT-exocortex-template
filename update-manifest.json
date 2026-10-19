@@ -897,11 +897,11 @@
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "4929bce9b7bf665284166c00c51161f4027a798c8dd0296e7d6fe7547ae12ddd"
+      "sha256": "c5c41057327ddcd872501618b8bf49cb5b3545171a37a256eaa92520e1bf631b"
     },
     {
       "path": "CLAUDE.md",
-      "sha256": "8e7e0ddeaa32bd3b583254a334d2513d21edeebde1cf3bf83a95c0336967f741"
+      "sha256": "c004a6484f229f25e7c60bfcc4cf40d84c6f0b5e6405eebca99241addf9933fd"
     },
     {
       "path": "ONTOLOGY.md",
