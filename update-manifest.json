@@ -897,7 +897,7 @@
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "090fe1a96e94024d9c7e0571511bcea884d16f184a3bef7b6dfecd8167a35de3"
+      "sha256": "b2a047600467eac894f359b2cc24a43fad1d08e2e115bb4d1b0269031d78f0bb"
     },
     {
       "path": "CLAUDE.md",
@@ -2213,7 +2213,7 @@
     },
     {
       "path": "scripts/check-dirty-repos.sh",
-      "sha256": "e4678b0fc4493e569e2ba95d6269619e5771d1e638a79587de2f074af42ade8a"
+      "sha256": "6dd085ffb3a486a8874805fa78ae8b5c6a92b4b82a36e350e7f675c0d159aa9f"
     },
     {
       "path": "scripts/check-hardcoded-workspace-md.py",
