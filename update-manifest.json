@@ -897,7 +897,7 @@
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "a36069caf739ea2ab3af16efb3849c53a5da082fe432ee52ba4ac3efee51f897"
+      "sha256": "090fe1a96e94024d9c7e0571511bcea884d16f184a3bef7b6dfecd8167a35de3"
     },
     {
       "path": "CLAUDE.md",
@@ -1098,6 +1098,10 @@
     {
       "path": "docs/skills-catalog.md",
       "sha256": "9cf28d0f72f967eb1b183e458c8b1214e9b97f8daf218847ccbde16b7244dc0a"
+    },
+    {
+      "path": "docs/state-axes-registry.yaml",
+      "sha256": "0e00b406d6380db86883475dadea339e7e60444b46266d9105ecacd90e7a2cc0"
     },
     {
       "path": "docs/use-cases/USE-CASES.md",
@@ -2510,6 +2514,10 @@
     {
       "path": "scripts/iwe-multipath.py",
       "sha256": "2bc20bf869195220748b1b0961a1219aab328279df5b36d48c092dcdaef6f631"
+    },
+    {
+      "path": "scripts/iwe-safe-pull.sh",
+      "sha256": "5fae05d64cb389ffba473ac6eec0e5ba9efd7aa5fdef87f77c62b5edd2ad54a6"
     },
     {
       "path": "scripts/iwe-transcribe.sh",
