@@ -757,7 +757,7 @@
     },
     {
       "path": ".claude/skills/strategy-session/SKILL.md",
-      "sha256": "f5e0b082cd0d9d002dafb41cbb75c1e6bd44c2204607bda8e937850ab2859ef9"
+      "sha256": "63f7a0fc4e68356d645f224b53699a48ea31fdf0417a32a6632ad4ac6f41c54f"
     },
     {
       "path": ".claude/skills/think/SKILL.md",
@@ -897,7 +897,7 @@
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "797713142ea06308161d1ac358f810c57f76149790719b4be0f1c9e5d3666ab0"
+      "sha256": "306173fcbd5a8eb3038613621334ea6495d1567c3802fa1a5beca2d069cbbfc8"
     },
     {
       "path": "CLAUDE.md",
@@ -1885,7 +1885,7 @@
     },
     {
       "path": "roles/strategist/prompts/strategy-session-weekly.md",
-      "sha256": "9783f6942568627df8000c6f74f53c4a509b2373dcf01b106014fe3732602692"
+      "sha256": "608bf7d352f410e83c20aacd737fa066994b2cb169e1c3880ee7580be8e374d2"
     },
     {
       "path": "roles/strategist/prompts/strategy-session-weekly/appendix/consent-check.md",
