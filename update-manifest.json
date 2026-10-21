@@ -897,7 +897,7 @@
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "92d257220afcf58e47bd3f02c829843cfd2255426c0b3f7192d7d1c0876eaa3e"
+      "sha256": "9d61578d850f894b8c56d520a76cdb6f8cc1d03b7f0e1b577aac9291c94e649a"
     },
     {
       "path": "CLAUDE.md",
@@ -3301,7 +3301,7 @@
     },
     {
       "path": "translation-manifest.yaml",
-      "sha256": "2a81f69899c474698f0ba0b55abae54499d8a44b3fd26bffdd1f1a7aff450786"
+      "sha256": "72101e0203f43257a8a22f0e71630ad55290221ae8e8164ca7988eced17d3d31"
     },
     {
       "path": "translation/en-doc-style.md",
