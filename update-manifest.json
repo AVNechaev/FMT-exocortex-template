@@ -873,7 +873,7 @@
     },
     {
       "path": ".github/workflows/validate-template.yml",
-      "sha256": "9fbf56ab054a3b739a003e50347e72a7847d720c1e04b58f8e233ab470af2fd3"
+      "sha256": "8af00a95f9ad7e7b89a0793745dc87f7444443df1c0676d8d7d82a7ac6d3c546"
     },
     {
       "path": ".gitignore",
@@ -901,7 +901,7 @@
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "20abf22016504580a134844a3af000c1e8504328db7d14ce2b426f9012a2b9d9"
+      "sha256": "1d25be7d55b2c658dbb3f5ffc90bbc1f23eef018bd503bf4bde26bba5d18ace0"
     },
     {
       "path": "CLAUDE.md",
@@ -3435,6 +3435,7 @@
     "scripts/tests/test_issue_713_registry_status.sh",
     "scripts/tests/test_issue_729_strategy_day.sh",
     "scripts/tests/test_issue_810_scan_selfexcl.sh",
+    "scripts/tests/test_issue_850_fork_guard.sh",
     "scripts/tests/test_issue_851_cyrillic_slug.sh",
     "scripts/tests/test_issue_869_claude_slug.sh",
     "scripts/tests/test_issue_870_dayplan_validator.sh",
