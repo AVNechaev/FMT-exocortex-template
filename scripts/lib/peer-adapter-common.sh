@@ -228,3 +228,35 @@ peer_adapter_check_language() {
     fi
   fi
 }
+
+# peer_adapter_check_style <agent-name> <output-text>
+# РП-388 Ф17: feeds a peer reply through the shared response-clarity-hook.sh
+# core via the style-check-text.sh wrapper, so Kimi/Codex replies get the
+# same A1-A13.1 checks as Claude's own Stop-hook — one core, thin wrappers,
+# not a third parallel reimplementation (style-check-post-run.sh was exactly
+# that, and dead: never wired into any adapter). Second call site (Codex)
+# below is why this lives here, not inline in kimi-peer-adapter.sh (P2).
+# Warn-only, never blocks: both the wrapper and the hook always exit 0, and
+# any failure to even find the wrapper (sync lag to the ~/IWE mirror, WP-388
+# Ф15 "два прыжка") is swallowed the same way.
+peer_adapter_check_style() {
+  local agent_name="${1-}" output="${2-}"
+  local wrapper="${IWE_ROOT:-$HOME/IWE}/.claude/hooks/style-check-text.sh"
+  [ -x "$wrapper" ] || return 0
+  local tmp_file
+  tmp_file=$(mktemp) || return 0
+  printf '%s' "$output" > "$tmp_file" 2>/dev/null
+  # timeout 10: a hung hook here would stall delivery of the peer's own reply
+  # to stdout (code review, this session) -- the Python wrapper already has
+  # this same guard, bash call sites need it too. `timeout` itself is
+  # GNU/Homebrew-only (missing on stock macOS, platform-compat check, WP-5) --
+  # command -v guard: no timeout(1) on this host -> skip the check entirely
+  # rather than block on a hung hook. Not routed through iwe_timeout() in
+  # lib/common.sh to avoid a new source dependency in a file that is
+  # deliberately source-side-effect-free (see file header); if a 5th inline
+  # copy of this guard appears elsewhere, that's the signal to migrate.
+  if command -v timeout >/dev/null 2>&1; then
+    timeout 10 bash "$wrapper" "$agent_name" "$tmp_file" >/dev/null 2>&1 || true
+  fi
+  rm -f "$tmp_file"
+}
