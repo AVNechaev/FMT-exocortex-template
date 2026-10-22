@@ -67,6 +67,7 @@ API_BASE="https://api.github.com/repos/$REPO"
 RELEASE_SHA=""
 
 CHECK_ONLY=false
+STRICT_CHECK=false   # WP-529 Ф220: --dry-run-strict — структурная проверка плана доставки, не ручной список
 AUTO_YES=false
 FAST_CHECK=false
 # Stage B opt-ins (WP-7 F71, поведение settings-merge скорректировано issue
@@ -205,6 +206,7 @@ fetch_update_manifest() {
 for arg in "$@"; do
     case "$arg" in
         --check|--dry-run)  CHECK_ONLY=true ;;
+        --dry-run-strict)   CHECK_ONLY=true; STRICT_CHECK=true ;;
         --fast)             FAST_CHECK=true ;;
         --yes)              AUTO_YES=true ;;
         --apply-settings-merge) APPLY_SETTINGS_MERGE=true ;;
@@ -216,6 +218,7 @@ for arg in "$@"; do
             echo ""
             echo "Options:"
             echo "  --check     Показать доступные обновления без применения"
+            echo "  --dry-run-strict  С --check: структурная проверка плана доставки (целевые файлы на месте, пути безопасны)"
             echo "  --fast      С --check: сравнить только версию манифеста (без скачивания 300+ файлов, issue #230)"
             echo "  --yes       Применить обновления без подтверждения (включает settings.json merge, см. --no-settings-merge)"
             echo "  --apply-settings-merge  Применить слияние settings.json отдельно от --yes (бэкап + пост-валидация; без флага и без --yes — только предпросмотр)"
@@ -5087,6 +5090,34 @@ fi
 if $CHECK_ONLY; then
     echo "Режим --check: изменения не применяются."
     echo "Для применения: bash update.sh"
+
+    # WP-529 Ф220: --dry-run-strict проверяет уже вычисленный план доставки
+    # (NEW_FILES/UPDATED_FILES этого прогона), а не повторно парсит текст
+    # update.sh — пир-сессия 2026-10-22-04-wp529-continue-items, возражение
+    # Codex на предложение Kimi (парсинг текста скрипта — хрупкое дублирование
+    # логики). CHECK_ONLY завершается здесь, до Step 5, поэтому это отдельный
+    # проверочный проход, не ветка внутри apply-циклов.
+    # BEGIN-TESTABLE: dry-run-strict-check
+    if $STRICT_CHECK; then
+        STRICT_FAILURES=()
+        for f in "${NEW_FILES[@]}" "${UPDATED_FILES[@]}"; do
+            case "$f" in
+                /*|*..*) STRICT_FAILURES+=("$f: путь выходит за пределы установки") ;;
+            esac
+            [ -f "$TMPDIR_UPDATE/files/$f" ] || STRICT_FAILURES+=("$f: отсутствует в загруженном плане доставки")
+        done
+        if [ "${#STRICT_FAILURES[@]}" -gt 0 ]; then
+            echo ""
+            echo "🔴 --dry-run-strict: план доставки не прошёл структурную проверку:"
+            for reason in "${STRICT_FAILURES[@]}"; do
+                echo "  - $reason"
+            done
+            exit "$EXIT_RUNTIME"
+        fi
+        echo "--dry-run-strict: план доставки (${#NEW_FILES[@]} новых + ${#UPDATED_FILES[@]} обновляемых) структурно корректен. Это не гарантирует отсутствие регрессий в поведении после apply."
+    fi
+    # END-TESTABLE: dry-run-strict-check
+
     assert_self_unmutated
     if ! run_sync_canary; then
         exit "$EXIT_CANARY_FAILED"
@@ -5138,6 +5169,14 @@ echo "Применяю обновления..."
 require_env_before_update
 begin_update_transaction
 remember_untouched_memory_before_apply
+
+# WP-529 Ф220: снимок CHANGELOG.md до перезаписи — источник для дифа и
+# дисклеймера после apply-циклов ниже. Снимаем содержимым файла (не git-тегом):
+# тег текущей ревизии не доказывает, какая версия была установлена у
+# пользователя до этого запуска, и может отсутствовать вовсе (пир-сессия
+# 2026-10-22-02-wp529-peer-continue, предложение Codex принято над git tag от Kimi).
+CHANGELOG_SNAPSHOT=""
+[ -f "$SCRIPT_DIR/CHANGELOG.md" ] && CHANGELOG_SNAPSHOT=$(cat "$SCRIPT_DIR/CHANGELOG.md")
 
 APPLIED=0
 REMOVED=0
@@ -5316,6 +5355,32 @@ for f in "${UPDATED_FILES[@]}"; do
     fi
     APPLIED=$((APPLIED + 1))
 done
+
+# BEGIN-TESTABLE: changelog-diff-disclaimer
+# WP-529 Ф220: диф и дисклеймер CHANGELOG.md — только если содержимое реально
+# изменилось (не на каждом прогоне). Решение зафиксировано пир-сессией
+# 2026-10-22-02-wp529-peer-continue + продолжением 2026-10-22-04: --check/--dry-run
+# не гарантирует отсутствие регрессий после настоящего обновления — честное
+# предупреждение здесь закрывает только "не знал, что изменилось", не сам риск
+# регрессии (его закрывает --dry-run-strict выше).
+if [ -n "$CHANGELOG_SNAPSHOT" ] && [ ! -f "$SCRIPT_DIR/CHANGELOG.md" ]; then
+    # Cold-review (2026-10-22): существовал до apply, пропал после (removal,
+    # не UPDATED_FILES) — редкий путь (CHANGELOG.md сейчас ни в одном списке
+    # удаления), но диф без этой ветки был бы тихо пропущен, хотя контент
+    # содержательно изменился (на "отсутствует").
+    echo ""
+    echo "⚠ CHANGELOG.md был удалён этим обновлением (ранее присутствовал)."
+elif [ -f "$SCRIPT_DIR/CHANGELOG.md" ]; then
+    CHANGELOG_AFTER=$(cat "$SCRIPT_DIR/CHANGELOG.md")
+    if [ "$CHANGELOG_AFTER" != "$CHANGELOG_SNAPSHOT" ]; then
+        echo ""
+        echo "Изменения в CHANGELOG.md:"
+        diff <(printf '%s\n' "$CHANGELOG_SNAPSHOT") <(printf '%s\n' "$CHANGELOG_AFTER") | grep '^>' | sed 's/^> /  + /'
+        echo ""
+        echo "⚠ Чистый --check/--dry-run не гарантирует отсутствие регрессий после этого обновления — он проверяет совпадение файлов, не поведение. Для структурной проверки плана доставки используйте --dry-run-strict."
+    fi
+fi
+# END-TESTABLE: changelog-diff-disclaimer
 
 # issue #229: hard-require frontmatter.sh now — NEW_FILES/UPDATED_FILES above have
 # just delivered it to disk if this is the first run after upgrading from a
