@@ -897,7 +897,7 @@
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "d1b13fae7232e3f1f7291c9138420522836824d5369a3098aa5023aa839470a2"
+      "sha256": "eafed0c283a77ca4d4f4e78725e4d3bee798c4b52a25deb9187920e19523d2cc"
     },
     {
       "path": "CLAUDE.md",
@@ -3313,7 +3313,7 @@
     },
     {
       "path": "update.sh",
-      "sha256": "bebf8c3360a2d6e612c0d958b4388deadd31771f4c492a9d72afc430d8c0df0e"
+      "sha256": "4fd5ca5cb75372a2f52ed8bed2eb0e0a37998af6e49306aebe7ae385ff88d32c"
     }
   ],
   "excluded_paths": [
@@ -3571,7 +3571,8 @@
     "setup/test-update-self-overwrite.sh",
     "setup/test-update-step0-staged-rename.sh",
     "setup/test-week-review-delivery-postcondition.sh",
-    "setup/ux-walkthrough-prompt.md"
+    "setup/ux-walkthrough-prompt.md",
+    "setup/wp529-f21-toggle-required-review.sh"
   ],
   "deprecated_files": [
     {
