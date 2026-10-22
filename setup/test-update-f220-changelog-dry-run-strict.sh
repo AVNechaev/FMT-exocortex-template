@@ -55,6 +55,7 @@ run_changelog_scenario() {
     OUTPUT=$(
         SCRIPT_DIR="$scenario_dir"
         CHANGELOG_SNAPSHOT="$before"
+        set +u; set -e; set +o pipefail  # match update.sh's real shell options (cold-review Medium)
         source "$CHANGELOG_BLOCK"
     2>&1)
     if [ -n "$expect_marker" ]; then
@@ -77,6 +78,60 @@ run_changelog_scenario "changed" "v1 content" "v2 content, new line" "⚠ Чис
 run_changelog_scenario "new-file" "" "v1 content" "⚠ Чистый --check/--dry-run"
 run_changelog_scenario "removed" "v1 content" "__REMOVED__" "⚠ CHANGELOG.md был удалён"
 run_changelog_scenario "absent-both" "" "__REMOVED__" ""
+
+# "Главное в этом обновлении" (слой "зачем", WP-529 Ф220 продолжение 2026-10-22):
+# значимые пункты (не [optional]) впереди полного дифа.
+run_highlight_scenario() {
+    local name="$1" before="$2" after="$3" expect_header="$4" expect_content="$5"
+    local scenario_dir="$TEST_ROOT/highlight-$name"
+    rm -rf "$scenario_dir"; mkdir -p "$scenario_dir"
+    printf '%s' "$after" > "$scenario_dir/CHANGELOG.md"
+    OUTPUT=$(
+        SCRIPT_DIR="$scenario_dir"
+        CHANGELOG_SNAPSHOT="$before"
+        set +u; set -e; set +o pipefail  # match update.sh's real shell options (cold-review Medium)
+        source "$CHANGELOG_BLOCK"
+    2>&1)
+    local has_header=false
+    printf '%s' "$OUTPUT" | grep -qF "Главное в этом обновлении" && has_header=true
+    if [ "$expect_header" = "1" ]; then
+        if $has_header && printf '%s' "$OUTPUT" | grep -qF "$expect_content"; then
+            pass "highlight-$name: заголовок и содержимое найдены"
+        else
+            fail "highlight-$name: ожидался заголовок с '$expect_content', получено: $OUTPUT"
+        fi
+    else
+        if ! $has_header; then
+            pass "highlight-$name: заголовок отсутствует, как и ожидалось"
+        else
+            fail "highlight-$name: заголовок не должен появляться, получено: $OUTPUT"
+        fi
+    fi
+}
+
+run_highlight_scenario "optional-only" "" "- [optional] косметика" 0 ""
+run_highlight_scenario "behavior-tagged" "" "- [behavior] важная правка" 1 "важная правка"
+run_highlight_scenario "untagged" "" "- нет метки, но это пункт" 1 "нет метки"
+
+# Чисто удаление (diff показывает только "<", ни одной "+") — cold-review нашёл,
+# что до фикса здесь печаталась паразитная строка "  + " без содержимого.
+run_pure_removal_scenario() {
+    local scenario_dir="$TEST_ROOT/pure-removal"
+    rm -rf "$scenario_dir"; mkdir -p "$scenario_dir"
+    printf 'L1' > "$scenario_dir/CHANGELOG.md"
+    OUTPUT=$(
+        SCRIPT_DIR="$scenario_dir"
+        CHANGELOG_SNAPSHOT=$'L1\nL2\nL3'
+        set +u; set -e; set +o pipefail  # match update.sh's real shell options (cold-review Medium)
+        source "$CHANGELOG_BLOCK"
+    2>&1)
+    if printf '%s\n' "$OUTPUT" | grep -qx '  + '; then
+        fail "pure-removal: паразитная строка '  + ' без содержимого всё ещё есть"
+    else
+        pass "pure-removal: нет паразитной строки при отсутствии добавленных строк"
+    fi
+}
+run_pure_removal_scenario
 
 echo ""
 echo "=== --dry-run-strict structural check ==="
@@ -104,6 +159,7 @@ run_strict_scenario() {
         NEW_FILES=("${new_files[@]}")
         UPDATED_FILES=("${updated_files[@]}")
         STRICT_CHECK=true
+        set +u; set -e; set +o pipefail  # match update.sh's real shell options
         source "$STRICT_BLOCK"
     )
     local rc=$?

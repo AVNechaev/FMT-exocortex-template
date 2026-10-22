@@ -5373,9 +5373,24 @@ if [ -n "$CHANGELOG_SNAPSHOT" ] && [ ! -f "$SCRIPT_DIR/CHANGELOG.md" ]; then
 elif [ -f "$SCRIPT_DIR/CHANGELOG.md" ]; then
     CHANGELOG_AFTER=$(cat "$SCRIPT_DIR/CHANGELOG.md")
     if [ "$CHANGELOG_AFTER" != "$CHANGELOG_SNAPSHOT" ]; then
+        # WP-529 Ф220 продолжение (2026-10-22, "слой зачем"): выделить значимые
+        # пункты (не [optional]) впереди полного дифа — переиспользует уже
+        # существующую классификацию Changelog-Tag (CLAUDE.md: security/
+        # migration/behavior/optional), не вводит новый слой авторства записей.
+        # Немаркированная строка тоже считается значимой (CLAUDE.md:
+        # «отсутствие метки не означает безопасно»).
+        ADDED_LINES=$(diff <(printf '%s\n' "$CHANGELOG_SNAPSHOT") <(printf '%s\n' "$CHANGELOG_AFTER") | grep '^>' | sed 's/^> //')
+        HIGHLIGHTS=$(printf '%s\n' "$ADDED_LINES" | grep '^- ' | grep -v '^- \[optional\]') || true
+        if [ -n "$HIGHLIGHTS" ]; then
+            echo ""
+            echo "Главное в этом обновлении:"
+            printf '%s\n' "$HIGHLIGHTS" | sed 's/^/  + /'
+        fi
         echo ""
         echo "Изменения в CHANGELOG.md:"
-        diff <(printf '%s\n' "$CHANGELOG_SNAPSHOT") <(printf '%s\n' "$CHANGELOG_AFTER") | grep '^>' | sed 's/^> /  + /'
+        # [ -n ] перед печатью — иначе пустой $ADDED_LINES (diff только удалял,
+        # ничего не добавил) печатает одну паразитную строку "  + " (cold-review).
+        [ -n "$ADDED_LINES" ] && printf '%s\n' "$ADDED_LINES" | sed 's/^/  + /'
         echo ""
         echo "⚠ Чистый --check/--dry-run не гарантирует отсутствие регрессий после этого обновления — он проверяет совпадение файлов, не поведение. Для структурной проверки плана доставки используйте --dry-run-strict."
     fi
