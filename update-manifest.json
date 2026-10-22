@@ -897,7 +897,7 @@
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "a9eb28c69f15805857eb41f9211e19961a87a8f9785198052901e8754ef53c78"
+      "sha256": "d1b13fae7232e3f1f7291c9138420522836824d5369a3098aa5023aa839470a2"
     },
     {
       "path": "CLAUDE.md",
@@ -3313,7 +3313,7 @@
     },
     {
       "path": "update.sh",
-      "sha256": "8bdd0428ed272b4902ee06662899c4038bd19270dba4b35a3f1644648dd46065"
+      "sha256": "bebf8c3360a2d6e612c0d958b4388deadd31771f4c492a9d72afc430d8c0df0e"
     }
   ],
   "excluded_paths": [
@@ -3560,6 +3560,7 @@
     "setup/test-update-channel-enum.sh",
     "setup/test-update-ds-publish-delivery.sh",
     "setup/test-update-edge-cases.sh",
+    "setup/test-update-f220-changelog-dry-run-strict.sh",
     "setup/test-update-install-path-provenance.sh",
     "setup/test-update-issue-1143.sh",
     "setup/test-update-issue-226.sh",
