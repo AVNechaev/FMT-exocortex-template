@@ -905,7 +905,7 @@
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "a40ff131d070d32c26b3cf76b8476355875ff9ab0db5002c15f9d1f89d88a7c2"
+      "sha256": "f6318611d71049d9586f08eb5e51d8097a702a64965dc87d6a99daa13bafe005"
     },
     {
       "path": "CLAUDE.md",
@@ -2929,7 +2929,7 @@
     },
     {
       "path": "scripts/tests/test_generate_manifest_registers_setup_exclusions.sh",
-      "sha256": "b9b360036eb38e0ea24b2ab11611a1251555a6d3e1ba72400c7441b8db099e3f"
+      "sha256": "f2bbbbc6a4a74a1ddcee6b29723a31422d7093e8f8c9923132f6ba108dafa34f"
     },
     {
       "path": "scripts/tests/test_hindsight_docs_contract.sh",
